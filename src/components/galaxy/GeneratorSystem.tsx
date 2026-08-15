@@ -316,7 +316,8 @@ export function GeneratorSystem() {
     return m ? m.size : null;
   };
 
-  /** Where the parked rocket stands: the host's upper-right shoulder.
+  /** Where the parked rocket rests: for planets and moons, the host's
+      upper-right shoulder; for the sun, a point on its slow orbit loop.
       The rocket is screen-fixed in size, so its world-space standoff
       shrinks as the camera zooms in (and grows as it zooms out). */
   const parkPos = (id: string): { x: number; y: number } | null => {
@@ -324,11 +325,22 @@ export function GeneratorSystem() {
     const s = bodySize(id);
     if (!c || !s) return null;
     const scale = stateRef.current?.scale ?? 1;
+    if (id === config.sun.id) {
+      const r = s / 2 + (ROCKET_H * SUN_ORBIT_STANDOFF) / scale;
+      const a = PARK_ANGLE + (t * TAU) / SUN_ORBIT_PERIOD;
+      return { x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) };
+    }
     const r = s / 2 + (ROCKET_H * 0.4) / scale;
     return {
       x: c.x + r * Math.cos(PARK_ANGLE),
       y: c.y + r * Math.sin(PARK_ANGLE),
     };
+  };
+
+  /** Nose heading (deg, 0 = up) along the sun-orbit tangent right now. */
+  const sunOrbitRot = () => {
+    const a = PARK_ANGLE + (t * TAU) / SUN_ORBIT_PERIOD;
+    return (Math.atan2(Math.cos(a), -Math.sin(a)) * 180) / Math.PI + 90;
   };
 
   /**
@@ -395,7 +407,8 @@ export function GeneratorSystem() {
   }, [t]);
 
   // Flight completion: the rocket becomes parked on its destination,
-  // squashes on touchdown and flashes the golden finder ring.
+  // squashes on touchdown and flashes the golden finder ring. Sun
+  // arrivals don't squash — the rocket slides into its orbit loop.
   useEffect(() => {
     if (!flight) return;
     if (performance.now() < flight.startAt + flight.dur) return;
@@ -403,9 +416,11 @@ export function GeneratorSystem() {
     setFlight(null);
     setRocketHostId(dest);
     setRocketInboundId(null);
-    setLandingSquash(true);
-    window.clearTimeout(squashTimer.current);
-    squashTimer.current = window.setTimeout(() => setLandingSquash(false), 600);
+    if (dest !== config.sun.id) {
+      setLandingSquash(true);
+      window.clearTimeout(squashTimer.current);
+      squashTimer.current = window.setTimeout(() => setLandingSquash(false), 600);
+    }
     window.clearTimeout(highlightTimer.current);
     setHighlightId(dest);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
@@ -487,7 +502,11 @@ export function GeneratorSystem() {
     if (flight || id === rocketHostId) return;
     const from = parkPos(rocketHostId);
     if (!from) return;
-    launchRocket(from, PARK_ROT, id);
+    launchRocket(
+      from,
+      rocketHostId === config.sun.id ? sunOrbitRot() : PARK_ROT,
+      id,
+    );
     focusCamera(id);
   };
 
@@ -574,8 +593,9 @@ export function GeneratorSystem() {
         focusCamera(target);
       } else if (d.moved) {
         launchRocket(d.cur, 0, rocketHostId);
-      } else {
-        // A gentle tap: a little squash hello.
+      } else if (rocketHostId !== config.sun.id) {
+        // A gentle tap: a little squash hello (not while orbiting the
+        // sun — there is no ground to bounce on).
         setLandingSquash(true);
         window.clearTimeout(squashTimer.current);
         squashTimer.current = window.setTimeout(
@@ -813,24 +833,39 @@ export function GeneratorSystem() {
     const vx = 2 * u * (flight.cx - flight.fx) + 2 * e * (end.x - flight.cx);
     const vy = 2 * u * (flight.cy - flight.fy) + 2 * e * (end.y - flight.cy);
     const heading = (Math.atan2(vy, vx) * 180) / Math.PI + 90;
+    // Sun arrivals slide into the orbit tangent instead of standing tall.
+    const toSun = flight.toId === config.sun.id;
+    const arriveRot = toSun ? sunOrbitRot() : PARK_ROT;
     if (p < 0.16) {
       rocketRot = lerpAngle(flight.fromRot, heading, easeOutCubic(p / 0.16));
     } else if (p > 0.76) {
       rocketRot = lerpAngle(
         heading,
-        PARK_ROT,
+        arriveRot,
         easeInOutCubicFn((p - 0.76) / 0.24),
       );
     } else {
       rocketRot = heading;
     }
+    // Sun arrivals keep the engine idling — no touchdown flame-out.
+    const flameFloor = toSun ? SUN_ORBIT_FLAME : 0;
     rocketFlame =
-      p < 0.12 ? p / 0.12 : p > 0.84 ? Math.max(0, (1 - p) / 0.16) : 1;
+      p < 0.12
+        ? p / 0.12
+        : p > 0.84
+          ? Math.max(flameFloor, (1 - p) / 0.16)
+          : 1;
   } else {
     const pp = parkPos(rocketHostId);
     if (pp) {
       rocketX = pp.x;
       rocketY = pp.y;
+    }
+    if (rocketHostId === config.sun.id) {
+      // Parked on the sun = slowly orbiting it, nose along the travel
+      // direction, engine idling — the sun's surface is no place to land.
+      rocketRot = sunOrbitRot();
+      rocketFlame = SUN_ORBIT_FLAME + 0.1 * Math.sin(t * 7);
     }
   }
 
