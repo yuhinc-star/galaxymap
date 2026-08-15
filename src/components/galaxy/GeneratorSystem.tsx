@@ -871,34 +871,10 @@ export function GeneratorSystem() {
         img: p.img,
         kindLabel: "Planet",
         line: p.line,
-        facts: [
-          {
-            label: "Size",
-            value:
-              p.size >= 250
-                ? "Gas giant"
-                : p.size >= 150
-                  ? "Mid-sized world"
-                  : "Pebble planet",
-          },
-          { label: "Orbit shape", value: ORBIT_KIND_LABELS[p.orbit.kind] },
-          { label: "One year", value: fmtPeriod(p.period) },
-          {
-            label: "Moons",
-            value: `${p.moons.length} of ${MAX_MOONS_PER_BODY}`,
-          },
-        ],
         childrenLabel: "Moons",
         childrenCap: MAX_MOONS_PER_BODY,
         children: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
         add,
-        remove: {
-          actionLabel: "Say goodbye to this planet",
-          note:
-            p.moons.length > 0
-              ? `Its ${p.moons.length} moon${p.moons.length > 1 ? "s" : ""} wave${p.moons.length > 1 ? "" : "s"} goodbye too!`
-              : undefined,
-        },
       };
     }
     const m = findMoonById(config.planets, id);
