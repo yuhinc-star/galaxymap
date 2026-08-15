@@ -43,11 +43,13 @@ import type { OrbitShapeKind } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { ChatPanel, type ChatSubjectInfo } from "./ChatPanel";
 import {
-  chaseChatSlot,
+  chaseChatTarget,
+  chatEase,
   computeChatLayout,
-  fitChatCamera,
+  rideChatOrbit,
   type ChatChaseState,
   type ChatLayout,
+  type ChatRideState,
 } from "./chatLayout";
 import { Drifter } from "./Drifter";
 import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
@@ -208,8 +210,12 @@ export function GeneratorSystem() {
   const chatSubjectRef = useRef<{ info: ChatSubjectInfo; layout: ChatLayout } | null>(null);
   /** 0 = orbits, 1 = column — ramps while chat opens and closes. */
   const chatMixRef = useRef(0);
-  /** Per-body rendered pose while the column forms and dissolves. */
+  /** Per-body rendered pose while the fan forms and dissolves (subject). */
   const chatRenderRef = useRef(new Map<string, ChatChaseState>());
+  /** Polar chase state for chat children riding their morphing rings. */
+  const chatRideRef = useRef(new Map<string, ChatRideState>());
+  /** Per-body ring scale while the orbits rearrange into the fan. */
+  const ringScaleRef = useRef(new Map<string, number>());
   /** Camera state captured when chat opens, glided back to on close. */
   const preChatCamRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
   /** The body chat was opened for (focus itself clears when chat opens). */
@@ -350,6 +356,8 @@ export function GeneratorSystem() {
     setChatOpen(false);
     chatSubjectRef.current = null;
     chatRenderRef.current.clear();
+    chatRideRef.current.clear();
+    ringScaleRef.current.clear();
     chatMixRef.current = 0;
     preChatCamRef.current = null;
     chatFocusRef.current = null;
@@ -415,6 +423,8 @@ export function GeneratorSystem() {
       : null;
     chatSubjectRef.current = null;
     chatRenderRef.current.clear();
+    chatRideRef.current.clear();
+    ringScaleRef.current.clear();
     setChatOpen(true);
     recordCrashEvent("chat-open", { focused: focusedId ?? config.sun.id });
   };
@@ -465,12 +475,7 @@ export function GeneratorSystem() {
   ): { x: number; y: number } | null => {
     for (const m of moons) {
       const a = m.startAngle + (t * TAU) / m.period;
-      const r = chatAdjust(
-        m.id,
-        px + m.orbitR * Math.cos(a),
-        py + m.orbitR * Math.sin(a),
-        m.size,
-      );
+      const r = chatPoseMoon(m, px, py, a);
       if (m.id === id) return { x: r.x, y: r.y };
       const sub = moonWorldPos(m.moons, id, r.x, r.y);
       if (sub) return sub;
@@ -494,7 +499,9 @@ export function GeneratorSystem() {
 
   /** Display size of any body (sun, planet or moon). */
   const bodySize = (id: string): number | null => {
-    // While the chat column forms, chat-set bodies render at slot size.
+    // While the chat fan forms, chat-set bodies render at slot size.
+    const ride = chatRideRef.current.get(id);
+    if (ride && chatMixRef.current > 0.004) return ride.size;
     const cr = chatRenderRef.current.get(id);
     if (cr && chatMixRef.current > 0.004) return cr.size;
     if (id === config.sun.id) return config.sun.size;
@@ -514,24 +521,119 @@ export function GeneratorSystem() {
     chatMixRef.current = 0;
     chatSubjectRef.current = null;
     chatRenderRef.current.clear();
+    chatRideRef.current.clear();
+    ringScaleRef.current.clear();
     preChatCamRef.current = null;
   }
   const chatMix = chatMixRef.current;
   const chatActive = chatMix > 0.004;
 
-  /** Blend + chase one body toward its column slot (frame-guarded). */
-  const chatAdjust = (id: string, x: number, y: number, size: number) => {
+  /** Current sky-strip size, with a sane fallback before first layout. */
+  const stripSize = () => {
+    const r = stripRef.current?.getBoundingClientRect();
+    if (r && r.width > 20 && r.height > 20) return { w: r.width, h: r.height };
+    if (typeof window === "undefined") return { w: 400, h: 800 };
+    return { w: Math.min(460, window.innerWidth), h: window.innerHeight };
+  };
+
+  /** Subject glide: the focused body leaves its orbit for the fan base
+      at the bottom of the strip (frame-guarded chase). */
+  const chatAdjustSubject = (id: string, x: number, y: number, size: number) => {
     const subj = chatSubjectRef.current;
     if (!subj || chatMixRef.current <= 0.004) return { x, y, size };
-    const r = chaseChatSlot(
+    const slot = subj.layout.slots.get(id);
+    if (!slot) return { x, y, size };
+    const e = chatEase(chatMixRef.current);
+    const r = chaseChatTarget(
       chatRenderRef.current,
       id,
       { x, y, size },
-      subj.layout.slots.get(id),
-      chatMixRef.current,
+      {
+        x: x + (slot.x - x) * e,
+        y: y + (slot.y - y) * e,
+        size: size + (slot.size - size) * e,
+      },
       t,
     );
     return { x: r.x, y: r.y, size: r.size };
+  };
+
+  /** Child ride: a chat-set body travels along its own orbit ring while
+      the ring morphs into its fan arc — body and ring always agree. */
+  const chatRide = (
+    id: string,
+    cx: number,
+    cy: number,
+    angle: number,
+    pointAt: (a: number) => { x: number; y: number },
+    size: number,
+  ) => {
+    const subj = chatSubjectRef.current;
+    const mix = chatMixRef.current;
+    const q = pointAt(angle);
+    const live = { x: cx + q.x, y: cy + q.y, size };
+    if (!subj || mix <= 0.004) return live;
+    const slot = subj.layout.slots.get(id);
+    if (!slot || id === subj.layout.parentId) {
+      ringScaleRef.current.delete(id);
+      return live;
+    }
+    const r = rideChatOrbit(
+      chatRideRef.current,
+      id,
+      cx,
+      cy,
+      angle,
+      pointAt,
+      size,
+      slot,
+      mix,
+      t,
+    );
+    ringScaleRef.current.set(id, r.ringScale);
+    return { x: r.x, y: r.y, size: r.size };
+  };
+
+  /** Moon pose during chat: the subject moon glides to the fan base,
+      chat children ride their rings, everyone else is live. */
+  const chatPoseMoon = (
+    m: GeneratedMoon,
+    px: number,
+    py: number,
+    a: number,
+    parentId = "",
+  ) => {
+    const subj = chatSubjectRef.current;
+    if (subj && chatMixRef.current > 0.004) {
+      if (m.id === subj.layout.parentId) {
+        return chatAdjustSubject(
+          m.id,
+          px + m.orbitR * Math.cos(a),
+          py + m.orbitR * Math.sin(a),
+          m.size,
+        );
+      }
+      // Any moon not in the fan (a grandchild at any depth, or a moon
+      // of an off-screen planet) keeps orbiting its parent, tightened
+      // as the fan forms so it never swings under the chat panel.
+      if (!subj.layout.slots.has(m.id)) {
+        const k = 1 - 0.45 * chatEase(chatMixRef.current);
+        ringScaleRef.current.set(m.id, k);
+        return {
+          x: px + m.orbitR * k * Math.cos(a),
+          y: py + m.orbitR * k * Math.sin(a),
+          size: m.size,
+        };
+      }
+    }
+    return chatRide(
+      m.id,
+      px,
+      py,
+      a,
+      (aa) => ({ x: m.orbitR * Math.cos(aa), y: m.orbitR * Math.sin(aa) }),
+      m.size,
+    );
   };
 
   // Build the subject once per opening: whatever held focus (the sun by
@@ -550,7 +652,9 @@ export function GeneratorSystem() {
           p.id,
           anchor,
           p.size,
-          p.moons.map((mm) => ({ id: mm.id, size: mm.size })),
+          p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name })),
+          stripSize().w,
+          stripSize().h,
         ),
       };
     } else if (m) {
@@ -570,7 +674,9 @@ export function GeneratorSystem() {
           m.id,
           anchor,
           m.size,
-          m.moons.map((c) => ({ id: c.id, size: c.size })),
+          m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name })),
+          stripSize().w,
+          stripSize().h,
         ),
       };
     }
@@ -587,7 +693,9 @@ export function GeneratorSystem() {
           config.sun.id,
           { x: CENTER, y: CENTER },
           config.sun.size,
-          config.planets.map((pp) => ({ id: pp.id, size: pp.size })),
+          config.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
+          stripSize().w,
+          stripSize().h,
         ),
       };
     }
@@ -639,14 +747,14 @@ export function GeneratorSystem() {
       if (!chatSubj.layout.slots.has(p.id)) continue;
       const q = planetPos.get(p.id);
       if (!q) continue;
-      const r = chatAdjust(p.id, q.x, q.y, p.size);
+      const a = p.startAngle + (t * TAU) / p.period;
+      const r =
+        p.id === chatSubj.layout.parentId
+          ? chatAdjustSubject(p.id, q.x, q.y, p.size)
+          : chatRide(p.id, CENTER, CENTER, a, p.orbit.pointAt, p.size);
       planetPos.set(p.id, { x: r.x, y: r.y });
     }
   }
-  // Names stay readable while the camera zooms the column out.
-  const chatLabelBoost = chatActive
-    ? Math.min(2.0, Math.max(1, 1 / (stateRef.current?.scale ?? 1)))
-    : 1;
 
   /** Where the parked rocket rests: for planets and moons, the host's
       upper-right shoulder; for the sun, a point on its slow orbit loop.
@@ -755,7 +863,15 @@ export function GeneratorSystem() {
     if (chatOpen) {
       const rect = stripRef.current?.getBoundingClientRect();
       if (!rect || rect.width < 20 || rect.height < 20) return;
-      target = fitChatCamera(subj.layout, rect.width, rect.height);
+      // The strip is still animating to its chat width (or the window
+      // moved): re-solve the fan so slots and camera track it.
+      if (
+        Math.abs(subj.layout.stripW - rect.width) > 2 ||
+        Math.abs(subj.layout.stripH - rect.height) > 2
+      ) {
+        rebuildChatLayout(config);
+      }
+      target = subj.layout.camera;
     } else if (preChatCamRef.current) {
       const pre = preChatCamRef.current;
       target = { posX: pre.positionX, posY: pre.positionY, scale: pre.scale };
@@ -1073,13 +1189,18 @@ export function GeneratorSystem() {
     const subj = chatSubjectRef.current;
     if (!subj) return;
     const id = subj.info.id;
-    const anchor = bodyPos(id) ?? { x: CENTER, y: CENTER };
+    // The anchor captured when chat opened stays fixed — re-anchoring to
+    // the chased pose would let the whole fan drift mid-transition.
+    const anchor = subj.layout.anchor;
+    const strip = stripSize();
     if (id === cfg.sun.id) {
       subj.layout = computeChatLayout(
         id,
         anchor,
         cfg.sun.size,
-        cfg.planets.map((pp) => ({ id: pp.id, size: pp.size })),
+        cfg.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
+        strip.w,
+        strip.h,
       );
       return;
     }
@@ -1089,7 +1210,9 @@ export function GeneratorSystem() {
         id,
         anchor,
         p.size,
-        p.moons.map((mm) => ({ id: mm.id, size: mm.size })),
+        p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name })),
+        strip.w,
+        strip.h,
       );
       return;
     }
@@ -1099,7 +1222,9 @@ export function GeneratorSystem() {
         id,
         anchor,
         m.size,
-        m.moons.map((c) => ({ id: c.id, size: c.size })),
+        m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name })),
+        strip.w,
+        strip.h,
       );
     }
   };
@@ -1331,24 +1456,33 @@ export function GeneratorSystem() {
     moons: GeneratedMoon[],
     px: number,
     py: number,
-    depth: number,
+    parentId = "",
+    depth = 0,
   ): ReactNode =>
     moons.map((m) => {
       const a = m.startAngle + (t * TAU) / m.period;
-      const mx = px + m.orbitR * Math.cos(a);
-      const my = py + m.orbitR * Math.sin(a);
+      // The moon's rendered pose (frame-guarded, agrees with the moon
+      // bodies) so nested rings center on where it actually is — and
+      // the ring breathes toward its fan-arc radius while the moon
+      // rides it into the lineup.
+      const pose = chatPoseMoon(m, px, py, a, parentId);
+      const s = ringScaleRef.current.get(m.id) ?? 1;
       return (
         <Fragment key={m.id}>
           {/* Position lives on the <g> so the path's own CSS transform
               stays free for the appear/disappear animation */}
-          <g transform={`translate(${px} ${py})`}>
+          <g transform={`translate(${px} ${py}) scale(${s})`}>
             <path
               d={m.ringD}
               fill="none"
               stroke="white"
               strokeOpacity={0.72}
-              strokeWidth={depth === 0 ? 6.5 : 5}
-              strokeDasharray={depth === 0 ? "22 17" : "16 13"}
+              strokeWidth={(depth === 0 ? 6.5 : 5) / s}
+              strokeDasharray={
+                depth === 0
+                  ? `${(22 / s).toFixed(1)} ${(17 / s).toFixed(1)}`
+                  : `${(16 / s).toFixed(1)} ${(13 / s).toFixed(1)}`
+              }
               strokeLinecap="round"
               className={
                 departingIds.includes(m.id)
@@ -1359,7 +1493,7 @@ export function GeneratorSystem() {
               }
             />
           </g>
-          {renderMoonRings(m.moons, mx, my, depth + 1)}
+          {renderMoonRings(m.moons, pose.x, pose.y, m.id, depth + 1)}
         </Fragment>
       );
     });
@@ -1369,15 +1503,11 @@ export function GeneratorSystem() {
     moons: GeneratedMoon[],
     px: number,
     py: number,
+    parentId = "",
   ): ReactNode =>
     moons.map((m) => {
       const a = m.startAngle + (t * TAU) / m.period;
-      const r = chatAdjust(
-        m.id,
-        px + m.orbitR * Math.cos(a),
-        py + m.orbitR * Math.sin(a),
-        m.size,
-      );
+      const r = chatPoseMoon(m, px, py, a, parentId);
       const chatSized = Math.abs(r.size - m.size) > 0.5;
       return (
         <Fragment key={m.id}>
@@ -1385,7 +1515,7 @@ export function GeneratorSystem() {
             def={chatSized ? { ...m, size: r.size } : m}
             x={r.x}
             y={r.y}
-            labelBoost={chatSubj?.layout.slots.has(m.id) ? chatLabelBoost : 1}
+            labelBoost={chatSubj?.layout.slots.get(m.id)?.labelBoost ?? 1}
             active={activeId === m.id}
             jumping={jumpId === m.id}
             highlighted={
@@ -1398,7 +1528,7 @@ export function GeneratorSystem() {
             departing={departingIds.includes(m.id)}
             onTap={handleBodyTap}
           />
-          {renderMoonTree(m.moons, r.x, r.y)}
+          {renderMoonTree(m.moons, r.x, r.y, m.id)}
         </Fragment>
       );
     });
@@ -1458,34 +1588,44 @@ export function GeneratorSystem() {
                   className="pointer-events-none absolute inset-0"
                   aria-hidden
                 >
-                  <g transform={`translate(${CENTER} ${CENTER})`}>
-                    {config.planets.map((p) => (
-                      <path
+                  {config.planets.map((p) => {
+                    // In chat mode each ring breathes toward its fan-arc
+                    // radius, carrying its planet along with it.
+                    const s = ringScaleRef.current.get(p.id) ?? 1;
+                    return (
+                      <g
                         key={p.id}
-                        d={p.orbit.d}
-                        fill="none"
-                        stroke="white"
-                        strokeOpacity={p.ringOpacity}
-                        strokeWidth={p.ringWidth}
-                        strokeDasharray={p.dash}
-                        strokeLinecap="round"
-                        className={
-                          departingIds.includes(p.id)
-                            ? "orbit-ring-out"
-                            : p.id === newbornId
-                              ? "orbit-ring-in"
-                              : undefined
-                        }
-                      />
-                    ))}
-                  </g>
+                        transform={`translate(${CENTER} ${CENTER}) scale(${s})`}
+                      >
+                        <path
+                          d={p.orbit.d}
+                          fill="none"
+                          stroke="white"
+                          strokeOpacity={p.ringOpacity}
+                          strokeWidth={p.ringWidth / s}
+                          strokeDasharray={p.dash
+                            .split(" ")
+                            .map((v) => (+v / s).toFixed(1))
+                            .join(" ")}
+                          strokeLinecap="round"
+                          className={
+                            departingIds.includes(p.id)
+                              ? "orbit-ring-out"
+                              : p.id === newbornId
+                                ? "orbit-ring-in"
+                                : undefined
+                          }
+                        />
+                      </g>
+                    );
+                  })}
                   {/* Moon rings follow their parent body — planets, and
                       moons with mini-moons of their own */}
                   {config.planets.map((p) => {
                     const q = planetPos.get(p.id)!;
                     return (
                       <Fragment key={p.id}>
-                        {renderMoonRings(p.moons, q.x, q.y, 0)}
+                        {renderMoonRings(p.moons, q.x, q.y, p.id, 0)}
                       </Fragment>
                     );
                   })}
@@ -1533,7 +1673,9 @@ export function GeneratorSystem() {
                   .sort((a, b) => b.size - a.size)
                   .map((p) => {
                     const q = planetPos.get(p.id)!;
-                    const cr = chatRenderRef.current.get(p.id);
+                    const cr =
+                      chatRenderRef.current.get(p.id) ??
+                      chatRideRef.current.get(p.id);
                     const chatSized = cr != null && Math.abs(cr.size - p.size) > 0.5;
                     return (
                       <Planet
@@ -1541,7 +1683,7 @@ export function GeneratorSystem() {
                         def={chatSized && cr ? { ...p, size: cr.size } : p}
                         x={q.x}
                         y={q.y}
-                        labelBoost={chatSubj?.layout.slots.has(p.id) ? chatLabelBoost : 1}
+                        labelBoost={chatSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         newborn={newbornId === p.id}
@@ -1563,7 +1705,7 @@ export function GeneratorSystem() {
                   const q = planetPos.get(p.id)!;
                   return (
                     <Fragment key={p.id}>
-                      {renderMoonTree(p.moons, q.x, q.y)}
+                      {renderMoonTree(p.moons, q.x, q.y, p.id)}
                     </Fragment>
                   );
                 })}
