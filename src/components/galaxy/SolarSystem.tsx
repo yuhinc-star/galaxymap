@@ -143,8 +143,8 @@ export function SolarSystem() {
         className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
       />
       <TransformWrapper
-        initialScale={0.3}
-        minScale={0.1}
+        initialScale={0.32}
+        minScale={0.12}
         maxScale={2.5}
         centerOnInit
         limitToBounds={false}
@@ -229,20 +229,24 @@ export function SolarSystem() {
                   spin
                 />
 
-                {PLANETS.map((p) => {
-                  const q = positions.get(p.id)!;
-                  return (
-                    <Planet
-                      key={p.id}
-                      def={p}
-                      x={q.x}
-                      y={q.y}
-                      active={activeId === p.id}
-                      bouncing={bounceId === p.id}
-                      onTap={handleTap}
-                    />
-                  );
-                })}
+                {/* Biggest first so small planets pass in front at
+                    conjunction and never disappear behind a giant */}
+                {[...PLANETS]
+                  .sort((a, b) => b.size - a.size)
+                  .map((p) => {
+                    const q = positions.get(p.id)!;
+                    return (
+                      <Planet
+                        key={p.id}
+                        def={p}
+                        x={q.x}
+                        y={q.y}
+                        active={activeId === p.id}
+                        bouncing={bounceId === p.id}
+                        onTap={handleTap}
+                      />
+                    );
+                  })}
 
                 <Planet
                   def={MOON}
