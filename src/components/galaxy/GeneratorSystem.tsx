@@ -60,7 +60,9 @@ import { HintGuide } from "./HintGuide";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { RocketChatInvite } from "./RocketChatInvite";
+import { RocketSummonInvite } from "./RocketSummonInvite";
 import { Starfield } from "./Starfield";
+import { SuggestionStack } from "./SuggestionStack";
 import { ZoomOutPill, type ZoomOutTarget } from "./ZoomOutPill";
 
 const TAU = Math.PI * 2;
@@ -1654,6 +1656,24 @@ export function GeneratorSystem() {
       ? getPanelInfo(chatSuggestionId)
       : null;
 
+  // --- Summon-rocket suggestion -----------------------------------------
+  // Wherever the camera is visiting — a galaxy-view zoom or a chat-mode
+  // fan — if the rocket isn't parked there and isn't already flying
+  // there, offer to send it over. Never suggested for the body that
+  // already holds it, while dragging it, or mid navigator pick.
+  const summonInfo =
+    focusedId && focusedId !== talkId && !dragActive && !rocketArmed
+      ? getPanelInfo(focusedId)
+      : null;
+
+  // Chat-mode companion suggestion: when the fan is visiting a body the
+  // rocket isn't on, offer the way back to the star you're actually
+  // chatting with — one tap re-fans the strip around the rocket's host.
+  const chatNavInfo =
+    chatActive && focusedId && focusedId !== talkId && !flight && !dragActive
+      ? talkPanel
+      : null;
+
   // --- Zoom-out pill --------------------------------------------------------
   // The body's parent is the zoom-out landing spot: a planet's parent is
   // the sun, a moon's parent is whatever it orbits. At the root sun the
@@ -2144,40 +2164,62 @@ export function GeneratorSystem() {
 
 
             {/*
-              Zoom-out pill: hop up to the parent star (or the whole sky).
-              The same pill serves chat mode too — docked over the strip,
-              it steps the fan up one generation at a time.
+              Top-of-sky suggestion stack: the zoom-out pill (hop up to the
+              parent star, or the whole sky), a summon-the-rocket offer
+              whenever the visited body isn't holding it, and the chat
+              invites — one vertical pile in the galaxy view and docked
+              over the strip in chat mode.
             */}
-            <ZoomOutPill
-              key={zoomOutTarget ? `${zoomOutTarget.id}:${zoomOutTarget.name}` : "none"}
-              target={zoomOutTarget}
-              chatMode={chatActive}
-              onZoomOut={(id) => {
-                chatUserZoom();
-                if (!id) {
-                  // "Whole sky": glide all the way back out to the full system.
-                  setInfoId(null);
-                  followRef.current = null;
-                  setFocusedId(null);
-                  resetTransform();
-                  return;
-                }
-                handleNavigate(id);
-              }}
-            />
-
-            {/* Post-landing invite: the rocket offers to introduce its new
-                host — a top notification pill just under the zoom-out pill
-                (galaxy view only; chat mode already knows the host). */}
-            {suggestionInfo && (
-              <RocketChatInvite
-                key={suggestionInfo.id}
-                name={suggestionInfo.name}
-                img={suggestionInfo.img}
-                onChat={() => openChat(suggestionInfo.id)}
-                onDismiss={() => setChatSuggestionId(null)}
+            <SuggestionStack chatMode={chatActive}>
+              <ZoomOutPill
+                key={zoomOutTarget ? `${zoomOutTarget.id}:${zoomOutTarget.name}` : "none"}
+                target={zoomOutTarget}
+                onZoomOut={(id) => {
+                  chatUserZoom();
+                  if (!id) {
+                    // "Whole sky": glide all the way back out to the full system.
+                    setInfoId(null);
+                    followRef.current = null;
+                    setFocusedId(null);
+                    resetTransform();
+                    return;
+                  }
+                  handleNavigate(id);
+                }}
               />
-            )}
+              {summonInfo && (
+                <RocketSummonInvite
+                  key={summonInfo.id}
+                  name={summonInfo.name}
+                  img={summonInfo.img}
+                  onSummon={() => {
+                    recordCrashEvent("rocket-summon-pill", { to: summonInfo.id });
+                    summonRocketTo(summonInfo.id);
+                  }}
+                />
+              )}
+              {/* Post-landing invite: the rocket offers to introduce its new
+                  host (galaxy view only; time-boxed and dismissible). */}
+              {suggestionInfo && (
+                <RocketChatInvite
+                  key={suggestionInfo.id}
+                  name={suggestionInfo.name}
+                  img={suggestionInfo.img}
+                  onChat={() => openChat(suggestionInfo.id)}
+                  onDismiss={() => setChatSuggestionId(null)}
+                />
+              )}
+              {/* Chat mode: the fan wandered off the rocket's host — offer
+                  the way back to the star you're actually chatting with. */}
+              {chatNavInfo && (
+                <RocketChatInvite
+                  key={`chat-${chatNavInfo.id}`}
+                  name={chatNavInfo.name}
+                  img={chatNavInfo.img}
+                  onChat={() => handleNavigate(chatNavInfo.id)}
+                />
+              )}
+            </SuggestionStack>
 
             <div
               className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] flex-col gap-2 transition-opacity duration-300 ${
