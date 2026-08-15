@@ -166,6 +166,10 @@ export function GeneratorSystem() {
   const [dragActive, setDragActive] = useState(false);
   /** Post-landing invite: a "Chat with <host>?" bubble over the rocket. */
   const [chatSuggestionId, setChatSuggestionId] = useState<string | null>(null);
+  /** The open conversation's partner in chat mode: fixed when chat opens,
+      switched only via the post-landing suggestion — the rocket landing
+      elsewhere never hijacks the ongoing conversation. */
+  const [chatTalkId, setChatTalkId] = useState<string | null>(null);
   const [bgIndex, setBgIndex] = useState(0);
   /** Runtime-grown system: once the user adds bodies by double-clicking,
       this replaces the seeded config (regenerating resets it). */
@@ -387,6 +391,7 @@ export function GeneratorSystem() {
     followRef.current = null;
     // A new world ends any chat — the old family is gone.
     setChatOpen(false);
+    setChatTalkId(null);
     chatSubjectRef.current = null;
     fanSubjectRef.current = null;
     chatGlideRef.current = false;
@@ -478,6 +483,8 @@ export function GeneratorSystem() {
     setRocketArmed(false);
     window.clearTimeout(suggestionTimer.current);
     setChatSuggestionId(null);
+    // The conversation opens with the subject the rocket flies to.
+    setChatTalkId(subjectId);
     const st = stateRef.current;
     preChatCamRef.current = st
       ? { positionX: st.positionX, positionY: st.positionY, scale: st.scale }
@@ -497,6 +504,7 @@ export function GeneratorSystem() {
   const closeChat = () => {
     if (!chatOpen) return;
     setChatOpen(false);
+    setChatTalkId(null);
     recordCrashEvent("chat-close", {});
   };
 
@@ -1650,11 +1658,16 @@ export function GeneratorSystem() {
   const panelInfo = infoId ? getPanelInfo(infoId) : null;
 
   // --- Chat subject: the rocket decides -----------------------------------
-  // We chat with the star the rocket is parked on — or the one it is
-  // flying to (it lands there in a moment). Falls back to the fan's root
-  // subject if the host can't be resolved right now.
+  // Galaxy view: we chat with the star the rocket is parked on — or the
+  // one it is flying to (it lands there in a moment). Chat mode: the
+  // conversation stays with the star it opened on (chatTalkId); the
+  // rocket landing elsewhere only OFFERS to switch via the suggestion
+  // pill — it never hijacks the open conversation. Falls back to the
+  // fan's root subject if the partner can't be resolved right now.
   const talkId = flight ? flight.toId : rocketHostId;
-  const talkPanel = getPanelInfo(talkId);
+  const chatPartnerPanel =
+    chatOpen && chatTalkId ? getPanelInfo(chatTalkId) : null;
+  const talkPanel = chatPartnerPanel ?? getPanelInfo(talkId);
   const talkInfo: ChatSubjectInfo | null = talkPanel
     ? {
         id: talkPanel.id,
@@ -1667,15 +1680,14 @@ export function GeneratorSystem() {
 
   // Post-landing invite: shared by galaxy and chat mode. It is created by
   // the touchdown effect, so it can never appear while the rocket is flying.
-  // Never suggest chatting with the star we're already chatting with: in
-  // chat mode the conversation follows the rocket automatically, so the
-  // invite for its host would be redundant — it only makes sense with the
-  // chat panel closed (galaxy view).
+  // Never suggest chatting with the star we're already chatting with — in
+  // chat mode the conversation stays put when the rocket lands on a new
+  // star, and this pill is the offer to switch the chat over to it.
   const suggestionInfo =
     chatSuggestionId &&
     !flight &&
     !dragActive &&
-    !(chatOpen && chatSuggestionId === talkId)
+    !(chatOpen && chatSuggestionId === talkInfo?.id)
       ? getPanelInfo(chatSuggestionId)
       : null;
 
@@ -2239,10 +2251,17 @@ export function GeneratorSystem() {
                   key={suggestionInfo.id}
                   name={suggestionInfo.name}
                   img={suggestionInfo.img}
+                  switching={chatActive}
                   onChat={() => {
                     setChatSuggestionId(null);
-                    if (chatActive) handleNavigate(suggestionInfo.id);
-                    else openChat(suggestionInfo.id);
+                    if (chatActive) {
+                      // Switch the open conversation to the rocket's new
+                      // host and fan the strip around it.
+                      setChatTalkId(suggestionInfo.id);
+                      handleNavigate(suggestionInfo.id);
+                    } else {
+                      openChat(suggestionInfo.id);
+                    }
                   }}
                   onDismiss={() => setChatSuggestionId(null)}
                 />
@@ -2331,7 +2350,9 @@ export function GeneratorSystem() {
         <ChatPanel
           key={talkInfo.id}
           subject={talkInfo}
-          waiting={!!flight}
+          // Wait only while the rocket is on its way to the star we're
+          // chatting with — flights to other stars don't interrupt us.
+          waiting={!!flight && flight.toId === talkInfo.id}
           onClose={closeChat}
         />
       )}
