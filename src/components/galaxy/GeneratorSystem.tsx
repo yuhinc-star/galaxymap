@@ -59,6 +59,7 @@ import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
 import { HintGuide } from "./HintGuide";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
+import { RocketChatInvite } from "./RocketChatInvite";
 import { Starfield } from "./Starfield";
 import { ZoomOutPill, type ZoomOutTarget } from "./ZoomOutPill";
 
@@ -77,7 +78,7 @@ const GENERATOR_HINTS = [
   "The pill up top flies you back to the parent star — from the sun, to the whole sky!",
   "A star's page grows its family, summons the rocket… or says goodbye!",
   "Roll 'New system' for a fresh galaxy — the palette paints new skies!",
-  "The chat button lines the whole family up in the sky — say hi!",
+  "Wherever the little rocket lands, that's who answers the chat — land it & say hi!",
 ];
 
 /** Parked rocket stands on its host's upper-right shoulder. */
@@ -156,6 +157,8 @@ export function GeneratorSystem() {
   const [rocketInboundId, setRocketInboundId] = useState<string | null>(null);
   const [landingSquash, setLandingSquash] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  /** Post-landing invite: a "Chat with <host>?" bubble over the rocket. */
+  const [chatSuggestionId, setChatSuggestionId] = useState<string | null>(null);
   const [bgIndex, setBgIndex] = useState(0);
   /** Runtime-grown system: once the user adds bodies by double-clicking,
       this replaces the seeded config (regenerating resets it). */
@@ -189,6 +192,11 @@ export function GeneratorSystem() {
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
   const squashTimer = useRef<number | undefined>(undefined);
+  /** Auto-hide for the post-landing chat invite. */
+  const suggestionTimer = useRef<number | undefined>(undefined);
+  /** The rocket's live render pose — mid-flight re-targets launch from
+      exactly here, never a teleport back to the old host. */
+  const rocketPoseRef = useRef({ x: 0, y: 0, rot: 0 });
   const newbornTimer = useRef<number | undefined>(undefined);
   const warpTimer = useRef<number | undefined>(undefined);
   const departTimer = useRef<number | undefined>(undefined);
@@ -388,6 +396,8 @@ export function GeneratorSystem() {
     setRocketInboundId(null);
     setDragActive(false);
     dragRef.current = null;
+    window.clearTimeout(suggestionTimer.current);
+    setChatSuggestionId(null);
   };
 
   const captureUndo = () => {
@@ -446,15 +456,21 @@ export function GeneratorSystem() {
     if (chatMixRef.current > 0.9) chatGlideRef.current = false;
   };
 
-  /** Open chat mode: whatever holds focus (the sun by default) anchors
-      the bottom of the strip and its children line up above it. */
-  const openChat = () => {
+  /** Open chat mode: the rocket decides who we chat with. A zoomed body
+      summons the rocket over first; with nothing zoomed we chat with the
+      body the rocket is parked on (or flying to). The subject anchors the
+      bottom of the strip and its children line up above it. */
+  const openChat = (subjectOverride?: string) => {
     if (chatOpen) return;
-    chatFocusRef.current = focusedId;
+    const rocketAt = flight ? flight.toId : rocketHostId;
+    const subjectId = subjectOverride ?? focusedId ?? rocketAt;
+    chatFocusRef.current = subjectId;
     stopFollow();
     // The fan's focus marker starts on the chat subject.
-    setFocusedId(focusedId ?? config.sun.id);
+    setFocusedId(subjectId);
     setRocketArmed(false);
+    window.clearTimeout(suggestionTimer.current);
+    setChatSuggestionId(null);
     const st = stateRef.current;
     preChatCamRef.current = st
       ? { positionX: st.positionX, positionY: st.positionY, scale: st.scale }
@@ -466,7 +482,9 @@ export function GeneratorSystem() {
     chatRideRef.current.clear();
     ringScaleRef.current.clear();
     setChatOpen(true);
-    recordCrashEvent("chat-open", { focused: focusedId ?? config.sun.id });
+    // Summon the rocket to the chat subject — it carries the conversation.
+    if (subjectId !== rocketAt) summonRocketTo(subjectId);
+    recordCrashEvent("chat-open", { focused: subjectId });
   };
 
   const closeChat = () => {
@@ -1048,7 +1066,17 @@ export function GeneratorSystem() {
     window.clearTimeout(highlightTimer.current);
     setHighlightId(dest);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
-  }, [t, flight]);
+    // Landed with the chat closed: the rocket offers to introduce its new
+    // host — where the rocket lands is who we chat with.
+    if (!chatOpen) {
+      window.clearTimeout(suggestionTimer.current);
+      setChatSuggestionId(dest);
+      suggestionTimer.current = window.setTimeout(
+        () => setChatSuggestionId(null),
+        9000,
+      );
+    }
+  }, [t, flight, chatOpen]);
 
   // If the rocket's host vanishes (regenerate / planet count changed),
   // park it back on the sun. Moons are valid hosts too.
@@ -1121,19 +1149,38 @@ export function GeneratorSystem() {
     setCrashContext({ rocket: `flying->${toId}` });
   };
 
+  /**
+   * Send the rocket to a body — re-targeting smoothly even mid-flight:
+   * the new arc starts from the rocket's live pose, never a teleport
+   * back to the old host. The rocket carries the conversation, so chat
+   * mode summons it on every zoom hop.
+   */
+  const summonRocketTo = (id: string) => {
+    if (dragRef.current) return;
+    if (!getPanelInfo(id)) return;
+    if (flight ? flight.toId === id : rocketHostId === id) return;
+    const pose = rocketPoseRef.current;
+    const from = flight
+      ? { x: pose.x, y: pose.y }
+      : (parkPos(rocketHostId) ?? { x: pose.x, y: pose.y });
+    launchRocket(
+      from,
+      flight
+        ? pose.rot
+        : rocketHostId === config.sun.id
+          ? sunOrbitRot()
+          : PARK_ROT,
+      id,
+    );
+  };
+
   /** Navigator move mode: send the rocket to the picked body — sun,
       planet or moon. */
   const handleRocketDestination = (id: string) => {
     setRocketArmed(false);
     setInfoId(null);
-    if (flight || id === rocketHostId) return;
-    const from = parkPos(rocketHostId);
-    if (!from) return;
-    launchRocket(
-      from,
-      rocketHostId === config.sun.id ? sunOrbitRot() : PARK_ROT,
-      id,
-    );
+    if (flight ? flight.toId === id : id === rocketHostId) return;
+    summonRocketTo(id);
     if (!chatOpen) focusCamera(id);
   };
 
@@ -1263,6 +1310,9 @@ export function GeneratorSystem() {
     if (chatOpen) {
       setFocusedId(id);
       focusChatFan(id);
+      // The rocket carries the conversation: it hops to the newly zoomed
+      // star and the chat switches to it.
+      summonRocketTo(id);
     } else {
       focusCamera(id);
     }
@@ -1584,6 +1634,29 @@ export function GeneratorSystem() {
   // --- Info panel -----------------------------------------------------------
   const panelInfo = infoId ? getPanelInfo(infoId) : null;
 
+  // --- Chat subject: the rocket decides -----------------------------------
+  // We chat with the star the rocket is parked on — or the one it is
+  // flying to (it lands there in a moment). Falls back to the fan's root
+  // subject if the host can't be resolved right now.
+  const talkId = flight ? flight.toId : rocketHostId;
+  const talkPanel = getPanelInfo(talkId);
+  const talkInfo: ChatSubjectInfo | null = talkPanel
+    ? {
+        id: talkPanel.id,
+        name: talkPanel.name,
+        img: talkPanel.img,
+        kindLabel: talkPanel.kindLabel,
+        line: talkPanel.line ?? "",
+      }
+    : (chatSubj?.info ?? null);
+
+  // Post-landing invite bubble (galaxy view only): the rocket offers a
+  // chat with its new host.
+  const suggestionInfo =
+    chatSuggestionId && !chatActive && !flight && !dragActive
+      ? getPanelInfo(chatSuggestionId)
+      : null;
+
   // --- Zoom-out pill --------------------------------------------------------
   // The body's parent is the zoom-out landing spot: a planet's parent is
   // the sun, a moon's parent is whatever it orbits. At the root sun the
@@ -1663,6 +1736,9 @@ export function GeneratorSystem() {
       rocketFlame = SUN_ORBIT_FLAME + 0.1 * Math.sin(t * 7);
     }
   }
+  // Keep the live pose reachable between frames: mid-flight re-targets
+  // and the chat invite anchor read it.
+  rocketPoseRef.current = { x: rocketX, y: rocketY, rot: rocketRot };
 
   /** Moon rings, recursively: each ring is centered on its parent's spot. */
   const renderMoonRings = (
@@ -1958,6 +2034,18 @@ export function GeneratorSystem() {
                   interactive={!flight && !chatActive}
                   onDown={onRocketDown}
                 />
+
+                {/* Post-landing invite: the rocket offers to introduce its
+                    new host (galaxy view only — chat mode already knows). */}
+                {suggestionInfo && (
+                  <RocketChatInvite
+                    x={rocketX}
+                    y={rocketY}
+                    name={suggestionInfo.name}
+                    onChat={() => openChat(suggestionInfo.id)}
+                    onDismiss={() => setChatSuggestionId(null)}
+                  />
+                )}
               </div>
             </TransformComponent>
 
@@ -1998,6 +2086,10 @@ export function GeneratorSystem() {
                 onDelete={
                   panelInfo.id === config.sun.id ||
                   departingIds.length > 0 ||
+                  // The rocket needs somewhere to stand — its host (or
+                  // inbound destination) can't leave mid-conversation.
+                  panelInfo.id === rocketHostId ||
+                  flight?.toId === panelInfo.id ||
                   (chatActive &&
                     (panelInfo.id === chatSubj?.info.id ||
                       panelInfo.id === fanSubj?.id))
@@ -2020,8 +2112,8 @@ export function GeneratorSystem() {
               <button
                 type="button"
                 aria-label="Chat with this world"
-                title="Chat mode — the family lines up to talk"
-                onClick={openChat}
+                title="Chat mode — the rocket introduces its host"
+                onClick={() => openChat()}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
                 <MessagesSquare className="h-5 w-5" />
@@ -2191,10 +2283,10 @@ export function GeneratorSystem() {
         }}
       </TransformWrapper>
       </div>
-      {chatSubj && (chatOpen || chatActive) && (
+      {chatSubj && (chatOpen || chatActive) && talkInfo && (
         <ChatPanel
-          key={chatSubj.info.id}
-          subject={chatSubj.info}
+          key={talkInfo.id}
+          subject={talkInfo}
           onClose={closeChat}
         />
       )}
