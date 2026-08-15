@@ -2,6 +2,21 @@ import { useRef } from "react";
 import type { BodyDef } from "./planets";
 import { SpeechBubble } from "./SpeechBubble";
 
+/** Hand-wobbled closed ring (r≈68 in a 160 viewBox) for the navigator
+    highlight — deliberately imperfect so it reads as drawn, not orbital. */
+const HIGHLIGHT_RING_PATH = (() => {
+  const pts: string[] = [];
+  const N = 48;
+  for (let i = 0; i <= N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const r = 68 + Math.sin(a * 3 + 0.7) * 3.2 + Math.sin(a * 5 + 2.1) * 1.8;
+    pts.push(
+      `${i === 0 ? "M" : "L"} ${(80 + Math.cos(a) * r).toFixed(1)} ${(80 + Math.sin(a) * r).toFixed(1)}`,
+    );
+  }
+  return `${pts.join(" ")} Z`;
+})();
+
 interface PlanetProps {
   def: BodyDef;
   /** Center position in world px. */
