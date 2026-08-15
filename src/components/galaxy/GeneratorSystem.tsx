@@ -574,7 +574,7 @@ export function GeneratorSystem() {
         limitToBounds={false}
         doubleClick={{ disabled: true }}
         wheel={{ step: 0.15 }}
-        panning={{ velocityDisabled: true }}
+        panning={{ velocityDisabled: true, disabled: dragActive }}
         onPanningStart={stopFollow}
         onWheel={stopFollow}
         onPinchStart={stopFollow}
@@ -655,7 +655,14 @@ export function GeneratorSystem() {
                   y={CENTER}
                   active={activeId === config.sun.id}
                   jumping={jumpId === config.sun.id}
-                  highlighted={highlightId === config.sun.id}
+                  highlighted={
+                    highlightId === config.sun.id ||
+                    dragHoverId === config.sun.id ||
+                    rocketInboundId === config.sun.id
+                  }
+                  highlightMode={
+                    highlightId === config.sun.id ? "flash" : "steady"
+                  }
                   onTap={handleNavigate}
                   spin
                 />
@@ -672,7 +679,14 @@ export function GeneratorSystem() {
                         y={q.y}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
-                        highlighted={highlightId === p.id}
+                        highlighted={
+                          highlightId === p.id ||
+                          dragHoverId === p.id ||
+                          rocketInboundId === p.id
+                        }
+                        highlightMode={
+                          highlightId === p.id ? "flash" : "steady"
+                        }
                         onTap={handleNavigate}
                       />
                     );
@@ -696,6 +710,41 @@ export function GeneratorSystem() {
                     );
                   });
                 })}
+
+                {/* Golden tether from the dragged rocket to its target */}
+                {dragNow?.hover && dragHoverPos && (
+                  <svg
+                    width={WORLD}
+                    height={WORLD}
+                    viewBox={`0 0 ${WORLD} ${WORLD}`}
+                    className="pointer-events-none absolute inset-0 z-[35]"
+                    aria-hidden
+                  >
+                    <line
+                      x1={dragNow.cur.x}
+                      y1={dragNow.cur.y}
+                      x2={dragHoverPos.x}
+                      y2={dragHoverPos.y}
+                      stroke="#ffd94d"
+                      strokeWidth={7}
+                      strokeDasharray="26 20"
+                      strokeLinecap="round"
+                      opacity={0.9}
+                      className="rocket-tether"
+                    />
+                  </svg>
+                )}
+
+                <HeroRocket
+                  x={rocketX}
+                  y={rocketY}
+                  rotation={rocketRot}
+                  flame={rocketFlame}
+                  squash={landingSquash}
+                  dragging={dragActive}
+                  interactive={!flight}
+                  onDown={onRocketDown}
+                />
               </div>
             </TransformComponent>
 
@@ -711,6 +760,14 @@ export function GeneratorSystem() {
               activeId={activeId}
               focusedId={focusedId}
               onSelect={handleNavigate}
+              rocket={{
+                img: heroRocketImg,
+                hostId: flight ? flight.toId : rocketHostId,
+                flying: flight !== null,
+                armed: rocketArmed,
+                onChip: () => setRocketArmed((a) => !a),
+                onDestination: handleRocketDestination,
+              }}
             />
 
             <div className="fixed right-4 top-4">
