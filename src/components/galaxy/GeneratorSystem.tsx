@@ -1253,7 +1253,6 @@ export function GeneratorSystem() {
               <BodyInfoPanel
                 info={panelInfo}
                 onAdd={handleAddBody}
-                onRemove={handleRemoveBody}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
                 rocket={{
