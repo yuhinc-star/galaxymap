@@ -74,10 +74,10 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
       .map((h) => h.id);
     if (!bootedRef.current) {
       bootedRef.current = true;
-      const t = window.setTimeout(() => setQueue(fresh), 1400);
+      const t = window.setTimeout(() => startQueue(fresh), 1400);
       return () => window.clearTimeout(t);
     }
-    setQueue(fresh);
+    startQueue(fresh);
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context]);
@@ -122,7 +122,7 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
 
   // The lightbulb replays the CURRENT situation's tips, seen or not.
   const replay = () => {
-    setQueue(hints.filter((h) => h.context === context).map((h) => h.id));
+    startQueue(hints.filter((h) => h.context === context).map((h) => h.id));
   };
 
   return (
@@ -147,9 +147,9 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
             <p className="flex-1 font-hand text-xl font-bold uppercase leading-tight tracking-wider text-white">
               {currentHint.text}
             </p>
-            {queue.length > 1 && (
+            {queueTotal > 1 && (
               <span className="shrink-0 font-display text-xs font-semibold text-white/50">
-                1/{queue.length}
+                {queueTotal - queue.length + 1}/{queueTotal}
               </span>
             )}
             <button
