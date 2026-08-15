@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plus, Rocket, Trash2, X } from "lucide-react";
+import { useState } from "react";
+import { Plus, Rocket, X } from "lucide-react";
 
 export interface BodyPanelChild {
   id: string;
@@ -11,12 +11,6 @@ export interface BodyPanelAdd {
   canAdd: boolean;
   actionLabel?: string | undefined;
   fullNote?: string | undefined;
-}
-
-export interface BodyPanelRemove {
-  actionLabel: string;
-  /** e.g. moons that wave goodbye together with their planet. */
-  note?: string | undefined;
 }
 
 export interface BodyPanelRocket {
@@ -34,19 +28,15 @@ export interface BodyPanelInfo {
   kindLabel: string;
   /** Personality quote, shown in a dashed bubble. */
   line?: string | undefined;
-  facts: { label: string; value: string }[];
   childrenLabel: string;
   childrenCap: number;
   children: BodyPanelChild[];
   add: BodyPanelAdd;
-  /** Null for the sun — the heart of the system can never leave. */
-  remove: BodyPanelRemove | null;
 }
 
 interface BodyInfoPanelProps {
   info: BodyPanelInfo;
   onAdd: () => void;
-  onRemove: () => void;
   /** Fly to a child body and open its own panel. */
   onSelect: (id: string) => void;
   onClose: () => void;
@@ -57,26 +47,21 @@ interface BodyInfoPanelProps {
 /**
  * The double-click information panel (generator): a screen-space card on
  * the right, styled like the Navigator — deep-space glass, hand-lettered
- * Amatic SC names in quote marks, dashed golden accents. It shows the
- * body's portrait, personality line, storybook facts and the family
- * orbiting it; the "grow this family" action lives at the bottom.
+ * Amatic SC names in quote marks, dashed golden accents. For the skeleton
+ * UI it keeps only the portrait, the story, the children list, and the
+ * single "grow this family" primary action.
  */
 export function BodyInfoPanel({
   info,
   onAdd,
-  onRemove,
   onSelect,
   onClose,
   rocket,
 }: BodyInfoPanelProps) {
-  // "Say goodbye" asks for a second tap before anything is removed.
-  const [confirming, setConfirming] = useState(false);
-  useEffect(() => setConfirming(false), [info.id]);
-
   return (
     <aside
       aria-label={`About ${info.name}`}
-      className="animate-panel-in fixed right-4 top-16 z-20 flex max-h-[calc(100vh-8.5rem)] w-72 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm"
+      className="animate-panel-in fixed right-3 top-14 z-20 flex max-h-[calc(100vh-7rem)] w-72 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm sm:right-4 sm:top-16 sm:w-72 sm:max-w-[calc(100vw-2rem)]"
     >
       <div className="flex items-start gap-3 px-4 pb-2 pt-3">
         <img
@@ -109,22 +94,6 @@ export function BodyInfoPanel({
             &ldquo;{info.line}&rdquo;
           </p>
         )}
-
-        <dl className="flex flex-col gap-1">
-          {info.facts.map((f) => (
-            <div
-              key={f.label}
-              className="flex items-baseline justify-between gap-3"
-            >
-              <dt className="shrink-0 font-hand text-lg font-bold uppercase tracking-wider text-white/55">
-                {f.label}
-              </dt>
-              <dd className="text-right font-display text-sm font-semibold text-white">
-                {f.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
 
         <section>
           <h3 className="font-hand text-xl font-bold uppercase tracking-[0.18em] text-white/70">
@@ -162,34 +131,25 @@ export function BodyInfoPanel({
           )}
         </section>
 
-        {/* Summon the hero rocket — it can land on anything, sun included
-            (where it circles instead of touching down) */}
-        {rocket && (
-          <section className="rounded-2xl border-2 border-dashed border-white/25 px-3 py-2.5">
-            <h3 className="font-hand text-lg font-bold uppercase tracking-[0.18em] text-white/70">
-              Hero rocket
-            </h3>
-            {rocket.here ? (
-              <p className="mt-1 font-hand text-xl font-bold uppercase leading-tight tracking-wider text-star">
-                {rocket.flying
-                  ? "The rocket is on its way!"
-                  : "The rocket is parked here!"}
-              </p>
-            ) : (
-              <button
-                type="button"
-                onClick={rocket.onSummon}
-                disabled={rocket.flying}
-                className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-full bg-star px-4 py-1.5 font-hand text-2xl font-bold uppercase leading-none tracking-wider text-space shadow-md transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
-              >
-                <Rocket className="h-5 w-5" strokeWidth={2.5} />
-                {rocket.flying ? "Rocket is flying…" : "Summon the rocket"}
-              </button>
-            )}
-          </section>
+        {/* Summon the hero rocket — kept as a compact secondary action */}
+        {rocket && !rocket.here && (
+          <button
+            type="button"
+            onClick={rocket.onSummon}
+            disabled={rocket.flying}
+            className="flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-dashed border-star/60 px-4 py-1.5 font-hand text-xl font-bold uppercase leading-none tracking-wider text-star transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
+          >
+            <Rocket className="h-5 w-5" strokeWidth={2.5} />
+            {rocket.flying ? "Rocket is flying…" : "Summon rocket"}
+          </button>
+        )}
+        {rocket && rocket.here && (
+          <p className="rounded-2xl border-2 border-dashed border-white/15 px-3 py-2 text-center font-hand text-lg font-bold uppercase leading-tight tracking-wider text-star">
+            {rocket.flying ? "The rocket is on its way!" : "The rocket is parked here!"}
+          </p>
         )}
 
-        {/* The add-a-body action lives inside the panel */}
+        {/* The single primary action: grow this family */}
         <section className="rounded-2xl border-2 border-dashed border-star/60 bg-star/10 px-3 py-2.5">
           <h3 className="font-hand text-lg font-bold uppercase tracking-[0.18em] text-star">
             Grow this family
@@ -209,49 +169,6 @@ export function BodyInfoPanel({
             </p>
           )}
         </section>
-
-        {/* Saying goodbye: two taps, then the body (and its whole moon
-            family) leaves the system */}
-        {info.remove && (
-          <section className="rounded-2xl border-2 border-dashed border-white/20 px-3 py-2.5">
-            <h3 className="font-hand text-lg font-bold uppercase tracking-[0.18em] text-white/55">
-              Too crowded?
-            </h3>
-            <button
-              type="button"
-              onClick={() => {
-                if (confirming) {
-                  onRemove();
-                } else {
-                  setConfirming(true);
-                }
-              }}
-              className={`mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-full px-4 py-1.5 font-hand text-2xl font-bold uppercase leading-none tracking-wider shadow-md transition-transform hover:scale-105 active:scale-95 ${
-                confirming
-                  ? "bg-red-400 text-space-deep"
-                  : "border-2 border-dashed border-white/30 text-white/75"
-              }`}
-            >
-              <Trash2 className="h-5 w-5" strokeWidth={2.5} />
-              {confirming ? "Really? Tap again!" : info.remove.actionLabel}
-            </button>
-            {(confirming || info.remove.note) && (
-              <p className="mt-1 font-hand text-lg font-bold uppercase leading-tight tracking-wider text-white/45">
-                {confirming
-                  ? "There's no bringing it back!"
-                  : info.remove.note}
-              </p>
-            )}
-          </section>
-        )}
-
-        {/* The sun alone has no goodbye button — say why, so the
-            delete option doesn't feel missing on its panel. */}
-        {!info.remove && info.kindLabel === "Sun" && (
-          <p className="rounded-2xl border-2 border-dashed border-white/15 px-3 py-2 text-center font-hand text-lg font-bold uppercase leading-tight tracking-wider text-white/40">
-            The sun is the heart of the system — it stays!
-          </p>
-        )}
       </div>
     </aside>
   );

@@ -853,13 +853,6 @@ export function GeneratorSystem() {
         img: config.sun.img,
         kindLabel: "Sun",
         line: config.sun.line,
-        facts: [
-          { label: "Size", value: "Supergiant star" },
-          {
-            label: "Planets in orbit",
-            value: `${config.planets.length} of ${MAX_SYSTEM_PLANETS}`,
-          },
-        ],
         childrenLabel: "Planets",
         childrenCap: MAX_SYSTEM_PLANETS,
         children: config.planets.map((p) => ({
@@ -868,7 +861,6 @@ export function GeneratorSystem() {
           img: p.img,
         })),
         add,
-        remove: null, // the sun is the heart of the system — it stays
       };
     }
     const p = config.planets.find((pp) => pp.id === id);
@@ -879,34 +871,10 @@ export function GeneratorSystem() {
         img: p.img,
         kindLabel: "Planet",
         line: p.line,
-        facts: [
-          {
-            label: "Size",
-            value:
-              p.size >= 250
-                ? "Gas giant"
-                : p.size >= 150
-                  ? "Mid-sized world"
-                  : "Pebble planet",
-          },
-          { label: "Orbit shape", value: ORBIT_KIND_LABELS[p.orbit.kind] },
-          { label: "One year", value: fmtPeriod(p.period) },
-          {
-            label: "Moons",
-            value: `${p.moons.length} of ${MAX_MOONS_PER_BODY}`,
-          },
-        ],
         childrenLabel: "Moons",
         childrenCap: MAX_MOONS_PER_BODY,
         children: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
         add,
-        remove: {
-          actionLabel: "Say goodbye to this planet",
-          note:
-            p.moons.length > 0
-              ? `Its ${p.moons.length} moon${p.moons.length > 1 ? "s" : ""} wave${p.moons.length > 1 ? "" : "s"} goodbye too!`
-              : undefined,
-        },
       };
     }
     const m = findMoonById(config.planets, id);
@@ -920,36 +888,10 @@ export function GeneratorSystem() {
         img: m.img,
         kindLabel: parentIsPlanet ? "Moon" : "Tiny moon",
         line: m.line,
-        facts: [
-          ...(parent ? [{ label: "Orbits", value: parent.name }] : []),
-          { label: "One lap", value: fmtPeriod(m.period) },
-          {
-            label: "Size",
-            value:
-              m.size >= 60
-                ? "Chunky moon"
-                : m.size >= MIN_MOON_PARENT_SIZE
-                  ? "Little moon"
-                  : "Tiny moon",
-          },
-          {
-            label: "Tiny moons",
-            value: `${m.moons.length} of ${MAX_MOONS_PER_BODY}`,
-          },
-        ],
         childrenLabel: "Tiny moons",
         childrenCap: MAX_MOONS_PER_BODY,
         children: m.moons.map((c) => ({ id: c.id, name: c.name, img: c.img })),
         add,
-        remove: {
-          actionLabel: parentIsPlanet
-            ? "Say goodbye to this moon"
-            : "Say goodbye to this tiny moon",
-          note:
-            m.moons.length > 0
-              ? `Its ${m.moons.length} tiny moon${m.moons.length > 1 ? "s" : ""} wave${m.moons.length > 1 ? "" : "s"} goodbye too!`
-              : undefined,
-        },
       };
     }
     return null;
@@ -1311,7 +1253,6 @@ export function GeneratorSystem() {
               <BodyInfoPanel
                 info={panelInfo}
                 onAdd={handleAddBody}
-                onRemove={handleRemoveBody}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
                 rocket={{

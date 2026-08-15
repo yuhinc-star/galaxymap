@@ -585,15 +585,10 @@ export function SolarSystem() {
         img: SUN.img,
         kindLabel: "Sun",
         line: SUN.line,
-        facts: [
-          { label: "Size", value: "Supergiant star" },
-          { label: "Planets in orbit", value: `${PLANETS.length}` },
-        ],
         childrenLabel: "Planets",
         childrenCap: PLANETS.length,
         children: PLANETS.map((p) => ({ id: p.id, name: p.name, img: p.img })),
         add,
-        remove: null,
       };
     }
     if (id === MOON.id) {
@@ -603,16 +598,10 @@ export function SolarSystem() {
         img: MOON.img,
         kindLabel: "Moon",
         line: MOON.line,
-        facts: [
-          { label: "Orbits", value: "Earth" },
-          { label: "One lap", value: fmtPeriod(MOON.period) },
-          { label: "Size", value: "Pebble moon" },
-        ],
         childrenLabel: "Tiny moons",
         childrenCap: 2,
         children: [],
         add,
-        remove: null,
       };
     }
     const p = PLANETS.find((pp) => pp.id === id);
@@ -624,27 +613,12 @@ export function SolarSystem() {
       img: p.img,
       kindLabel: "Planet",
       line: p.line,
-      facts: [
-        {
-          label: "Size",
-          value:
-            p.size >= 250
-              ? "Gas giant"
-              : p.size >= 150
-                ? "Mid-sized world"
-                : "Pebble planet",
-        },
-        { label: "Orbit", value: `Ring #${PLANETS.indexOf(p) + 1} from the Sun` },
-        { label: "One year", value: fmtPeriod(p.period) },
-        { label: "Moons", value: hasMoon ? "1 of 2" : "0 of 2" },
-      ],
       childrenLabel: "Moons",
       childrenCap: 2,
       children: hasMoon
         ? [{ id: MOON.id, name: MOON.name, img: MOON.img }]
         : [],
       add,
-      remove: null,
     };
   };
 
@@ -930,7 +904,6 @@ export function SolarSystem() {
               <BodyInfoPanel
                 info={panelInfo}
                 onAdd={() => {}}
-                onRemove={() => {}}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
                 rocket={{
