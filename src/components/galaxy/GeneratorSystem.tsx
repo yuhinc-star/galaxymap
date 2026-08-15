@@ -888,36 +888,10 @@ export function GeneratorSystem() {
         img: m.img,
         kindLabel: parentIsPlanet ? "Moon" : "Tiny moon",
         line: m.line,
-        facts: [
-          ...(parent ? [{ label: "Orbits", value: parent.name }] : []),
-          { label: "One lap", value: fmtPeriod(m.period) },
-          {
-            label: "Size",
-            value:
-              m.size >= 60
-                ? "Chunky moon"
-                : m.size >= MIN_MOON_PARENT_SIZE
-                  ? "Little moon"
-                  : "Tiny moon",
-          },
-          {
-            label: "Tiny moons",
-            value: `${m.moons.length} of ${MAX_MOONS_PER_BODY}`,
-          },
-        ],
         childrenLabel: "Tiny moons",
         childrenCap: MAX_MOONS_PER_BODY,
         children: m.moons.map((c) => ({ id: c.id, name: c.name, img: c.img })),
         add,
-        remove: {
-          actionLabel: parentIsPlanet
-            ? "Say goodbye to this moon"
-            : "Say goodbye to this tiny moon",
-          note:
-            m.moons.length > 0
-              ? `Its ${m.moons.length} tiny moon${m.moons.length > 1 ? "s" : ""} wave${m.moons.length > 1 ? "" : "s"} goodbye too!`
-              : undefined,
-        },
       };
     }
     return null;
