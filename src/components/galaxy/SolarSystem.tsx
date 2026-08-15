@@ -230,10 +230,7 @@ export function SolarSystem() {
    * (the sun with all planet rings, a planet with its moon rings),
    * glide there, pop its speech bubble, hop once, flash a dashed ring.
    */
-  const handleNavigate = (
-    id: string,
-    setTransform: (x: number, y: number, s: number, ms: number) => void,
-  ) => {
+  const handleNavigate = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
     window.clearTimeout(hideTimer.current);
@@ -249,13 +246,19 @@ export function SolarSystem() {
       (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
       (2 * frameRadius(id));
     const s = Math.min(Math.max(fit, 0.16), 1.35);
-    followRef.current = { id, scale: s, startAt: performance.now() };
-    setTransform(
-      window.innerWidth / 2 - q.x * s,
-      window.innerHeight / 2 - q.y * s,
-      s,
-      450,
-    );
+    const st = stateRef.current;
+    followRef.current = {
+      id,
+      scale: s,
+      from: st
+        ? { x: st.positionX, y: st.positionY, scale: st.scale }
+        : {
+            x: window.innerWidth / 2 - q.x * s,
+            y: window.innerHeight / 2 - q.y * s,
+            scale: s,
+          },
+      startAt: performance.now(),
+    };
   };
 
   return (
