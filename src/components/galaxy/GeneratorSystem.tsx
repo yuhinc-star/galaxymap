@@ -595,6 +595,42 @@ export function GeneratorSystem() {
   }
   const chatSubj = chatSubjectRef.current;
 
+  // In chat mode the navigator lists only the family on screen: the
+  // subject at the top with its children (and their moons) nested below.
+  const chatNavItems: NavigatorEntry[] = (() => {
+    if (!chatSubj) return navItems;
+    const id = chatSubj.info.id;
+    if (id === config.sun.id) {
+      return [
+        {
+          id: config.sun.id,
+          name: config.sun.name,
+          img: config.sun.img,
+          moons: config.planets.map((p) => ({
+            id: p.id,
+            name: p.name,
+            img: p.img,
+            moons: p.moons.length > 0 ? p.moons.map(moonEntry) : undefined,
+          })),
+        },
+      ];
+    }
+    const p = config.planets.find((pp) => pp.id === id);
+    if (p) {
+      return [
+        {
+          id: p.id,
+          name: p.name,
+          img: p.img,
+          moons: p.moons.length > 0 ? p.moons.map(moonEntry) : undefined,
+        },
+      ];
+    }
+    const m = findMoonById(config.planets, id);
+    if (m) return [moonEntry(m)];
+    return navItems;
+  })();
+
   // Planets in the chat set render at their chased pose — the map feeds
   // moons, rings, rocket parking and hover-picking, so all of them ride
   // along into the column.
@@ -982,7 +1018,7 @@ export function GeneratorSystem() {
   /** Panel child-row click: fly to that body and open its own panel. */
   const handleInfoSelect = (id: string) => {
     handleNavigate(id);
-    if (!chatOpen) setInfoId(id);
+    setInfoId(id);
   };
 
   /**
@@ -991,15 +1027,12 @@ export function GeneratorSystem() {
    * still does its usual happy jump — the panel simply replaces it.
    */
   const handleBodyTap = (id: string) => {
-    // In chat mode every tap is just a hello — no camera, no panel.
-    if (chatOpen) {
-      handleNavigate(id);
-      return;
-    }
     const now = Date.now();
     const last = lastTapRef.current;
     lastTapRef.current = { id, t: now };
-    if (focusedId === id && last?.id === id && now - last.t < 450) {
+    // In chat mode there is no camera focus, so a quick second tap on any
+    // lined-up body opens its page. Outside chat the body must hold focus.
+    if (last?.id === id && now - last.t < 450 && (chatOpen || focusedId === id)) {
       lastTapRef.current = null;
       openInfo(id);
       return;
@@ -1030,6 +1063,65 @@ export function GeneratorSystem() {
     }
     return null;
   };
+
+  /**
+   * Rebuild the chat column from a fresh config — used when the family
+   * changes mid-chat so a newborn gets a slot (or a goodbye's gap closes)
+   * and every body chases to its fresh place.
+   */
+  const rebuildChatLayout = (cfg: typeof config) => {
+    const subj = chatSubjectRef.current;
+    if (!subj) return;
+    const id = subj.info.id;
+    const anchor = bodyPos(id) ?? { x: CENTER, y: CENTER };
+    if (id === cfg.sun.id) {
+      subj.layout = computeChatLayout(
+        id,
+        anchor,
+        cfg.sun.size,
+        cfg.planets.map((pp) => ({ id: pp.id, size: pp.size })),
+      );
+      return;
+    }
+    const p = cfg.planets.find((pp) => pp.id === id);
+    if (p) {
+      subj.layout = computeChatLayout(
+        id,
+        anchor,
+        p.size,
+        p.moons.map((mm) => ({ id: mm.id, size: mm.size })),
+      );
+      return;
+    }
+    const m = findMoonById(cfg.planets, id);
+    if (m) {
+      subj.layout = computeChatLayout(
+        id,
+        anchor,
+        m.size,
+        m.moons.map((c) => ({ id: c.id, size: c.size })),
+      );
+    }
+  };
+
+  // Keep the chat column in sync with the family: adding or removing a
+  // body mid-chat rebuilds the lineup; if the subject itself is gone the
+  // chat set dissolves back to live orbits.
+  useEffect(() => {
+    if (!chatOpen) return;
+    const subj = chatSubjectRef.current;
+    if (!subj) return;
+    const id = subj.info.id;
+    if (
+      id !== config.sun.id &&
+      !config.planets.some((pp) => pp.id === id) &&
+      !findMoonById(config.planets, id)
+    ) {
+      chatSubjectRef.current = null;
+      return;
+    }
+    rebuildChatLayout(config);
+  }, [config, chatOpen]);
 
   /**
    * The panel's "grow this family" button. The panel stays open so the
@@ -1110,6 +1202,7 @@ export function GeneratorSystem() {
     departTimer.current = window.setTimeout(() => {
       setDepartingIds([]);
       setExtras(next);
+      for (const id of ids) chatRenderRef.current.delete(id);
     }, 700);
   };
 
@@ -1521,38 +1614,53 @@ export function GeneratorSystem() {
               </span>
             </header>
 
-            {!chatActive && (
-              <Navigator
-                key={`${seed}-${planetCount}`}
-                items={navItems}
-                activeId={activeId}
-                focusedId={focusedId}
-                onSelect={handleNavigate}
-                onInfo={handleInfoSelect}
-                departingIds={departingIds}
-                rocket={{
-                  img: heroRocketImg,
-                  hostId: flight ? flight.toId : rocketHostId,
-                  flying: flight !== null,
-                  armed: rocketArmed,
-                  onChip: () => setRocketArmed((a) => !a),
-                  onDestination: handleRocketDestination,
-                }}
-              />
-            )}
+            <Navigator
+              key={`${seed}-${planetCount}-${chatActive ? "strip" : "all"}`}
+              items={chatActive ? chatNavItems : navItems}
+              activeId={activeId}
+              focusedId={focusedId}
+              onSelect={handleNavigate}
+              onInfo={handleInfoSelect}
+              departingIds={departingIds}
+              chatMode={chatActive}
+              rocket={
+                chatActive
+                  ? undefined
+                  : {
+                      img: heroRocketImg,
+                      hostId: flight ? flight.toId : rocketHostId,
+                      flying: flight !== null,
+                      armed: rocketArmed,
+                      onChip: () => setRocketArmed((a) => !a),
+                      onDestination: handleRocketDestination,
+                    }
+              }
+            />
 
             {/* Double-click info panel: details + grow-this-family */}
             {panelInfo && (
               <BodyInfoPanel
                 info={panelInfo}
+                chatMode={chatActive}
                 onAdd={handleAddBody}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
-                rocket={{
-                  here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
-                  flying: flight !== null,
-                  onSummon: () => handleRocketDestination(panelInfo.id),
-                }}
+                onDelete={
+                  panelInfo.id === config.sun.id ||
+                  departingIds.length > 0 ||
+                  (chatActive && panelInfo.id === chatSubj?.info.id)
+                    ? undefined
+                    : handleRemoveBody
+                }
+                rocket={
+                  chatActive
+                    ? undefined
+                    : {
+                        here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
+                        flying: flight !== null,
+                        onSummon: () => handleRocketDestination(panelInfo.id),
+                      }
+                }
               />
             )}
 

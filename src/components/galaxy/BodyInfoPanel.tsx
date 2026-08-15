@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Rocket, X } from "lucide-react";
+import { Plus, Rocket, Trash2, X } from "lucide-react";
 
 export interface BodyPanelChild {
   id: string;
@@ -42,6 +42,10 @@ interface BodyInfoPanelProps {
   onClose: () => void;
   /** Summon the hero rocket to this body. */
   rocket?: BodyPanelRocket | undefined;
+  /** Chat mode: the panel floats over the chat sheet instead of the galaxy. */
+  chatMode?: boolean;
+  /** "Say goodbye" — omitted for the sun and for the chat subject. */
+  onDelete?: (() => void) | undefined;
 }
 
 /**
@@ -57,11 +61,17 @@ export function BodyInfoPanel({
   onSelect,
   onClose,
   rocket,
+  chatMode = false,
+  onDelete,
 }: BodyInfoPanelProps) {
   return (
     <aside
       aria-label={`About ${info.name}`}
-      className="animate-sheet-in fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 flex max-h-[52vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm sm:animate-panel-in sm:bottom-auto sm:left-auto sm:right-4 sm:top-16 sm:max-h-[calc(100vh-7rem)] sm:w-72 sm:max-w-[calc(100vw-2rem)]"
+      className={
+        chatMode
+          ? "animate-sheet-in fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[60] flex max-h-[52vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm sm:animate-panel-in sm:bottom-3 sm:left-auto sm:right-3 sm:top-3 sm:max-h-none sm:w-80"
+          : "animate-sheet-in fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 flex max-h-[52vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm sm:animate-panel-in sm:bottom-auto sm:left-auto sm:right-4 sm:top-16 sm:max-h-[calc(100vh-7rem)] sm:w-72 sm:max-w-[calc(100vw-2rem)]"
+      }
     >
       <div className="flex items-start gap-3 px-4 pb-2 pt-3">
         <img
@@ -169,6 +179,17 @@ export function BodyInfoPanel({
             </p>
           )}
         </section>
+
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/20 px-3 py-1.5 font-hand text-xl font-bold uppercase tracking-wider text-white/50 transition-colors hover:border-red-300/60 hover:bg-red-400/10 hover:text-red-200 active:scale-95"
+          >
+            <Trash2 className="h-4 w-4" />
+            Say goodbye
+          </button>
+        )}
       </div>
     </aside>
   );
