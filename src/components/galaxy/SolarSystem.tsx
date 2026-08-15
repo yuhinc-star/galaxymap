@@ -191,6 +191,12 @@ export function SolarSystem() {
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
   /** Chat column: subject + layout captured when chat opens. */
   const chatSubjectRef = useRef<{ info: ChatSubjectInfo; layout: ChatLayout } | null>(null);
+  /** The star the fan is currently lined up around — the chat subject by
+      default, re-focused by navigator picks while chat stays open. */
+  const fanSubjectRef = useRef<{ id: string; layout: ChatLayout } | null>(null);
+  /** True while the camera glides to the fan framing; false once the
+      user owns the zoom for exploring inside the family. */
+  const chatGlideRef = useRef(false);
   /** 0 = orbits, 1 = column — ramps while chat opens and closes. */
   const chatMixRef = useRef(0);
   /** Per-body rendered pose while the fan forms and dissolves (subject). */
