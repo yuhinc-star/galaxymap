@@ -11,6 +11,8 @@ export interface NavigatorEntry {
 interface NavigatorProps {
   items: NavigatorEntry[];
   activeId: string | null;
+  /** Body the camera is following right now — the "you are here" marker. */
+  focusedId?: string | null;
   onSelect: (id: string) => void;
 }
 
@@ -20,7 +22,7 @@ interface NavigatorProps {
  * the reference poster's lettering). Clicking an entry pans the camera to
  * the body, which hops once and flashes a dashed ring so you can spot it.
  */
-export function Navigator({ items, activeId, onSelect }: NavigatorProps) {
+export function Navigator({ items, activeId, focusedId, onSelect }: NavigatorProps) {
   const [open, setOpen] = useState(true);
 
   if (!open) {
