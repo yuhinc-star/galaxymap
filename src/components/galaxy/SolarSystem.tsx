@@ -122,16 +122,7 @@ export function SolarSystem() {
   /** Any manual camera move takes control back from the follow mode. */
   const stopFollow = useCallback(() => {
     followRef.current = null;
-  }, []);
-
-  const handleTap = useCallback((id: string) => {
-    followRef.current = null;
-    window.clearTimeout(hideTimer.current);
-    window.clearTimeout(bounceTimer.current);
-    setActiveId(id);
-    setBounceId(id);
-    bounceTimer.current = window.setTimeout(() => setBounceId(null), 700);
-    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    setFocusedId(null);
   }, []);
 
   /** Navigator entries: the Sun, then every planet (Earth carries the Moon). */
