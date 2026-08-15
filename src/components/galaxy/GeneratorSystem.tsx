@@ -316,12 +316,15 @@ export function GeneratorSystem() {
     return m ? m.size : null;
   };
 
-  /** Where the parked rocket stands: the host's upper-right shoulder. */
+  /** Where the parked rocket stands: the host's upper-right shoulder.
+      The rocket is screen-fixed in size, so its world-space standoff
+      shrinks as the camera zooms in (and grows as it zooms out). */
   const parkPos = (id: string): { x: number; y: number } | null => {
     const c = bodyPos(id);
     const s = bodySize(id);
     if (!c || !s) return null;
-    const r = s / 2 + ROCKET_H * 0.4;
+    const scale = stateRef.current?.scale ?? 1;
+    const r = s / 2 + (ROCKET_H * 0.4) / scale;
     return {
       x: c.x + r * Math.cos(PARK_ANGLE),
       y: c.y + r * Math.sin(PARK_ANGLE),
@@ -408,11 +411,13 @@ export function GeneratorSystem() {
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
   }, [t, flight]);
 
-  // If the rocket's host vanishes (planet count changed), park on the sun.
+  // If the rocket's host vanishes (regenerate / planet count changed),
+  // park it back on the sun. Moons are valid hosts too.
   useEffect(() => {
     if (
       rocketHostId !== config.sun.id &&
-      !config.planets.some((p) => p.id === rocketHostId)
+      !config.planets.some((p) => p.id === rocketHostId) &&
+      !findMoonById(config.planets, rocketHostId)
     ) {
       setRocketHostId(config.sun.id);
     }
@@ -474,7 +479,8 @@ export function GeneratorSystem() {
     setRocketInboundId(toId);
   };
 
-  /** Navigator move mode: send the rocket to the picked sun or planet. */
+  /** Navigator move mode: send the rocket to the picked body — sun,
+      planet or moon. */
   const handleRocketDestination = (id: string) => {
     setRocketArmed(false);
     setInfoId(null);
@@ -495,8 +501,11 @@ export function GeneratorSystem() {
     };
   };
 
-  /** Nearest landable body under a dragged point, if any. */
+  /** Nearest landable body under a dragged point, if any. Moons (and
+      mini-moons) count too — the minimum grab radius is zoom-aware so
+      tiny bodies stay grabbable when zoomed in. */
   const pickHover = (w: { x: number; y: number }): string | null => {
+    const scale = stateRef.current?.scale ?? 1;
     let best: string | null = null;
     let bestD = Infinity;
     const consider = (id: string) => {
@@ -504,13 +513,19 @@ export function GeneratorSystem() {
       const s = bodySize(id);
       if (!c || !s) return;
       const d = Math.hypot(w.x - c.x, w.y - c.y);
-      if (d < Math.max((s / 2) * 1.25, 90) && d < bestD) {
+      if (d < Math.max((s / 2) * 1.25, 70 / scale) && d < bestD) {
         best = id;
         bestD = d;
       }
     };
     consider(config.sun.id);
-    for (const p of config.planets) consider(p.id);
+    for (const p of config.planets) {
+      consider(p.id);
+      for (const m of p.moons) {
+        consider(m.id);
+        for (const g of m.moons) consider(g.id);
+      }
+    }
     return best;
   };
 

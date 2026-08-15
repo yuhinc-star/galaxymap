@@ -14,7 +14,7 @@ export interface NavigatorRocket {
   /** Entry the chip sits on — the destination while the rocket flies. */
   hostId: string | null;
   flying: boolean;
-  /** Move mode: the next sun/planet pick becomes the rocket's destination. */
+  /** Move mode: the next pick (sun, planet or moon) becomes the destination. */
   armed: boolean;
   onChip: () => void;
   onDestination: (id: string) => void;
@@ -38,9 +38,9 @@ interface NavigatorProps {
  * generation smaller, along a dashed connector line.
  *
  * The hero rocket appears as a small chip on the entry it's parked at.
- * Clicking the chip arms "move mode": the next sun or planet picked here
- * becomes the rocket's destination instead of a camera target. (Rockets
- * land on suns and planets — moons are too small, so they dim out.)
+ * Clicking the chip arms "move mode": the next body picked here becomes
+ * the rocket's destination instead of a camera target. The rocket can
+ * land on anything — sun, planet or moon — so every entry stays live.
  */
 export function Navigator({ items, activeId, focusedId, onSelect, rocket }: NavigatorProps) {
   const [open, setOpen] = useState(true);
@@ -63,12 +63,11 @@ export function Navigator({ items, activeId, focusedId, onSelect, rocket }: Navi
 
   const renderEntry = (entry: NavigatorEntry, depth: number) => {
     const focused = focusedId === entry.id;
-    // The rocket only ever parks on suns and planets (depth 0).
-    const rocketHere = depth === 0 && rocket?.hostId === entry.id;
-    const dimmed = armed && depth > 0;
+    // The rocket can park on any body, at any depth of the moon tree.
+    const rocketHere = rocket?.hostId === entry.id;
     const handleClick = () => {
       if (armed) {
-        if (depth === 0) rocket!.onDestination(entry.id);
+        rocket!.onDestination(entry.id);
         return;
       }
       onSelect(entry.id);
@@ -83,13 +82,10 @@ export function Navigator({ items, activeId, focusedId, onSelect, rocket }: Navi
           type="button"
           onClick={handleClick}
           aria-current={focused ? "true" : undefined}
-          disabled={dimmed}
           className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 text-left transition-colors ${
-            dimmed
-              ? "opacity-35"
-              : armed
-                ? "cursor-pointer hover:bg-star/20 hover:ring-1 hover:ring-star/50"
-                : "hover:bg-white/10"
+            armed
+              ? "cursor-pointer hover:bg-star/20 hover:ring-1 hover:ring-star/50"
+              : "hover:bg-white/10"
           } ${
             focused
               ? "bg-star/15 ring-1 ring-star/60"
