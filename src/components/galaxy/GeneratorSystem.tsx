@@ -565,7 +565,7 @@ export function GeneratorSystem() {
   /** Subject glide: the focused body leaves its orbit for the fan base
       at the bottom of the strip (frame-guarded chase). */
   const chatAdjustSubject = (id: string, x: number, y: number, size: number) => {
-    const subj = chatSubjectRef.current;
+    const subj = fanSubjectRef.current;
     if (!subj || chatMixRef.current <= 0.004) return { x, y, size };
     const slot = subj.layout.slots.get(id);
     if (!slot) return { x, y, size };
@@ -594,7 +594,7 @@ export function GeneratorSystem() {
     pointAt: (a: number) => { x: number; y: number },
     size: number,
   ) => {
-    const subj = chatSubjectRef.current;
+    const subj = fanSubjectRef.current;
     const mix = chatMixRef.current;
     const q = pointAt(angle);
     const live = { x: cx + q.x, y: cy + q.y, size };
@@ -603,6 +603,14 @@ export function GeneratorSystem() {
     if (!slot || id === subj.layout.parentId) {
       ringScaleRef.current.delete(id);
       return live;
+    }
+    // Seed the ride from the ring's current scale so a body sliding out
+    // of the compressed band doesn't snap out to its full orbit first.
+    if (!chatRideRef.current.has(id)) {
+      const rs = ringScaleRef.current.get(id);
+      if (rs !== undefined) {
+        chatRideRef.current.set(id, { angle, scale: rs, size, frame: t });
+      }
     }
     const r = rideChatOrbit(
       chatRideRef.current,
