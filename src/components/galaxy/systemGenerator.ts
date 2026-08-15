@@ -113,7 +113,9 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
   // --- Planets -----------------------------------------------------------
   const sprites = shuffled(PLANET_SPRITES).slice(0, planetCount);
   const names = shuffled(PLANET_NAMES);
-  const inner = 470;
+  // Innermost ring must clear the biggest sun (radius ~395) plus a
+  // gas giant's half-width (~155), so nothing parks on the sun's face.
+  const inner = 580;
   const outer = 1620;
   const gap = planetCount > 1 ? (outer - inner) / (planetCount - 1) : 0;
 
