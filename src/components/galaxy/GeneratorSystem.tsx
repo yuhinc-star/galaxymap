@@ -28,6 +28,7 @@ import {
   findMoonById,
   findMoonParent,
   generateSystem,
+  removeBodyFromSystem,
   MAX_MOONS_PER_BODY,
   MAX_SYSTEM_PLANETS,
   MIN_MOON_PARENT_SIZE,
@@ -37,7 +38,7 @@ import {
 import type { OrbitShapeKind } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { Drifter } from "./Drifter";
-import { HeroRocket, ROCKET_H } from "./HeroRocket";
+import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
@@ -323,19 +324,19 @@ export function GeneratorSystem() {
 
   /** Where the parked rocket rests: for planets and moons, the host's
       upper-right shoulder; for the sun, a point on its slow orbit loop.
-      The rocket is screen-fixed in size, so its world-space standoff
-      shrinks as the camera zooms in (and grows as it zooms out). */
+      The standoff matches the rocket's world-space footprint — which
+      only counter-scales when zoomed IN (see rocketWorldScale). */
   const parkPos = (id: string): { x: number; y: number } | null => {
     const c = bodyPos(id);
     const s = bodySize(id);
     if (!c || !s) return null;
-    const scale = stateRef.current?.scale ?? 1;
+    const k = rocketWorldScale(stateRef.current?.scale ?? 1);
     if (id === config.sun.id) {
-      const r = s / 2 + (ROCKET_H * SUN_ORBIT_STANDOFF) / scale;
+      const r = s / 2 + ROCKET_H * SUN_ORBIT_STANDOFF * k;
       const a = PARK_ANGLE + (t * TAU) / SUN_ORBIT_PERIOD;
       return { x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) };
     }
-    const r = s / 2 + (ROCKET_H * 0.4) / scale;
+    const r = s / 2 + ROCKET_H * 0.4 * k;
     return {
       x: c.x + r * Math.cos(PARK_ANGLE),
       y: c.y + r * Math.sin(PARK_ANGLE),
@@ -356,6 +357,8 @@ export function GeneratorSystem() {
    */
   const frameRadius = (id: string): number => {
     if (id === config.sun.id) {
+      // Every planet may have been waved goodbye — frame just the sun.
+      if (config.planets.length === 0) return config.sun.size * 1.2;
       return (
         Math.max(...config.planets.map((p) => p.orbit.maxR + p.size / 2)) + 80
       );
