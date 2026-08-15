@@ -264,7 +264,7 @@ export function SolarSystem() {
         onWheel={stopFollow}
         onPinchStart={stopFollow}
       >
-        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
+        {({ zoomIn, zoomOut, resetTransform, setTransform }) => {
           setTransformRef.current = setTransform;
           return (
           <>
