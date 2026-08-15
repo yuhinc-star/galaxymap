@@ -357,24 +357,116 @@ export function SolarSystem() {
     chatMixRef.current = 0;
     chatSubjectRef.current = null;
     chatRenderRef.current.clear();
+    chatRideRef.current.clear();
+    ringScaleRef.current.clear();
     preChatCamRef.current = null;
   }
   const chatMix = chatMixRef.current;
   const chatActive = chatMix > 0.004;
 
-  /** Blend + chase one body toward its column slot (frame-guarded). */
-  const chatAdjust = (id: string, x: number, y: number, size: number) => {
+  /** Current sky-strip size, with a sane fallback before first layout. */
+  const stripSize = () => {
+    const r = stripRef.current?.getBoundingClientRect();
+    if (r && r.width > 20 && r.height > 20) return { w: r.width, h: r.height };
+    if (typeof window === "undefined") return { w: 400, h: 800 };
+    return { w: Math.min(460, window.innerWidth), h: window.innerHeight };
+  };
+
+  /** Subject glide: the focused body leaves its orbit for the fan base
+      at the bottom of the strip (frame-guarded chase). */
+  const chatAdjustSubject = (id: string, x: number, y: number, size: number) => {
     const subj = chatSubjectRef.current;
     if (!subj || chatMixRef.current <= 0.004) return { x, y, size };
-    const r = chaseChatSlot(
+    const slot = subj.layout.slots.get(id);
+    if (!slot) return { x, y, size };
+    const e = chatEase(chatMixRef.current);
+    const r = chaseChatTarget(
       chatRenderRef.current,
       id,
       { x, y, size },
-      subj.layout.slots.get(id),
-      chatMixRef.current,
+      {
+        x: x + (slot.x - x) * e,
+        y: y + (slot.y - y) * e,
+        size: size + (slot.size - size) * e,
+      },
       t,
     );
     return { x: r.x, y: r.y, size: r.size };
+  };
+
+  /** Child ride: a chat-set body travels along its own orbit ring while
+      the ring morphs into its fan arc — body and ring always agree. */
+  const chatRide = (
+    id: string,
+    cx: number,
+    cy: number,
+    angle: number,
+    orbitR: number,
+    size: number,
+  ) => {
+    const subj = chatSubjectRef.current;
+    const mix = chatMixRef.current;
+    const live = {
+      x: cx + orbitR * Math.cos(angle),
+      y: cy + orbitR * Math.sin(angle),
+      size,
+    };
+    if (!subj || mix <= 0.004) return live;
+    const slot = subj.layout.slots.get(id);
+    if (!slot || id === subj.layout.parentId) {
+      ringScaleRef.current.delete(id);
+      return live;
+    }
+    const r = rideChatOrbit(
+      chatRideRef.current,
+      id,
+      cx,
+      cy,
+      angle,
+      (aa) => ({ x: orbitR * Math.cos(aa), y: orbitR * Math.sin(aa) }),
+      size,
+      slot,
+      mix,
+      t,
+    );
+    ringScaleRef.current.set(id, r.ringScale);
+    return { x: r.x, y: r.y, size: r.size };
+  };
+
+  /** Re-solve the fan for the current strip size (the strip animates to
+      its chat width, and the window may move while chat is open). */
+  const rebuildChatLayout = () => {
+    const subj = chatSubjectRef.current;
+    if (!subj) return;
+    const id = subj.info.id;
+    const anchor = subj.layout.anchor;
+    const strip = stripSize();
+    if (id === SUN.id) {
+      subj.layout = computeChatLayout(
+        SUN.id,
+        anchor,
+        SUN.size,
+        PLANETS.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
+        strip.w,
+        strip.h,
+      );
+      return;
+    }
+    if (id === MOON.id) {
+      subj.layout = computeChatLayout(MOON.id, anchor, MOON.size, [], strip.w, strip.h);
+      return;
+    }
+    const p = PLANETS.find((pp) => pp.id === id);
+    if (p) {
+      subj.layout = computeChatLayout(
+        p.id,
+        anchor,
+        p.size,
+        p.id === "earth" ? [{ id: MOON.id, size: MOON.size, name: MOON.name }] : [],
+        strip.w,
+        strip.h,
+      );
+    }
   };
 
   // Build the subject once per opening: whatever held focus (the sun by
