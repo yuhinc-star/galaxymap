@@ -51,6 +51,11 @@ const DEFAULT_COUNT = 6;
 /** Parked rocket stands on its host's upper-right shoulder. */
 const PARK_ANGLE = (-80 * Math.PI) / 180;
 const PARK_ROT = 10;
+/** ...except on the sun: there is no ground to land on, so the rocket
+    holds a slow orbit just above the surface, engine idling. */
+const SUN_ORBIT_PERIOD = 46;
+const SUN_ORBIT_STANDOFF = 1.05;
+const SUN_ORBIT_FLAME = 0.45;
 
 interface RocketFlight {
   fx: number;
