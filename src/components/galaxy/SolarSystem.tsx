@@ -1770,6 +1770,7 @@ export function SolarSystem() {
         <ChatPanel
           key={talkInfo.id}
           subject={talkInfo}
+          waiting={!!flight}
           onClose={closeChat}
         />
       )}

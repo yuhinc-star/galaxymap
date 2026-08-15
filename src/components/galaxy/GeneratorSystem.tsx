@@ -2326,6 +2326,7 @@ export function GeneratorSystem() {
         <ChatPanel
           key={talkInfo.id}
           subject={talkInfo}
+          waiting={!!flight}
           onClose={closeChat}
         />
       )}
