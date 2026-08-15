@@ -1520,17 +1520,6 @@ export function SolarSystem() {
                   onDown={onRocketDown}
                 />
 
-                {/* Post-landing invite: the rocket offers to introduce its
-                    new host (galaxy view only — chat mode already knows). */}
-                {suggestionInfo && (
-                  <RocketChatInvite
-                    x={rocketX}
-                    y={rocketY}
-                    name={suggestionInfo.name}
-                    onChat={() => openChat(suggestionInfo.id)}
-                    onDismiss={() => setChatSuggestionId(null)}
-                  />
-                )}
               </div>
             </TransformComponent>
 
@@ -1602,25 +1591,37 @@ export function SolarSystem() {
 
             {/*
               Zoom-out pill: hop up to the parent star (or the whole sky).
-              In chat mode the same job is handled by the strip's bottom-right
-              button, so the pill only appears in the open sky.
+              The same pill serves chat mode too — docked over the strip,
+              it steps the fan up one generation at a time.
             */}
-            {!chatActive && (
-              <ZoomOutPill
-                key={zoomOutTarget ? `${zoomOutTarget.id}:${zoomOutTarget.name}` : "none"}
-                target={zoomOutTarget}
-                chatMode={false}
-                onZoomOut={(id) => {
-                  if (!id) {
-                    // "Whole sky": glide all the way back out to the full system.
-                    setInfoId(null);
-                    followRef.current = null;
-                    setFocusedId(null);
-                    resetTransform();
-                    return;
-                  }
-                  handleNavigate(id);
-                }}
+            <ZoomOutPill
+              key={zoomOutTarget ? `${zoomOutTarget.id}:${zoomOutTarget.name}` : "none"}
+              target={zoomOutTarget}
+              chatMode={chatActive}
+              onZoomOut={(id) => {
+                chatUserZoom();
+                if (!id) {
+                  // "Whole sky": glide all the way back out to the full system.
+                  setInfoId(null);
+                  followRef.current = null;
+                  setFocusedId(null);
+                  resetTransform();
+                  return;
+                }
+                handleNavigate(id);
+              }}
+            />
+
+            {/* Post-landing invite: the rocket offers to introduce its new
+                host — a top notification pill just under the zoom-out pill
+                (galaxy view only; chat mode already knows the host). */}
+            {suggestionInfo && (
+              <RocketChatInvite
+                key={suggestionInfo.id}
+                name={suggestionInfo.name}
+                img={suggestionInfo.img}
+                onChat={() => openChat(suggestionInfo.id)}
+                onDismiss={() => setChatSuggestionId(null)}
               />
             )}
 
@@ -1642,47 +1643,16 @@ export function SolarSystem() {
               </button>
 
               {chatActive ? (
-                <>
-                  <button
-                    type="button"
-                    aria-label={
-                      zoomOutTarget
-                        ? `Zoom out to ${zoomOutTarget.name}`
-                        : "Zoom out"
-                    }
-                    title={
-                      zoomOutTarget
-                        ? `Zoom out to ${zoomOutTarget.name}`
-                        : "Already at the top of this family"
-                    }
-                    disabled={!zoomOutTarget}
-                    onClick={() => {
-                      if (!zoomOutTarget) return;
-                      chatUserZoom();
-                      if (!zoomOutTarget.id) {
-                        setInfoId(null);
-                        followRef.current = null;
-                        setFocusedId(null);
-                        resetTransform();
-                        return;
-                      }
-                      handleNavigate(zoomOutTarget.id);
-                    }}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
-                  >
-                    <Minus className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Reverse last step"
-                    title="Reverse last step (not available in this sky)"
-                    disabled
-                    onClick={() => {}}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
-                  >
-                    <Undo className="h-5 w-5" />
-                  </button>
-                </>
+                <button
+                  type="button"
+                  aria-label="Reverse last step"
+                  title="Reverse last step (not available in this sky)"
+                  disabled
+                  onClick={() => {}}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
+                >
+                  <Undo className="h-5 w-5" />
+                </button>
               ) : (
                 <>
                   <button
