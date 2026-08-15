@@ -13,6 +13,7 @@ import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import {
   Dices,
   Home,
+  MessagesSquare,
   Minus,
   Palette,
   Plus,
@@ -40,6 +41,14 @@ import { ensureSpritesReady, warmSpritePool } from "./spritePool";
 import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 import type { OrbitShapeKind } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
+import { ChatPanel, type ChatSubjectInfo } from "./ChatPanel";
+import {
+  chaseChatSlot,
+  computeChatLayout,
+  fitChatCamera,
+  type ChatChaseState,
+  type ChatLayout,
+} from "./chatLayout";
 import { Drifter } from "./Drifter";
 import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
 import { HintGuide } from "./HintGuide";
@@ -61,6 +70,7 @@ const GENERATOR_HINTS = [
   "Drag the little rocket onto any star — or tap its chip in the navigator!",
   "A star's page grows its family, summons the rocket… or says goodbye!",
   "Roll 'New system' for a fresh galaxy — the palette paints new skies!",
+  "The chat button lines the whole family up in the sky — say hi!",
 ];
 
 /** Parked rocket stands on its host's upper-right shoulder. */
@@ -159,6 +169,8 @@ export function GeneratorSystem() {
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
+  /** Chat mode: the family lines up in a sky strip beside the chat panel. */
+  const [chatOpen, setChatOpen] = useState(false);
   const hideTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
@@ -192,6 +204,18 @@ export function GeneratorSystem() {
   /** Latest camera state, so a glide eases from exactly where the camera
       is now — even mid-flight from a previous pick. */
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
+  /** Chat column: subject + layout captured when chat opens. */
+  const chatSubjectRef = useRef<{ info: ChatSubjectInfo; layout: ChatLayout } | null>(null);
+  /** 0 = orbits, 1 = column — ramps while chat opens and closes. */
+  const chatMixRef = useRef(0);
+  /** Per-body rendered pose while the column forms and dissolves. */
+  const chatRenderRef = useRef(new Map<string, ChatChaseState>());
+  /** Camera state captured when chat opens, glided back to on close. */
+  const preChatCamRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
+  /** The body chat was opened for (focus itself clears when chat opens). */
+  const chatFocusRef = useRef<string | null>(null);
+  /** The sky strip container — the chat camera frames inside it. */
+  const stripRef = useRef<HTMLDivElement>(null);
 
   const baseConfig = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
 
@@ -233,8 +257,9 @@ export function GeneratorSystem() {
         config.planets.reduce((n, p) => n + countMoons(p.moons), 0) +
         config.drifters.length,
       bg: bgIndex,
+      chat: chatOpen ? "open" : "closed",
     });
-  }, [config, seed, planetCount, extras, bgIndex]);
+  }, [config, seed, planetCount, extras, bgIndex, chatOpen]);
 
   useEffect(() => {
     let raf = 0;
@@ -321,6 +346,13 @@ export function GeneratorSystem() {
     setDepartingIds([]);
     lastTapRef.current = null;
     followRef.current = null;
+    // A new world ends any chat — the old family is gone.
+    setChatOpen(false);
+    chatSubjectRef.current = null;
+    chatRenderRef.current.clear();
+    chatMixRef.current = 0;
+    preChatCamRef.current = null;
+    chatFocusRef.current = null;
     // The rocket always starts parked on the new sun.
     setRocketHostId("sun");
     setRocketArmed(false);
@@ -370,6 +402,29 @@ export function GeneratorSystem() {
     setInfoId(null);
   }, []);
 
+  /** Open chat mode: whatever holds focus (the sun by default) anchors
+      the bottom of the strip and its children line up above it. */
+  const openChat = () => {
+    if (chatOpen) return;
+    chatFocusRef.current = focusedId;
+    stopFollow();
+    setRocketArmed(false);
+    const st = stateRef.current;
+    preChatCamRef.current = st
+      ? { positionX: st.positionX, positionY: st.positionY, scale: st.scale }
+      : null;
+    chatSubjectRef.current = null;
+    chatRenderRef.current.clear();
+    setChatOpen(true);
+    recordCrashEvent("chat-open", { focused: focusedId ?? config.sun.id });
+  };
+
+  const closeChat = () => {
+    if (!chatOpen) return;
+    setChatOpen(false);
+    recordCrashEvent("chat-close", {});
+  };
+
   // Orbit math: bodies advance along their own wobbly closed curves.
   const planetPos = new Map<string, { x: number; y: number }>();
   for (const p of config.planets) {
@@ -399,7 +454,9 @@ export function GeneratorSystem() {
     })),
   ];
 
-  /** Recursive moon position: mini-moons ride on their parent moon. */
+  /** Recursive moon position: mini-moons ride on their parent moon.
+      Chat-set moons report their chased column pose, and their own
+      mini-moons ride that rendered position. */
   const moonWorldPos = (
     moons: GeneratedMoon[],
     id: string,
@@ -408,12 +465,14 @@ export function GeneratorSystem() {
   ): { x: number; y: number } | null => {
     for (const m of moons) {
       const a = m.startAngle + (t * TAU) / m.period;
-      const pos = {
-        x: px + m.orbitR * Math.cos(a),
-        y: py + m.orbitR * Math.sin(a),
-      };
-      if (m.id === id) return pos;
-      const sub = moonWorldPos(m.moons, id, pos.x, pos.y);
+      const r = chatAdjust(
+        m.id,
+        px + m.orbitR * Math.cos(a),
+        py + m.orbitR * Math.sin(a),
+        m.size,
+      );
+      if (m.id === id) return { x: r.x, y: r.y };
+      const sub = moonWorldPos(m.moons, id, r.x, r.y);
       if (sub) return sub;
     }
     return null;
@@ -435,12 +494,123 @@ export function GeneratorSystem() {
 
   /** Display size of any body (sun, planet or moon). */
   const bodySize = (id: string): number | null => {
+    // While the chat column forms, chat-set bodies render at slot size.
+    const cr = chatRenderRef.current.get(id);
+    if (cr && chatMixRef.current > 0.004) return cr.size;
     if (id === config.sun.id) return config.sun.size;
     const p = config.planets.find((pp) => pp.id === id);
     if (p) return p.size;
     const m = findMoonById(config.planets, id);
     return m ? m.size : null;
   };
+
+  // --- Chat mode: line the family up in the sky strip -------------------
+  // The mix ramps 0→1 while chat opens and back when it closes; bodies in
+  // the chat set chase a blend of their live orbit pose and their column
+  // slot, so they glide smoothly in both directions.
+  const chatMixTarget = chatOpen ? 1 : 0;
+  chatMixRef.current += (chatMixTarget - chatMixRef.current) * 0.12;
+  if (!chatOpen && chatMixRef.current < 0.004) {
+    chatMixRef.current = 0;
+    chatSubjectRef.current = null;
+    chatRenderRef.current.clear();
+    preChatCamRef.current = null;
+  }
+  const chatMix = chatMixRef.current;
+  const chatActive = chatMix > 0.004;
+
+  /** Blend + chase one body toward its column slot (frame-guarded). */
+  const chatAdjust = (id: string, x: number, y: number, size: number) => {
+    const subj = chatSubjectRef.current;
+    if (!subj || chatMixRef.current <= 0.004) return { x, y, size };
+    const r = chaseChatSlot(
+      chatRenderRef.current,
+      id,
+      { x, y, size },
+      subj.layout.slots.get(id),
+      chatMixRef.current,
+      t,
+    );
+    return { x: r.x, y: r.y, size: r.size };
+  };
+
+  // Build the subject once per opening: whatever held focus (the sun by
+  // default), anchored where it is right now. chatAdjust is inert while
+  // the subject is being built, so anchors read live positions.
+  if (chatOpen && !chatSubjectRef.current) {
+    const fid = chatFocusRef.current;
+    let subject: { info: ChatSubjectInfo; layout: ChatLayout } | null = null;
+    const p = fid ? config.planets.find((pp) => pp.id === fid) : undefined;
+    const m = fid && !p ? findMoonById(config.planets, fid) : null;
+    if (p) {
+      const anchor = planetPos.get(p.id) ?? { x: CENTER, y: CENTER };
+      subject = {
+        info: { id: p.id, name: p.name, img: p.img, line: p.line, kindLabel: "Planet" },
+        layout: computeChatLayout(
+          p.id,
+          anchor,
+          p.size,
+          p.moons.map((mm) => ({ id: mm.id, size: mm.size })),
+        ),
+      };
+    } else if (m) {
+      const anchor = bodyPos(m.id) ?? { x: CENTER, y: CENTER };
+      const parent = findMoonParent(config.planets, m.id);
+      const parentIsPlanet =
+        parent != null && config.planets.some((pp) => pp.id === parent.id);
+      subject = {
+        info: {
+          id: m.id,
+          name: m.name,
+          img: m.img,
+          line: m.line,
+          kindLabel: parentIsPlanet ? "Moon" : "Tiny moon",
+        },
+        layout: computeChatLayout(
+          m.id,
+          anchor,
+          m.size,
+          m.moons.map((c) => ({ id: c.id, size: c.size })),
+        ),
+      };
+    }
+    if (!subject) {
+      subject = {
+        info: {
+          id: config.sun.id,
+          name: config.sun.name,
+          img: config.sun.img,
+          line: config.sun.line,
+          kindLabel: "Star",
+        },
+        layout: computeChatLayout(
+          config.sun.id,
+          { x: CENTER, y: CENTER },
+          config.sun.size,
+          config.planets.map((pp) => ({ id: pp.id, size: pp.size })),
+        ),
+      };
+    }
+    chatSubjectRef.current = subject;
+  }
+  const chatSubj = chatSubjectRef.current;
+
+  // Planets in the chat set render at their chased pose — the map feeds
+  // moons, rings, rocket parking and hover-picking, so all of them ride
+  // along into the column.
+  if (chatSubj && chatActive) {
+    for (const p of config.planets) {
+      if (!chatSubj.layout.slots.has(p.id)) continue;
+      const q = planetPos.get(p.id);
+      if (!q) continue;
+      const r = chatAdjust(p.id, q.x, q.y, p.size);
+      planetPos.set(p.id, { x: r.x, y: r.y });
+    }
+  }
+  // Names stay readable while the camera zooms the column out.
+  const chatLabelBoost = chatActive
+    ? Math.min(2.0, Math.max(1, 1 / (stateRef.current?.scale ?? 1)))
+    : 1;
 
   /** Where the parked rocket rests: for planets and moons, the host's
       upper-right shoulder; for the sun, a point on its slow orbit loop.
@@ -509,6 +679,8 @@ export function GeneratorSystem() {
   // the glide bends with the moving body and lands exactly on it — no
   // end-of-glide snap. After the glide the body stays pinned to center.
   useEffect(() => {
+    // Chat mode owns the camera while the column is up.
+    if (chatMixRef.current > 0.004) return;
     const f = followRef.current;
     const apply = setTransformRef.current;
     if (!f || !apply) return;
@@ -533,6 +705,38 @@ export function GeneratorSystem() {
       0,
     );
   }, [t]);
+
+  // Chat-mode camera: while chat is open the camera chases the column
+  // framing inside the sky strip; while it closes it glides back to the
+  // pre-chat view. Chase-cam style, like the navigator follow.
+  useEffect(() => {
+    if (!chatActive) return;
+    const subj = chatSubjectRef.current;
+    const apply = setTransformRef.current;
+    const st = stateRef.current;
+    if (!subj || !apply || !st) return;
+    let target: { posX: number; posY: number; scale: number } | null = null;
+    if (chatOpen) {
+      const rect = stripRef.current?.getBoundingClientRect();
+      if (!rect || rect.width < 20 || rect.height < 20) return;
+      target = fitChatCamera(subj.layout, rect.width, rect.height);
+    } else if (preChatCamRef.current) {
+      const pre = preChatCamRef.current;
+      target = { posX: pre.positionX, posY: pre.positionY, scale: pre.scale };
+    }
+    if (!target) return;
+    const dx = target.posX - st.positionX;
+    const dy = target.posY - st.positionY;
+    const ds = target.scale - st.scale;
+    if (Math.abs(dx) + Math.abs(dy) > 0.5 || Math.abs(ds) > 0.001) {
+      apply(
+        st.positionX + dx * 0.14,
+        st.positionY + dy * 0.14,
+        st.scale + ds * 0.14,
+        0,
+      );
+    }
+  });
 
   // Flight completion: the rocket becomes parked on its destination,
   // squashes on touchdown and flashes the golden finder ring. Sun
@@ -640,7 +844,7 @@ export function GeneratorSystem() {
       rocketHostId === config.sun.id ? sunOrbitRot() : PARK_ROT,
       id,
     );
-    focusCamera(id);
+    if (!chatOpen) focusCamera(id);
   };
 
   /** Client px → world px using the live pan/zoom transform. */
@@ -687,6 +891,8 @@ export function GeneratorSystem() {
    * flies the rocket there; dropping on empty sky flies it back home.
    */
   const onRocketDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    // No rocket games while the family is lined up for chat.
+    if (chatMixRef.current > 0.004) return;
     e.stopPropagation();
     e.preventDefault();
     stopFollow();
@@ -761,7 +967,9 @@ export function GeneratorSystem() {
     jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
-    focusCamera(id);
+    // In chat mode the camera stays on the column — the hop, ring and
+    // bubble still play, but nobody leaves their slot.
+    if (!chatOpen) focusCamera(id);
   };
 
   /** Double-tap on the focused body: open its information panel. */
@@ -774,7 +982,7 @@ export function GeneratorSystem() {
   /** Panel child-row click: fly to that body and open its own panel. */
   const handleInfoSelect = (id: string) => {
     handleNavigate(id);
-    setInfoId(id);
+    if (!chatOpen) setInfoId(id);
   };
 
   /**
@@ -783,6 +991,11 @@ export function GeneratorSystem() {
    * still does its usual happy jump — the panel simply replaces it.
    */
   const handleBodyTap = (id: string) => {
+    // In chat mode every tap is just a hello — no camera, no panel.
+    if (chatOpen) {
+      handleNavigate(id);
+      return;
+    }
     const now = Date.now();
     const last = lastTapRef.current;
     lastTapRef.current = { id, t: now };
@@ -1066,14 +1279,20 @@ export function GeneratorSystem() {
   ): ReactNode =>
     moons.map((m) => {
       const a = m.startAngle + (t * TAU) / m.period;
-      const mx = px + m.orbitR * Math.cos(a);
-      const my = py + m.orbitR * Math.sin(a);
+      const r = chatAdjust(
+        m.id,
+        px + m.orbitR * Math.cos(a),
+        py + m.orbitR * Math.sin(a),
+        m.size,
+      );
+      const chatSized = Math.abs(r.size - m.size) > 0.5;
       return (
         <Fragment key={m.id}>
           <Planet
-            def={m}
-            x={mx}
-            y={my}
+            def={chatSized ? { ...m, size: r.size } : m}
+            x={r.x}
+            y={r.y}
+            labelBoost={chatSubj?.layout.slots.has(m.id) ? chatLabelBoost : 1}
             active={activeId === m.id}
             jumping={jumpId === m.id}
             highlighted={
@@ -1086,13 +1305,21 @@ export function GeneratorSystem() {
             departing={departingIds.includes(m.id)}
             onTap={handleBodyTap}
           />
-          {renderMoonTree(m.moons, mx, my)}
+          {renderMoonTree(m.moons, r.x, r.y)}
         </Fragment>
       );
     });
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
+      <div className="flex h-full w-full">
+      {/* Sky strip: the whole galaxy squeezes here when chat opens */}
+      <div
+        ref={stripRef}
+        className={`relative h-full min-w-0 flex-none overflow-hidden transition-[width] duration-500 ease-in-out ${
+          chatOpen ? "w-full sm:w-[clamp(290px,33vw,460px)]" : "w-full"
+        }`}
+      >
       <img
         key={BACKGROUNDS[bgIndex]!.src}
         src={BACKGROUNDS[bgIndex]!.src}
@@ -1110,8 +1337,9 @@ export function GeneratorSystem() {
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
-        wheel={{ step: 0.15 }}
-        panning={{ velocityDisabled: true, disabled: dragActive }}
+        wheel={{ step: 0.15, disabled: chatActive }}
+        panning={{ velocityDisabled: true, disabled: dragActive || chatActive }}
+        pinch={{ disabled: chatActive }}
         onPanning={stopFollow}
         onWheel={stopFollow}
         onPinchStart={stopFollow}
@@ -1212,12 +1440,15 @@ export function GeneratorSystem() {
                   .sort((a, b) => b.size - a.size)
                   .map((p) => {
                     const q = planetPos.get(p.id)!;
+                    const cr = chatRenderRef.current.get(p.id);
+                    const chatSized = cr != null && Math.abs(cr.size - p.size) > 0.5;
                     return (
                       <Planet
                         key={p.id}
-                        def={p}
+                        def={chatSized && cr ? { ...p, size: cr.size } : p}
                         x={q.x}
                         y={q.y}
+                        labelBoost={chatSubj?.layout.slots.has(p.id) ? chatLabelBoost : 1}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         newborn={newbornId === p.id}
@@ -1277,7 +1508,7 @@ export function GeneratorSystem() {
                   flame={rocketFlame}
                   squash={landingSquash}
                   dragging={dragActive}
-                  interactive={!flight}
+                  interactive={!flight && !chatActive}
                   onDown={onRocketDown}
                 />
               </div>
@@ -1290,23 +1521,25 @@ export function GeneratorSystem() {
               </span>
             </header>
 
-            <Navigator
-              key={`${seed}-${planetCount}`}
-              items={navItems}
-              activeId={activeId}
-              focusedId={focusedId}
-              onSelect={handleNavigate}
-              onInfo={handleInfoSelect}
-              departingIds={departingIds}
-              rocket={{
-                img: heroRocketImg,
-                hostId: flight ? flight.toId : rocketHostId,
-                flying: flight !== null,
-                armed: rocketArmed,
-                onChip: () => setRocketArmed((a) => !a),
-                onDestination: handleRocketDestination,
-              }}
-            />
+            {!chatActive && (
+              <Navigator
+                key={`${seed}-${planetCount}`}
+                items={navItems}
+                activeId={activeId}
+                focusedId={focusedId}
+                onSelect={handleNavigate}
+                onInfo={handleInfoSelect}
+                departingIds={departingIds}
+                rocket={{
+                  img: heroRocketImg,
+                  hostId: flight ? flight.toId : rocketHostId,
+                  flying: flight !== null,
+                  armed: rocketArmed,
+                  onChip: () => setRocketArmed((a) => !a),
+                  onDestination: handleRocketDestination,
+                }}
+              />
+            )}
 
             {/* Double-click info panel: details + grow-this-family */}
             {panelInfo && (
@@ -1323,7 +1556,20 @@ export function GeneratorSystem() {
               />
             )}
 
-            <div className="fixed right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))]">
+            <div
+              className={`fixed right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2 transition-opacity duration-300 ${
+                chatActive ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
+            >
+              <button
+                type="button"
+                aria-label="Chat with this world"
+                title="Chat mode — the family lines up to talk"
+                onClick={openChat}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <MessagesSquare className="h-5 w-5" />
+              </button>
               <Link
                 to="/"
                 aria-label="Back to the classic solar system"
@@ -1335,7 +1581,11 @@ export function GeneratorSystem() {
             </div>
 
             {/* Generator controls */}
-            <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] flex flex-col gap-2">
+            <div
+              className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] flex flex-col gap-2 transition-opacity duration-300 ${
+                chatActive ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
+            >
               <div className="flex items-center gap-2 rounded-full border border-border bg-card/90 px-2 py-1.5 shadow-lg">
                 <button
                   type="button"
@@ -1379,7 +1629,11 @@ export function GeneratorSystem() {
               </p>
             </div>
 
-            <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] flex flex-col gap-2">
+            <div
+              className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] flex flex-col gap-2 transition-opacity duration-300 ${
+                chatActive ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
+            >
               <button
                 type="button"
                 aria-label={`Change background (now: ${BACKGROUNDS[bgIndex]!.name})`}
@@ -1424,11 +1678,20 @@ export function GeneratorSystem() {
               </button>
             </div>
 
-            <HintGuide pageId="generator" hints={GENERATOR_HINTS} />
+            {!chatActive && <HintGuide pageId="generator" hints={GENERATOR_HINTS} />}
           </>
           );
         }}
       </TransformWrapper>
+      </div>
+      {chatSubj && (chatOpen || chatActive) && (
+        <ChatPanel
+          key={chatSubj.info.id}
+          subject={chatSubj.info}
+          onClose={closeChat}
+        />
+      )}
+      </div>
     </div>
   );
 }

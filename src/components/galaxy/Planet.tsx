@@ -37,13 +37,16 @@ interface PlanetProps {
   highlighted?: boolean;
   /** "flash" fades out (navigator find); "steady" stays on (rocket target). */
   highlightMode?: "flash" | "steady";
+  /** Chat mode: scale the name label up so it stays readable while the
+      camera zooms the family column out. */
+  labelBoost?: number;
 }
 
 /**
  * A celestial body floating in the world: sprite, name label, tap
  * reaction. Position comes from the parent's orbit math.
  */
-export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash" }: PlanetProps) {
+export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1 }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
 
   let animation: string | undefined;
@@ -179,7 +182,7 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
           longName ? "w-max max-w-[380px] whitespace-normal text-center leading-none" : "whitespace-nowrap"
         }`}
         style={{
-          fontSize: labelSize,
+          fontSize: labelSize * labelBoost,
           textShadow: "0 2px 10px rgba(10, 6, 30, 0.9)",
         }}
       >
