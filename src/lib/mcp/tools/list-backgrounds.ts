@@ -1,4 +1,5 @@
 import { defineTool } from "@lovable.dev/mcp-js";
+import { z } from "zod";
 
 import { BACKGROUNDS } from "@/components/galaxy/backgrounds";
 
@@ -8,6 +9,15 @@ export default defineTool({
   description:
     "List the hand-painted gouache starfield backgrounds the app can use as the sky, with full-size and small-screen image URLs.",
   inputSchema: {},
+  outputSchema: {
+    backgrounds: z.array(
+      z.object({
+        name: z.string(),
+        src: z.string().describe("Full-size painted sky image URL."),
+        srcSm: z.string().describe("Small-screen (1280px) image URL."),
+      }),
+    ),
+  },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: () => ({
     content: [

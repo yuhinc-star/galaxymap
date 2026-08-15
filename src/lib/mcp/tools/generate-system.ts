@@ -56,6 +56,44 @@ const mapPlanet = (p: GeneratedPlanet): PlanetSpec => ({
   moons: p.moons.map(mapMoon),
 });
 
+const bodyFields = {
+  id: z.string().describe("Stable body id within the system."),
+  name: z.string().describe("Storybook display name."),
+  size: z.number().describe("Sprite diameter in world pixels."),
+  img: z.string().describe("Hand-painted sprite image URL."),
+  line: z.string().describe("The body's speech-bubble catchphrase."),
+};
+
+const moonSchema = z.object({
+  ...bodyFields,
+  orbitRadius: z.number().describe("Radius of the moon's little ring, in world pixels."),
+  orbitPeriodSeconds: z.number().describe("Seconds per revolution around its parent."),
+  moons: z
+    .array(z.unknown())
+    .describe("Nested mini-moons (empty for a freshly generated system)."),
+});
+
+const planetSchema = z.object({
+  ...bodyFields,
+  orbitShape: z
+    .string()
+    .describe("Wobbly orbit family: ring, egg, bean, peanut, tilt or wobble."),
+  orbitRadius: z.number().describe("Largest orbit radius in world pixels."),
+  orbitPeriodSeconds: z.number().describe("Seconds per revolution around the sun."),
+  moons: z.array(moonSchema),
+});
+
+const drifterSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  size: z.number(),
+  img: z.string(),
+  orbitShape: z.string(),
+  orbitRadius: z.number(),
+  orbitPeriodSeconds: z.number(),
+  direction: z.string().describe("clockwise or counterclockwise."),
+});
+
 export default defineTool({
   name: "generate_system",
   title: "Generate a solar system",
@@ -77,10 +115,18 @@ export default defineTool({
         `How many planets the system should have (1-${MAX_SYSTEM_PLANETS}). Defaults to 4; values outside the range are clamped.`,
       ),
   },
+  outputSchema: {
+    system: z.object({
+      seed: z.number(),
+      planetCount: z.number(),
+      sun: z.object(bodyFields),
+      planets: z.array(planetSchema),
+      drifters: z.array(drifterSchema),
+    }),
+  },
   annotations: { readOnlyHint: true, openWorldHint: false },
   handler: ({ seed, planetCount }) => {
-    const usedSeed =
-      seed ?? Math.floor(Math.random() * 1_000_000_000);
+    const usedSeed = seed ?? Math.floor(Math.random() * 1_000_000_000);
     const count = Math.max(
       1,
       Math.min(MAX_SYSTEM_PLANETS, Math.round(planetCount ?? 4)),
@@ -110,10 +156,7 @@ export default defineTool({
       })),
     };
 
-    const moonTotal = system.planets.reduce(
-      (n, p) => n + p.moons.length,
-      0,
-    );
+    const moonTotal = system.planets.reduce((n, p) => n + p.moons.length, 0);
     const planetNames = system.planets.map((p) => p.name).join(", ");
     const text =
       `System #${system.seed}: sun "${system.sun.name}", ` +

@@ -1,4 +1,5 @@
 import { defineTool } from "@lovable.dev/mcp-js";
+import { z } from "zod";
 
 import {
   DRIFTER_SPRITES,
@@ -7,12 +8,26 @@ import {
   SUN_SPRITES,
 } from "@/components/galaxy/spritePool";
 
+const spriteSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  img: z.string().describe("Hand-painted sprite image URL."),
+});
+
 export default defineTool({
   name: "list_sprites",
   title: "List sprite cast",
   description:
     "List the full cast of hand-painted gouache sprites the generator assembles systems from — suns, planets, moons and drifting friends (rockets, astronauts, UFOs and more) — with image URLs.",
   inputSchema: {},
+  outputSchema: {
+    cast: z.object({
+      suns: z.array(spriteSchema),
+      planets: z.array(spriteSchema),
+      moons: z.array(spriteSchema),
+      drifters: z.array(spriteSchema),
+    }),
+  },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: () => {
     const cast = {

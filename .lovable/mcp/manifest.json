@@ -35,7 +35,206 @@
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
-        "outputSchema": null
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "system": {
+              "type": "object",
+              "properties": {
+                "seed": {
+                  "type": "number"
+                },
+                "planetCount": {
+                  "type": "number"
+                },
+                "sun": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Stable body id within the system."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Storybook display name."
+                    },
+                    "size": {
+                      "type": "number",
+                      "description": "Sprite diameter in world pixels."
+                    },
+                    "img": {
+                      "type": "string",
+                      "description": "Hand-painted sprite image URL."
+                    },
+                    "line": {
+                      "type": "string",
+                      "description": "The body's speech-bubble catchphrase."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "size",
+                    "img",
+                    "line"
+                  ],
+                  "additionalProperties": false
+                },
+                "planets": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "$ref": "#/properties/system/properties/sun/properties/id"
+                      },
+                      "name": {
+                        "$ref": "#/properties/system/properties/sun/properties/name"
+                      },
+                      "size": {
+                        "$ref": "#/properties/system/properties/sun/properties/size"
+                      },
+                      "img": {
+                        "$ref": "#/properties/system/properties/sun/properties/img"
+                      },
+                      "line": {
+                        "$ref": "#/properties/system/properties/sun/properties/line"
+                      },
+                      "orbitShape": {
+                        "type": "string",
+                        "description": "Wobbly orbit family: ring, egg, bean, peanut, tilt or wobble."
+                      },
+                      "orbitRadius": {
+                        "type": "number",
+                        "description": "Largest orbit radius in world pixels."
+                      },
+                      "orbitPeriodSeconds": {
+                        "type": "number",
+                        "description": "Seconds per revolution around the sun."
+                      },
+                      "moons": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "$ref": "#/properties/system/properties/sun/properties/id"
+                            },
+                            "name": {
+                              "$ref": "#/properties/system/properties/sun/properties/name"
+                            },
+                            "size": {
+                              "$ref": "#/properties/system/properties/sun/properties/size"
+                            },
+                            "img": {
+                              "$ref": "#/properties/system/properties/sun/properties/img"
+                            },
+                            "line": {
+                              "$ref": "#/properties/system/properties/sun/properties/line"
+                            },
+                            "orbitRadius": {
+                              "type": "number",
+                              "description": "Radius of the moon's little ring, in world pixels."
+                            },
+                            "orbitPeriodSeconds": {
+                              "type": "number",
+                              "description": "Seconds per revolution around its parent."
+                            },
+                            "moons": {
+                              "type": "array",
+                              "items": {},
+                              "description": "Nested mini-moons (empty for a freshly generated system)."
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "size",
+                            "img",
+                            "line",
+                            "orbitRadius",
+                            "orbitPeriodSeconds",
+                            "moons"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "size",
+                      "img",
+                      "line",
+                      "orbitShape",
+                      "orbitRadius",
+                      "orbitPeriodSeconds",
+                      "moons"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "drifters": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "size": {
+                        "type": "number"
+                      },
+                      "img": {
+                        "type": "string"
+                      },
+                      "orbitShape": {
+                        "type": "string"
+                      },
+                      "orbitRadius": {
+                        "type": "number"
+                      },
+                      "orbitPeriodSeconds": {
+                        "type": "number"
+                      },
+                      "direction": {
+                        "type": "string",
+                        "description": "clockwise or counterclockwise."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "size",
+                      "img",
+                      "orbitShape",
+                      "orbitRadius",
+                      "orbitPeriodSeconds",
+                      "direction"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "seed",
+                "planetCount",
+                "sun",
+                "planets",
+                "drifters"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "system"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       {
         "name": "list_sprites",
@@ -51,7 +250,70 @@
           "type": "object",
           "properties": {}
         },
-        "outputSchema": null
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "cast": {
+              "type": "object",
+              "properties": {
+                "suns": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "img": {
+                        "type": "string",
+                        "description": "Hand-painted sprite image URL."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "img"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "planets": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/properties/cast/properties/suns/items"
+                  }
+                },
+                "moons": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/properties/cast/properties/suns/items"
+                  }
+                },
+                "drifters": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/properties/cast/properties/suns/items"
+                  }
+                }
+              },
+              "required": [
+                "suns",
+                "planets",
+                "moons",
+                "drifters"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "cast"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       {
         "name": "list_backgrounds",
@@ -67,7 +329,41 @@
           "type": "object",
           "properties": {}
         },
-        "outputSchema": null
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "backgrounds": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "src": {
+                    "type": "string",
+                    "description": "Full-size painted sky image URL."
+                  },
+                  "srcSm": {
+                    "type": "string",
+                    "description": "Small-screen (1280px) image URL."
+                  }
+                },
+                "required": [
+                  "name",
+                  "src",
+                  "srcSm"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "backgrounds"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       }
     ]
   }
