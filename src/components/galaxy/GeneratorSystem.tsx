@@ -400,20 +400,6 @@ export function GeneratorSystem() {
     }, ready);
   };
 
-  const changeCount = (delta: number) => {
-    const next = Math.min(MAX_PLANETS, Math.max(MIN_PLANETS, planetCount + delta));
-    // At the bounds nothing changes — don't play a pointless warp.
-    if (next === planetCount) return;
-    recordCrashEvent("warp", { reason: "count", seed, planetCount: next });
-    const ready = ensureSpritesReady(
-      collectSystemSpriteUrls(generateSystem(seed, next)),
-    );
-    warpTo(() => {
-      window.localStorage.setItem("galaxy-gen-count", String(next));
-      setPlanetCount(next);
-      resetForNewSystem();
-    }, ready);
-  };
 
   /** Any manual camera move takes control back from the follow mode. */
   const stopFollow = useCallback(() => {
@@ -2026,29 +2012,6 @@ export function GeneratorSystem() {
                 chatActive ? "pointer-events-none opacity-0" : "opacity-100"
               }`}
             >
-              <div className="flex items-center gap-2 rounded-full border border-border bg-card/90 px-2 py-1.5 shadow-lg">
-                <button
-                  type="button"
-                  aria-label="Fewer planets"
-                  onClick={() => changeCount(-1)}
-                  disabled={warping || planetCount <= MIN_PLANETS}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-card-foreground transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="min-w-20 text-center font-display text-sm font-semibold text-card-foreground">
-                  {config.planets.length} planets
-                </span>
-                <button
-                  type="button"
-                  aria-label="More planets"
-                  onClick={() => changeCount(1)}
-                  disabled={warping || planetCount >= MAX_PLANETS}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-card-foreground transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
               <button
                 type="button"
                 onClick={regenerate}
@@ -2068,6 +2031,7 @@ export function GeneratorSystem() {
                 seed #{seed}
               </p>
             </div>
+
 
             {/* Zoom-out pill: hop up to the parent star (or the whole sky). */}
             <ZoomOutPill
