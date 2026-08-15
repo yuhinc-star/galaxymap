@@ -859,9 +859,6 @@ export function SolarSystem() {
     if (chatOpen) {
       setFocusedId(id);
       focusChatFan(id);
-      // The rocket carries the conversation: it hops to the newly zoomed
-      // star and the chat switches to it.
-      summonRocketTo(id);
     } else {
       focusCamera(id);
     }
@@ -1007,8 +1004,8 @@ export function SolarSystem() {
   /**
    * Send the rocket to a body — re-targeting smoothly even mid-flight:
    * the new arc starts from the rocket's live pose, never a teleport
-   * back to the old host. The rocket carries the conversation, so chat
-   * mode summons it on every zoom hop.
+   * back to the old host. Chat entry may summon it once; later chat
+   * navigation changes only the family view, never the rocket's host.
    */
   const summonRocketTo = (id: string) => {
     if (dragRef.current) return;
