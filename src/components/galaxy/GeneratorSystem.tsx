@@ -188,7 +188,7 @@ export function GeneratorSystem() {
     setExtras(null);
     setAddMenuId(null);
     setNewbornId(null);
-    tapIdRef.current = null;
+    lastTapRef.current = null;
     followRef.current = null;
     // The rocket always starts parked on the new sun.
     setRocketHostId("sun");
@@ -211,7 +211,7 @@ export function GeneratorSystem() {
     setExtras(null);
     setAddMenuId(null);
     setNewbornId(null);
-    tapIdRef.current = null;
+    lastTapRef.current = null;
     followRef.current = null;
     setRocketHostId("sun");
     setRocketArmed(false);
