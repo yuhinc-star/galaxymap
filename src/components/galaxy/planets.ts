@@ -12,6 +12,11 @@ import plutoImg from "@/assets/planets/pluto.png";
 import rocketImg from "@/assets/planets/rocket.png";
 import astronautImg from "@/assets/planets/astronaut.png";
 import satelliteImg from "@/assets/planets/satellite.png";
+import ufoImg from "@/assets/planets/ufo.png";
+import alienImg from "@/assets/planets/alien.png";
+import shootingStarImg from "@/assets/planets/shooting-star.png";
+import capsuleImg from "@/assets/planets/capsule.png";
+import probeImg from "@/assets/planets/probe.png";
 
 /** Square world size in px; the Sun sits at the center. */
 export const WORLD = 2900;
@@ -97,4 +102,9 @@ export const DRIFTERS: DrifterDef[] = [
   { id: "rocket", name: "Rocket", img: rocketImg, size: 155, orbitR: 1150, period: 170, startAngle: 2.9, dir: -1, line: "", breathe: 4.4, delay: 0.5 },
   { id: "astronaut", name: "Astronaut", img: astronautImg, size: 145, orbitR: 672, period: 220, startAngle: 5.6, dir: 1, line: "", breathe: 5.2, delay: 1.2 },
   { id: "satellite", name: "Satellite", img: satelliteImg, size: 135, orbitR: 1395, period: 250, startAngle: 1.0, dir: 1, line: "", breathe: 4.8, delay: 0.9 },
+  { id: "ufo", name: "UFO", img: ufoImg, size: 190, orbitR: 1290, period: 200, startAngle: 3.9, dir: -1, line: "", breathe: 5.0, delay: 0.3 },
+  { id: "alien", name: "Alien", img: alienImg, size: 105, orbitR: 800, period: 240, startAngle: 0.4, dir: 1, line: "", breathe: 3.6, delay: 1.6 },
+  { id: "shooting-star", name: "Shooting Star", img: shootingStarImg, size: 160, orbitR: 960, period: 150, startAngle: 4.8, dir: -1, line: "", breathe: 4.0, delay: 0.7 },
+  { id: "capsule", name: "Capsule", img: capsuleImg, size: 130, orbitR: 545, period: 195, startAngle: 1.9, dir: 1, line: "", breathe: 4.7, delay: 1.0 },
+  { id: "probe", name: "Probe", img: probeImg, size: 140, orbitR: 1450, period: 275, startAngle: 5.1, dir: -1, line: "", breathe: 5.4, delay: 0.4 },
 ];
