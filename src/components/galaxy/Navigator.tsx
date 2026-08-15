@@ -44,8 +44,8 @@ export function Navigator({ items, activeId, onSelect }: NavigatorProps) {
     <button
       type="button"
       onClick={() => onSelect(entry.id)}
-      className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 text-left transition-colors hover:bg-accent/70 ${
-        activeId === entry.id ? "bg-accent" : ""
+      className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 text-left transition-colors hover:bg-white/10 ${
+        activeId === entry.id ? "bg-white/20" : ""
       } ${moon ? "py-1" : "py-1.5"}`}
     >
       <img
@@ -57,7 +57,7 @@ export function Navigator({ items, activeId, onSelect }: NavigatorProps) {
         }`}
       />
       <span
-        className={`font-hand font-bold uppercase leading-none tracking-wider text-orbit-label ${
+        className={`font-hand font-bold uppercase leading-none tracking-wider text-white ${
           moon ? "text-lg" : "text-2xl"
         }`}
       >
