@@ -1573,6 +1573,19 @@ export function GeneratorSystem() {
     }, 700);
   };
 
+  /**
+   * The panel's pencil: give the body a new name. Ids stay put, so the
+   * rocket, the camera and the chat fan never notice — every surface
+   * (sky label, navigator, pills, chat header) reads the name live from
+   * the config. Undoable like any other family change.
+   */
+  const handleRenameBody = (id: string, name: string) => {
+    if (name === getPanelInfo(id)?.name) return;
+    recordCrashEvent("body-rename", { id });
+    captureUndo();
+    setExtras(renameBodyInSystem(config, id, name));
+  };
+
   /** Everything the information panel shows about a body. */
   const getPanelInfo = (id: string): BodyPanelInfo | null => {
     const add = getAddMenuInfo(id);
@@ -2120,6 +2133,7 @@ export function GeneratorSystem() {
                 onAdd={handleAddBody}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
+                onRename={(name) => handleRenameBody(panelInfo.id, name)}
                 onDelete={
                   panelInfo.id === config.sun.id ||
                   departingIds.length > 0 ||
