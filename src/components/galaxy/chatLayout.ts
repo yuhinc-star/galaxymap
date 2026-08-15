@@ -42,7 +42,6 @@ export function computeChatLayout(
   const slots = new Map<string, ChatSlot>();
   slots.set(parentId, { x: anchor.x, y: anchor.y, size: parentSize });
   const maxChild = Math.max(1, ...children.map((c) => c.size));
-  const gap = clamp(parentSize * 0.3, 96, 300);
   let cursor = anchor.y - parentSize / 2;
   let widest = parentSize * 0.72;
   for (const c of children) {
@@ -53,6 +52,10 @@ export function computeChatLayout(
       80,
       parentSize * 0.52,
     );
+    // The gap must also fit the hand-lettered name hanging below each
+    // body — at the boosted chat label size that is up to ~2 wrapped
+    // lines, i.e. a bit over one body-height of clearance.
+    const gap = clamp(parentSize * 0.3, 96, 300) + size * 1.2;
     const cy = cursor - gap - size / 2;
     slots.set(c.id, { x: anchor.x, y: cy, size });
     cursor = cy - size / 2;
