@@ -207,6 +207,14 @@ export function BodyInfoPanel({
             )}
           </section>
         )}
+
+        {/* The sun alone has no goodbye button — say why, so the
+            delete option doesn't feel missing on its panel. */}
+        {!info.remove && info.kindLabel === "Sun" && (
+          <p className="rounded-2xl border-2 border-dashed border-white/15 px-3 py-2 text-center font-hand text-lg font-bold uppercase leading-tight tracking-wider text-white/40">
+            The sun is the heart of the system — it stays!
+          </p>
+        )}
       </div>
     </aside>
   );
