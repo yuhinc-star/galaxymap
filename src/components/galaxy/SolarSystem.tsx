@@ -1135,21 +1135,23 @@ export function SolarSystem() {
               </span>
             </header>
 
-            <Navigator
-              items={navItems}
-              activeId={activeId}
-              focusedId={focusedId}
-              onSelect={handleNavigate}
-              onInfo={handleInfoSelect}
-              rocket={{
-                img: heroRocketImg,
-                hostId: flight ? flight.toId : rocketHostId,
-                flying: flight !== null,
-                armed: rocketArmed,
-                onChip: () => setRocketArmed((a) => !a),
-                onDestination: handleRocketDestination,
-              }}
-            />
+            {!chatActive && (
+              <Navigator
+                items={navItems}
+                activeId={activeId}
+                focusedId={focusedId}
+                onSelect={handleNavigate}
+                onInfo={handleInfoSelect}
+                rocket={{
+                  img: heroRocketImg,
+                  hostId: flight ? flight.toId : rocketHostId,
+                  flying: flight !== null,
+                  armed: rocketArmed,
+                  onChip: () => setRocketArmed((a) => !a),
+                  onDestination: handleRocketDestination,
+                }}
+              />
+            )}
 
             {/* Double-click info panel: details + summon the rocket */}
             {panelInfo && (
@@ -1240,7 +1242,7 @@ export function SolarSystem() {
               </button>
             </div>
 
-            <HintGuide pageId="classic" hints={CLASSIC_HINTS} />
+            {!chatActive && <HintGuide pageId="classic" hints={CLASSIC_HINTS} />}
           </>
           );
         }}
