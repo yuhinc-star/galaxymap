@@ -9,6 +9,9 @@ import saturnImg from "@/assets/planets/saturn.png";
 import uranusImg from "@/assets/planets/uranus.png";
 import neptuneImg from "@/assets/planets/neptune.png";
 import plutoImg from "@/assets/planets/pluto.png";
+import rocketImg from "@/assets/planets/rocket.png";
+import astronautImg from "@/assets/planets/astronaut.png";
+import satelliteImg from "@/assets/planets/satellite.png";
 
 /** Square world size in px; the Sun sits at the center. */
 export const WORLD = 2900;
@@ -70,3 +73,23 @@ export const MOON = {
   breathe: 3.1,
   delay: 0.9,
 };
+
+export interface DrifterDef extends BodyDef {
+  /** Orbit radius around the Sun, world px. */
+  orbitR: number;
+  /** Seconds per full revolution. */
+  period: number;
+  startAngle: number;
+  /** 1 = counter-clockwise, -1 = clockwise. */
+  dir: 1 | -1;
+}
+
+/**
+ * Decorative characters drifting through the sky, like the rocket,
+ * astronaut and satellite in the reference posters. Non-interactive.
+ */
+export const DRIFTERS: DrifterDef[] = [
+  { id: "rocket", name: "Rocket", img: rocketImg, size: 150, orbitR: 1180, period: 170, startAngle: 2.9, dir: -1, line: "", breathe: 4.4, delay: 0.5 },
+  { id: "astronaut", name: "Astronaut", img: astronautImg, size: 140, orbitR: 760, period: 220, startAngle: 5.6, dir: 1, line: "", breathe: 5.2, delay: 1.2 },
+  { id: "satellite", name: "Satellite", img: satelliteImg, size: 130, orbitR: 1340, period: 250, startAngle: 1.0, dir: 1, line: "", breathe: 4.8, delay: 0.9 },
+];

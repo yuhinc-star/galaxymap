@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import { Minus, Plus, RotateCcw, Sparkle } from "lucide-react";
-import { CENTER, MOON, PLANETS, SUN, WORLD } from "./planets";
+import { CENTER, DRIFTERS, MOON, PLANETS, SUN, WORLD } from "./planets";
+import { Drifter } from "./Drifter";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
 
@@ -42,6 +43,13 @@ export function SolarSystem() {
     positions.set(p.id, {
       x: CENTER + p.orbitR * Math.cos(a),
       y: CENTER + p.orbitR * Math.sin(a),
+    });
+  }
+  for (const d of DRIFTERS) {
+    const a = d.startAngle + (d.dir * t * TAU) / d.period;
+    positions.set(d.id, {
+      x: CENTER + d.orbitR * Math.cos(a),
+      y: CENTER + d.orbitR * Math.sin(a),
     });
   }
   const earth = positions.get("earth") ?? { x: CENTER, y: CENTER };
@@ -100,9 +108,9 @@ export function SolarSystem() {
                       r={p.orbitR}
                       fill="none"
                       stroke="white"
-                      strokeOpacity={0.55}
-                      strokeWidth={8}
-                      strokeDasharray="0.1 26"
+                      strokeOpacity={0.85}
+                      strokeWidth={10}
+                      strokeDasharray="36 26"
                       strokeLinecap="round"
                     />
                   ))}
@@ -112,9 +120,9 @@ export function SolarSystem() {
                     r={MOON.orbitR}
                     fill="none"
                     stroke="white"
-                    strokeOpacity={0.5}
-                    strokeWidth={5.5}
-                    strokeDasharray="0.1 20"
+                    strokeOpacity={0.75}
+                    strokeWidth={6}
+                    strokeDasharray="22 16"
                     strokeLinecap="round"
                   />
                 </svg>
@@ -166,6 +174,11 @@ export function SolarSystem() {
                   bouncing={bounceId === MOON.id}
                   onTap={handleTap}
                 />
+
+                {DRIFTERS.map((d) => {
+                  const q = positions.get(d.id)!;
+                  return <Drifter key={d.id} def={d} x={q.x} y={q.y} />;
+                })}
               </div>
             </TransformComponent>
 
