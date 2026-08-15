@@ -152,6 +152,40 @@ export function SolarSystem() {
     y: earth.y + MOON.orbitR * Math.sin(moonAngle),
   };
 
+  /**
+   * Navigator click: pan the camera to the body, pop its speech bubble,
+   * make it hop once, and flash a dashed ring around it.
+   */
+  const handleNavigate = (
+    id: string,
+    scale: number,
+    setTransform: (x: number, y: number, s: number, ms: number) => void,
+  ) => {
+    const q =
+      id === SUN.id
+        ? { x: CENTER, y: CENTER }
+        : id === MOON.id
+          ? moonPos
+          : positions.get(id);
+    if (!q) return;
+    window.clearTimeout(hideTimer.current);
+    window.clearTimeout(jumpTimer.current);
+    window.clearTimeout(highlightTimer.current);
+    setActiveId(id);
+    setJumpId(id);
+    setHighlightId(id);
+    jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
+    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+    const s = Math.min(Math.max(scale, 0.6), 1.05);
+    setTransform(
+      window.innerWidth / 2 - q.x * s,
+      window.innerHeight / 2 - q.y * s,
+      s,
+      450,
+    );
+  };
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
       {/* Hand-painted gouache sky, fixed to the viewport so it stays
