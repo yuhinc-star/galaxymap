@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, List } from "lucide-react";
+import { ChevronDown, List, Sparkle } from "lucide-react";
 
 export interface NavigatorEntry {
   id: string;
@@ -42,31 +42,45 @@ export function Navigator({ items, activeId, focusedId, onSelect }: NavigatorPro
   const renderEntry = (
     entry: { id: string; name: string; img: string },
     moon: boolean,
-  ) => (
-    <button
-      type="button"
-      onClick={() => onSelect(entry.id)}
-      className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 text-left transition-colors hover:bg-white/10 ${
-        activeId === entry.id ? "bg-white/20" : ""
-      } ${moon ? "py-1" : "py-1.5"}`}
-    >
-      <img
-        src={entry.img}
-        alt=""
-        draggable={false}
-        className={`shrink-0 select-none rounded-full bg-space/60 object-contain p-0.5 ${
-          moon ? "h-7 w-7" : "h-9 w-9"
-        }`}
-      />
-      <span
-        className={`font-hand font-bold uppercase leading-none tracking-wider text-white ${
-          moon ? "text-lg" : "text-2xl"
-        }`}
+  ) => {
+    const focused = focusedId === entry.id;
+    return (
+      <button
+        type="button"
+        onClick={() => onSelect(entry.id)}
+        aria-current={focused ? "true" : undefined}
+        className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 text-left transition-colors hover:bg-white/10 ${
+          focused
+            ? "bg-star/15 ring-1 ring-star/60"
+            : activeId === entry.id
+              ? "bg-white/20"
+              : ""
+        } ${moon ? "py-1" : "py-1.5"}`}
       >
-        &ldquo;{entry.name}&rdquo;
-      </span>
-    </button>
-  );
+        <img
+          src={entry.img}
+          alt=""
+          draggable={false}
+          className={`shrink-0 select-none rounded-full bg-space/60 object-contain p-0.5 ${
+            moon ? "h-7 w-7" : "h-9 w-9"
+          } ${focused ? "ring-2 ring-star" : ""}`}
+        />
+        <span
+          className={`font-hand font-bold uppercase leading-none tracking-wider ${
+            focused ? "text-star" : "text-white"
+          } ${moon ? "text-lg" : "text-2xl"}`}
+        >
+          &ldquo;{entry.name}&rdquo;
+        </span>
+        {focused && (
+          <Sparkle
+            className="ml-auto h-4 w-4 shrink-0 animate-pulse text-star"
+            aria-label="Camera is following"
+          />
+        )}
+      </button>
+    );
+  };
 
   return (
     <nav
