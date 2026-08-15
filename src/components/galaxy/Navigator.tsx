@@ -152,8 +152,11 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
               focused ? "ring-2 ring-star" : ""
             }`}
           />
+          {/* Long catalog names truncate to one line — the full name is
+              a hover title away, and the info panel shows it in full. */}
           <span
-            className={`font-hand font-bold uppercase leading-none tracking-wider ${
+            title={entry.name}
+            className={`min-w-0 flex-1 truncate font-hand font-bold uppercase leading-none tracking-wider ${
               focused ? "text-star" : "text-white"
             } ${nameSize}`}
           >
