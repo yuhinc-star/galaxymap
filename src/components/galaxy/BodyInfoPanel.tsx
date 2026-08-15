@@ -1,4 +1,5 @@
-import { Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus, Trash2, X } from "lucide-react";
 
 export interface BodyPanelChild {
   id: string;
@@ -10,6 +11,12 @@ export interface BodyPanelAdd {
   canAdd: boolean;
   actionLabel?: string | undefined;
   fullNote?: string | undefined;
+}
+
+export interface BodyPanelRemove {
+  actionLabel: string;
+  /** e.g. moons that wave goodbye together with their planet. */
+  note?: string | undefined;
 }
 
 export interface BodyPanelInfo {
@@ -25,11 +32,14 @@ export interface BodyPanelInfo {
   childrenCap: number;
   children: BodyPanelChild[];
   add: BodyPanelAdd;
+  /** Null for the sun — the heart of the system can never leave. */
+  remove: BodyPanelRemove | null;
 }
 
 interface BodyInfoPanelProps {
   info: BodyPanelInfo;
   onAdd: () => void;
+  onRemove: () => void;
   /** Fly to a child body and open its own panel. */
   onSelect: (id: string) => void;
   onClose: () => void;
