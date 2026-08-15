@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.2",
+  "path": "/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "galaxy-explorer-app",
+      "version": "0.1.0",
+      "title": "Galaxy Explorer App"
+    },
+    "tools": [
+      {
+        "name": "generate_system",
+        "title": "Generate a solar system",
+        "description": "Create a deterministic cartoon solar-system-like world from a seed: a sun, hand-painted planets (some with moons) on wobbly storybook orbits, and drifting friends. The same seed and planet count always return the same system.",
+        "annotations": {
+          "readOnlyHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "seed": {
+              "type": "integer",
+              "description": "Integer seed for the world. Omit for a fresh random seed. Reuse a seed to get the exact same system back."
+            },
+            "planetCount": {
+              "type": "integer",
+              "description": "How many planets the system should have (1-8). Defaults to 4; values outside the range are clamped."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_sprites",
+        "title": "List sprite cast",
+        "description": "List the full cast of hand-painted gouache sprites the generator assembles systems from — suns, planets, moons and drifting friends (rockets, astronauts, UFOs and more) — with image URLs.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_backgrounds",
+        "title": "List sky backgrounds",
+        "description": "List the hand-painted gouache starfield backgrounds the app can use as the sky, with full-size and small-screen image URLs.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
