@@ -14,6 +14,7 @@ import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, WORLD } from "./planets";
 import { generateSystem } from "./systemGenerator";
 import { Drifter } from "./Drifter";
+import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
 
@@ -31,12 +32,17 @@ const DEFAULT_COUNT = 6;
 export function GeneratorSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bounceId, setBounceId] = useState<string | null>(null);
+  /** Navigator "find me": dashed ring + single hop. */
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [jumpId, setJumpId] = useState<string | null>(null);
   const [bgIndex, setBgIndex] = useState(0);
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
   const bounceTimer = useRef<number | undefined>(undefined);
+  const highlightTimer = useRef<number | undefined>(undefined);
+  const jumpTimer = useRef<number | undefined>(undefined);
 
   const config = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
 
@@ -81,6 +87,7 @@ export function GeneratorSystem() {
     window.localStorage.setItem("galaxy-gen-seed", String(next));
     setSeed(next);
     setActiveId(null);
+    setHighlightId(null);
   }, []);
 
   const changeCount = useCallback((delta: number) => {
@@ -90,6 +97,7 @@ export function GeneratorSystem() {
       return next;
     });
     setActiveId(null);
+    setHighlightId(null);
   }, []);
 
   const handleTap = useCallback((id: string) => {
@@ -113,6 +121,62 @@ export function GeneratorSystem() {
     drifterPos.set(d.id, { x: CENTER + q.x, y: CENTER + q.y });
   }
 
+  /** Navigator entries: the sun, then every planet with its moons nested. */
+  const navItems: NavigatorEntry[] = [
+    { id: config.sun.id, name: config.sun.name, img: config.sun.img },
+    ...config.planets.map((p) => ({
+      id: p.id,
+      name: p.name,
+      img: p.img,
+      moons: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
+    })),
+  ];
+
+  /**
+   * Navigator click: pan the camera to the body, pop its speech bubble,
+   * make it hop once, and flash a dashed ring around it.
+   */
+  const handleNavigate = (
+    id: string,
+    scale: number,
+    setTransform: (x: number, y: number, s: number, ms: number) => void,
+  ) => {
+    let q =
+      id === config.sun.id ? { x: CENTER, y: CENTER } : planetPos.get(id);
+    if (!q) {
+      // Moons ride on their planet's position.
+      for (const p of config.planets) {
+        const m = p.moons.find((mm) => mm.id === id);
+        if (m) {
+          const pq = planetPos.get(p.id)!;
+          const a = m.startAngle + (t * TAU) / m.period;
+          q = {
+            x: pq.x + m.orbitR * Math.cos(a),
+            y: pq.y + m.orbitR * Math.sin(a),
+          };
+          break;
+        }
+      }
+    }
+    if (!q) return;
+    window.clearTimeout(hideTimer.current);
+    window.clearTimeout(jumpTimer.current);
+    window.clearTimeout(highlightTimer.current);
+    setActiveId(id);
+    setJumpId(id);
+    setHighlightId(id);
+    jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
+    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+    const s = Math.min(Math.max(scale, 0.6), 1.05);
+    setTransform(
+      window.innerWidth / 2 - q.x * s,
+      window.innerHeight / 2 - q.y * s,
+      s,
+      450,
+    );
+  };
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
       <img
@@ -133,7 +197,7 @@ export function GeneratorSystem() {
         wheel={{ step: 0.15 }}
         panning={{ velocityDisabled: true }}
       >
-        {({ zoomIn, zoomOut, resetTransform }) => (
+        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => (
           <>
             <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}>
               <div className="relative" style={{ width: WORLD, height: WORLD }}>
@@ -206,6 +270,8 @@ export function GeneratorSystem() {
                   y={CENTER}
                   active={activeId === config.sun.id}
                   bouncing={bounceId === config.sun.id}
+                  jumping={jumpId === config.sun.id}
+                  highlighted={highlightId === config.sun.id}
                   onTap={handleTap}
                   spin
                 />
@@ -222,6 +288,8 @@ export function GeneratorSystem() {
                         y={q.y}
                         active={activeId === p.id}
                         bouncing={bounceId === p.id}
+                        jumping={jumpId === p.id}
+                        highlighted={highlightId === p.id}
                         onTap={handleTap}
                       />
                     );
@@ -239,6 +307,8 @@ export function GeneratorSystem() {
                         y={q.y + m.orbitR * Math.sin(a)}
                         active={activeId === m.id}
                         bouncing={bounceId === m.id}
+                        jumping={jumpId === m.id}
+                        highlighted={highlightId === m.id}
                         onTap={handleTap}
                       />
                     );
@@ -253,6 +323,12 @@ export function GeneratorSystem() {
                 Galaxy Generator
               </span>
             </header>
+
+            <Navigator
+              items={navItems}
+              activeId={activeId}
+              onSelect={(id) => handleNavigate(id, state.scale, setTransform)}
+            />
 
             <div className="fixed right-4 top-4">
               <Link

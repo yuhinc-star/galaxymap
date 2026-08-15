@@ -5,6 +5,7 @@ import { Dices, Minus, Palette, Plus, RotateCcw, Sparkle } from "lucide-react";
 import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, DRIFTERS, MOON, PLANETS, SUN, WORLD } from "./planets";
 import { Drifter } from "./Drifter";
+import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
 
@@ -67,12 +68,17 @@ const RING_STYLES: RingStyle[] = PLANETS.map((p, i) => {
 export function SolarSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bounceId, setBounceId] = useState<string | null>(null);
+  /** Navigator "find me": dashed ring + single hop. */
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [jumpId, setJumpId] = useState<string | null>(null);
   /** Which hand-painted sky is showing; restored from localStorage after mount. */
   const [bgIndex, setBgIndex] = useState(0);
   /** Animation clock, seconds. Starts at 0 so SSR and hydration agree. */
   const [t, setT] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
   const bounceTimer = useRef<number | undefined>(undefined);
+  const highlightTimer = useRef<number | undefined>(undefined);
+  const jumpTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     let raf = 0;
@@ -109,6 +115,20 @@ export function SolarSystem() {
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
   }, []);
 
+  /** Navigator entries: the Sun, then every planet (Earth carries the Moon). */
+  const navItems: NavigatorEntry[] = [
+    { id: SUN.id, name: SUN.name, img: SUN.img },
+    ...PLANETS.map((p) => ({
+      id: p.id,
+      name: p.name,
+      img: p.img,
+      moons:
+        p.id === "earth"
+          ? [{ id: MOON.id, name: MOON.name, img: MOON.img }]
+          : undefined,
+    })),
+  ];
+
   // Orbit math: every planet advances along its ring at its own speed.
   const positions = new Map<string, { x: number; y: number }>();
   for (const p of PLANETS) {
@@ -132,6 +152,40 @@ export function SolarSystem() {
     y: earth.y + MOON.orbitR * Math.sin(moonAngle),
   };
 
+  /**
+   * Navigator click: pan the camera to the body, pop its speech bubble,
+   * make it hop once, and flash a dashed ring around it.
+   */
+  const handleNavigate = (
+    id: string,
+    scale: number,
+    setTransform: (x: number, y: number, s: number, ms: number) => void,
+  ) => {
+    const q =
+      id === SUN.id
+        ? { x: CENTER, y: CENTER }
+        : id === MOON.id
+          ? moonPos
+          : positions.get(id);
+    if (!q) return;
+    window.clearTimeout(hideTimer.current);
+    window.clearTimeout(jumpTimer.current);
+    window.clearTimeout(highlightTimer.current);
+    setActiveId(id);
+    setJumpId(id);
+    setHighlightId(id);
+    jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
+    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+    const s = Math.min(Math.max(scale, 0.6), 1.05);
+    setTransform(
+      window.innerWidth / 2 - q.x * s,
+      window.innerHeight / 2 - q.y * s,
+      s,
+      450,
+    );
+  };
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
       {/* Hand-painted gouache sky, fixed to the viewport so it stays
@@ -153,7 +207,7 @@ export function SolarSystem() {
         wheel={{ step: 0.15 }}
         panning={{ velocityDisabled: true }}
       >
-        {({ zoomIn, zoomOut, resetTransform }) => (
+        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => (
           <>
             <TransformComponent
               wrapperStyle={{ width: "100%", height: "100%" }}
@@ -226,6 +280,8 @@ export function SolarSystem() {
                   y={CENTER}
                   active={activeId === SUN.id}
                   bouncing={bounceId === SUN.id}
+                  jumping={jumpId === SUN.id}
+                  highlighted={highlightId === SUN.id}
                   onTap={handleTap}
                   spin
                 />
@@ -244,6 +300,8 @@ export function SolarSystem() {
                         y={q.y}
                         active={activeId === p.id}
                         bouncing={bounceId === p.id}
+                        jumping={jumpId === p.id}
+                        highlighted={highlightId === p.id}
                         onTap={handleTap}
                       />
                     );
@@ -255,6 +313,8 @@ export function SolarSystem() {
                   y={moonPos.y}
                   active={activeId === MOON.id}
                   bouncing={bounceId === MOON.id}
+                  jumping={jumpId === MOON.id}
+                  highlighted={highlightId === MOON.id}
                   onTap={handleTap}
                 />
               </div>
@@ -266,6 +326,12 @@ export function SolarSystem() {
                 Pocket Galaxy
               </span>
             </header>
+
+            <Navigator
+              items={navItems}
+              activeId={activeId}
+              onSelect={(id) => handleNavigate(id, state.scale, setTransform)}
+            />
 
             <div className="fixed right-4 top-4">
               <Link

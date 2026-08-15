@@ -81,6 +81,26 @@ const SUN_LINES = [
 ];
 
 /**
+ * Long storybook names, in the spirit of "Super Big Star 29444 Cajun
+ * Cafe" — an opener, a body type, a catalog number and a quirky little
+ * establishment. They stress-test the navigator and the wrapping labels.
+ */
+const LONG_OPENERS = [
+  "Super Big", "Mega Tiny", "Ultra Round", "Hyper Happy", "Cosmic Little",
+  "Grand Old", "Wobbly", "Sleepy", "Hungry", "Dancing", "Grumpy", "Jolly",
+];
+const LONG_TYPES = [
+  "Star", "Planet", "World", "Blob", "Orb", "Rock", "Marshmallow",
+  "Pancake", "Meatball", "Gumball",
+];
+const LONG_SUFFIXES = [
+  "Cajun Cafe", "Moon Diner", "Space Bakery", "Cosmic Laundry",
+  "Star Nursery", "Comet Garage", "Nebula Salon", "Orbit School",
+  "Meteor Motel", "Galaxy Farm", "Astro Arcade", "Pizza Place",
+  "Donut Shop", "Bowling Alley",
+];
+
+/**
  * Build a whole random solar-system-like world from a seed. Deterministic:
  * the same seed and planet count always produce the same system, so SSR
  * and hydration render identical frames.
@@ -98,11 +118,41 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
     return a;
   };
 
+  // --- Names -------------------------------------------------------------
+  // ~45% of bodies get a long catalog name like "Super Big Star 29444
+  // Cajun Cafe"; the rest get a short storybook name. All unique.
+  const usedNames = new Set<string>();
+  const uniqueName = (base: string): string => {
+    if (!usedNames.has(base)) {
+      usedNames.add(base);
+      return base;
+    }
+    const numerals = ["II", "III", "IV", "V", "VI"];
+    for (const n of numerals) {
+      const candidate = `${base} ${n}`;
+      if (!usedNames.has(candidate)) {
+        usedNames.add(candidate);
+        return candidate;
+      }
+    }
+    const fallback = `${base} ${Math.floor(rand() * 900) + 100}`;
+    usedNames.add(fallback);
+    return fallback;
+  };
+  const makeLongName = () =>
+    uniqueName(
+      `${pick(LONG_OPENERS)} ${pick(LONG_TYPES)} ${1000 + Math.floor(rand() * 98999)} ${pick(LONG_SUFFIXES)}`,
+    );
+  const shortNames = shuffled(PLANET_NAMES);
+  let shortIdx = 0;
+  const planetName = () =>
+    rand() < 0.45 ? makeLongName() : uniqueName(shortNames[shortIdx++ % shortNames.length]!);
+
   // --- Sun -------------------------------------------------------------
   const sunSprite = pick(SUN_SPRITES);
   const sun: BodyDef = {
     id: "sun",
-    name: sunSprite.name,
+    name: rand() < 0.4 ? makeLongName() : sunSprite.name,
     img: sunSprite.img,
     size: 700 + rand() * 90,
     line: pick(SUN_LINES),
@@ -112,7 +162,6 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
 
   // --- Planets -----------------------------------------------------------
   const sprites = shuffled(PLANET_SPRITES).slice(0, planetCount);
-  const names = shuffled(PLANET_NAMES);
   // Innermost ring must clear the biggest sun (radius ~395) plus a
   // gas giant's half-width (~155), so nothing parks on the sun's face.
   const inner = 580;
@@ -157,7 +206,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
 
     return {
       id: `planet-${i}-${sprite.id}`,
-      name: names[i % names.length]!,
+      name: planetName(),
       img: sprite.img,
       size,
       orbit,
