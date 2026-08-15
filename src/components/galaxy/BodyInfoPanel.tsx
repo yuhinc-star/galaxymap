@@ -198,11 +198,13 @@ export function BodyInfoPanel({
               <Trash2 className="h-5 w-5" strokeWidth={2.5} />
               {confirming ? "Really? Tap again!" : info.remove.actionLabel}
             </button>
-            <p className="mt-1 font-hand text-lg font-bold uppercase leading-tight tracking-wider text-white/45">
-              {confirming
-                ? "There's no bringing it back!"
-                : info.remove.note}
-            </p>
+            {(confirming || info.remove.note) && (
+              <p className="mt-1 font-hand text-lg font-bold uppercase leading-tight tracking-wider text-white/45">
+                {confirming
+                  ? "There's no bringing it back!"
+                  : info.remove.note}
+              </p>
+            )}
           </section>
         )}
       </div>
