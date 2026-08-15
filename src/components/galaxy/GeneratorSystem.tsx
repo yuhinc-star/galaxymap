@@ -47,7 +47,9 @@ import {
   chatEase,
   computeChatLayout,
   rideChatOrbit,
+  rideChatOrbitExit,
   type ChatChaseState,
+  type ChatChildInput,
   type ChatLayout,
   type ChatRideState,
 } from "./chatLayout";
@@ -208,6 +210,12 @@ export function GeneratorSystem() {
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
   /** Chat column: subject + layout captured when chat opens. */
   const chatSubjectRef = useRef<{ info: ChatSubjectInfo; layout: ChatLayout } | null>(null);
+  /** The star the fan is currently lined up around — starts as the chat
+      subject, but zooming into any family member re-fans around it. */
+  const fanSubjectRef = useRef<{ id: string; layout: ChatLayout } | null>(null);
+  /** While true the chat camera glides to the fan framing; a user
+      wheel/pinch after the fan settles hands the zoom over. */
+  const chatGlideRef = useRef(false);
   /** 0 = orbits, 1 = column — ramps while chat opens and closes. */
   const chatMixRef = useRef(0);
   /** Per-body rendered pose while the fan forms and dissolves (subject). */
@@ -355,6 +363,8 @@ export function GeneratorSystem() {
     // A new world ends any chat — the old family is gone.
     setChatOpen(false);
     chatSubjectRef.current = null;
+    fanSubjectRef.current = null;
+    chatGlideRef.current = false;
     chatRenderRef.current.clear();
     chatRideRef.current.clear();
     ringScaleRef.current.clear();
@@ -406,9 +416,19 @@ export function GeneratorSystem() {
   /** Any manual camera move takes control back from the follow mode. */
   const stopFollow = useCallback(() => {
     followRef.current = null;
+    // In chat mode the focus marker belongs to the fan — zooming around
+    // must not drop it (or the open info panel).
+    if (chatMixRef.current > 0.004) return;
     setFocusedId(null);
     setInfoId(null);
   }, []);
+
+  /** Wheel/pinch/zoom-button: in chat mode the user takes the zoom over
+      from the fan's camera glide once the fan has settled. */
+  const chatUserZoom = () => {
+    stopFollow();
+    if (chatMixRef.current > 0.9) chatGlideRef.current = false;
+  };
 
   /** Open chat mode: whatever holds focus (the sun by default) anchors
       the bottom of the strip and its children line up above it. */
@@ -416,12 +436,16 @@ export function GeneratorSystem() {
     if (chatOpen) return;
     chatFocusRef.current = focusedId;
     stopFollow();
+    // The fan's focus marker starts on the chat subject.
+    setFocusedId(focusedId ?? config.sun.id);
     setRocketArmed(false);
     const st = stateRef.current;
     preChatCamRef.current = st
       ? { positionX: st.positionX, positionY: st.positionY, scale: st.scale }
       : null;
     chatSubjectRef.current = null;
+    fanSubjectRef.current = null;
+    chatGlideRef.current = true;
     chatRenderRef.current.clear();
     chatRideRef.current.clear();
     ringScaleRef.current.clear();
@@ -520,6 +544,8 @@ export function GeneratorSystem() {
   if (!chatOpen && chatMixRef.current < 0.004) {
     chatMixRef.current = 0;
     chatSubjectRef.current = null;
+    fanSubjectRef.current = null;
+    chatGlideRef.current = false;
     chatRenderRef.current.clear();
     chatRideRef.current.clear();
     ringScaleRef.current.clear();
