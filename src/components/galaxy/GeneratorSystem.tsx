@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { Link } from "@tanstack/react-router";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import {
@@ -10,10 +17,12 @@ import {
   RotateCcw,
   Sparkle,
 } from "lucide-react";
+import heroRocketImg from "@/assets/planets/hero-rocket.png";
 import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, WORLD } from "./planets";
 import { generateSystem } from "./systemGenerator";
 import { Drifter } from "./Drifter";
+import { HeroRocket, ROCKET_H } from "./HeroRocket";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
@@ -23,6 +32,30 @@ const MIN_PLANETS = 2;
 const MAX_PLANETS = 8;
 const DEFAULT_SEED = 20260214;
 const DEFAULT_COUNT = 6;
+
+/** Parked rocket stands on its host's upper-right shoulder. */
+const PARK_ANGLE = (-80 * Math.PI) / 180;
+const PARK_ROT = 10;
+
+interface RocketFlight {
+  fx: number;
+  fy: number;
+  cx: number;
+  cy: number;
+  toId: string;
+  fromRot: number;
+  startAt: number;
+  dur: number;
+}
+
+const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3);
+const easeInOutCubicFn = (p: number) =>
+  p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+/** Shortest-path angle interpolation (degrees). */
+const lerpAngle = (a: number, b: number, t: number) => {
+  const d = ((b - a + 540) % 360) - 180;
+  return a + d * t;
+};
 
 /**
  * The Galaxy Generator: every seed assembles a brand-new solar-system-like
@@ -36,6 +69,16 @@ export function GeneratorSystem() {
   /** Navigator "find me": dashed ring + single hop. */
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [jumpId, setJumpId] = useState<string | null>(null);
+  /** Body the hero rocket is parked on (always starts on the sun). */
+  const [rocketHostId, setRocketHostId] = useState<string>("sun");
+  /** Navigator move mode: the next sun/planet pick is the destination. */
+  const [rocketArmed, setRocketArmed] = useState(false);
+  /** Live flight, or null while parked. */
+  const [flight, setFlight] = useState<RocketFlight | null>(null);
+  /** Destination wearing a steady golden ring while the rocket flies. */
+  const [rocketInboundId, setRocketInboundId] = useState<string | null>(null);
+  const [landingSquash, setLandingSquash] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
@@ -43,6 +86,17 @@ export function GeneratorSystem() {
   const hideTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
+  const squashTimer = useRef<number | undefined>(undefined);
+  /** Live drag data — read every frame by the render loop. */
+  const dragRef = useRef<{
+    cur: { x: number; y: number };
+    hover: string | null;
+    startClient: { x: number; y: number };
+    moved: boolean;
+    lastX: number;
+  } | null>(null);
+  /** Alternates the flight arc's bend side. */
+  const arcSideRef = useRef(1);
   /** Camera follow: keeps the navigator-picked body centered as it orbits. */
   const followRef = useRef<{
     id: string;
@@ -101,6 +155,13 @@ export function GeneratorSystem() {
     setHighlightId(null);
     setFocusedId(null);
     followRef.current = null;
+    // The rocket always starts parked on the new sun.
+    setRocketHostId("sun");
+    setRocketArmed(false);
+    setFlight(null);
+    setRocketInboundId(null);
+    setDragActive(false);
+    dragRef.current = null;
   }, []);
 
   const changeCount = useCallback((delta: number) => {
@@ -113,6 +174,12 @@ export function GeneratorSystem() {
     setHighlightId(null);
     setFocusedId(null);
     followRef.current = null;
+    setRocketHostId("sun");
+    setRocketArmed(false);
+    setFlight(null);
+    setRocketInboundId(null);
+    setDragActive(false);
+    dragRef.current = null;
   }, []);
 
   /** Any manual camera move takes control back from the follow mode. */
@@ -162,6 +229,25 @@ export function GeneratorSystem() {
       }
     }
     return null;
+  };
+
+  /** Display size of a rocket-landable body (sun or planet — no moons). */
+  const bodySize = (id: string): number | null => {
+    if (id === config.sun.id) return config.sun.size;
+    const p = config.planets.find((pp) => pp.id === id);
+    return p ? p.size : null;
+  };
+
+  /** Where the parked rocket stands: the host's upper-right shoulder. */
+  const parkPos = (id: string): { x: number; y: number } | null => {
+    const c = bodyPos(id);
+    const s = bodySize(id);
+    if (!c || !s) return null;
+    const r = s / 2 + ROCKET_H * 0.4;
+    return {
+      x: c.x + r * Math.cos(PARK_ANGLE),
+      y: c.y + r * Math.sin(PARK_ANGLE),
+    };
   };
 
   /**
@@ -221,24 +307,37 @@ export function GeneratorSystem() {
     );
   }, [t]);
 
-  /**
-   * Navigator click: zoom so the body and everything orbiting it fits
-   * (the sun with all planet rings, a planet with its moon rings),
-   * glide there, pop its speech bubble, hop once, flash a dashed ring.
-   */
-  const handleNavigate = (id: string) => {
+  // Flight completion: the rocket becomes parked on its destination,
+  // squashes on touchdown and flashes the golden finder ring.
+  useEffect(() => {
+    if (!flight) return;
+    if (performance.now() < flight.startAt + flight.dur) return;
+    const dest = flight.toId;
+    setFlight(null);
+    setRocketHostId(dest);
+    setRocketInboundId(null);
+    setLandingSquash(true);
+    window.clearTimeout(squashTimer.current);
+    squashTimer.current = window.setTimeout(() => setLandingSquash(false), 600);
+    window.clearTimeout(highlightTimer.current);
+    setHighlightId(dest);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+  }, [t, flight]);
+
+  // If the rocket's host vanishes (planet count changed), park on the sun.
+  useEffect(() => {
+    if (
+      rocketHostId !== config.sun.id &&
+      !config.planets.some((p) => p.id === rocketHostId)
+    ) {
+      setRocketHostId(config.sun.id);
+    }
+  }, [config, rocketHostId]);
+
+  /** Glide the camera so the body and everything orbiting it fits. */
+  const focusCamera = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
-    window.clearTimeout(hideTimer.current);
-    window.clearTimeout(jumpTimer.current);
-    window.clearTimeout(highlightTimer.current);
-    setActiveId(id);
-    setJumpId(id);
-    setHighlightId(id);
-    setFocusedId(id);
-    jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
-    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
-    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
     const fit =
       (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
       (2 * frameRadius(id));
@@ -256,7 +355,206 @@ export function GeneratorSystem() {
           },
       startAt: performance.now(),
     };
+    setFocusedId(id);
   };
+
+  /**
+   * Launch the rocket along a hand-drawn arc. The end point is the
+   * destination's park spot recomputed every frame, so the rocket homes
+   * in on its target even while that body keeps orbiting.
+   */
+  const launchRocket = (
+    from: { x: number; y: number },
+    fromRot: number,
+    toId: string,
+  ) => {
+    const end = parkPos(toId);
+    if (!end) return;
+    const dist = Math.hypot(end.x - from.x, end.y - from.y);
+    if (dist < 30) return;
+    const dur = Math.min(3.4, Math.max(1.15, dist / 1500)) * 1000;
+    arcSideRef.current *= -1;
+    const nx = -(end.y - from.y) / dist;
+    const ny = (end.x - from.x) / dist;
+    const lift = Math.min(430, Math.max(120, dist * 0.26)) * arcSideRef.current;
+    setFlight({
+      fx: from.x,
+      fy: from.y,
+      cx: (from.x + end.x) / 2 + nx * lift,
+      cy: (from.y + end.y) / 2 + ny * lift,
+      toId,
+      fromRot,
+      startAt: performance.now(),
+      dur,
+    });
+    setRocketInboundId(toId);
+  };
+
+  /** Navigator move mode: send the rocket to the picked sun or planet. */
+  const handleRocketDestination = (id: string) => {
+    setRocketArmed(false);
+    if (flight || id === rocketHostId) return;
+    const from = parkPos(rocketHostId);
+    if (!from) return;
+    launchRocket(from, PARK_ROT, id);
+    focusCamera(id);
+  };
+
+  /** Client px → world px using the live pan/zoom transform. */
+  const toWorld = (clientX: number, clientY: number) => {
+    const st = stateRef.current;
+    if (!st) return { x: clientX, y: clientY };
+    return {
+      x: (clientX - st.positionX) / st.scale,
+      y: (clientY - st.positionY) / st.scale,
+    };
+  };
+
+  /** Nearest landable body under a dragged point, if any. */
+  const pickHover = (w: { x: number; y: number }): string | null => {
+    let best: string | null = null;
+    let bestD = Infinity;
+    const consider = (id: string) => {
+      const c = bodyPos(id);
+      const s = bodySize(id);
+      if (!c || !s) return;
+      const d = Math.hypot(w.x - c.x, w.y - c.y);
+      if (d < Math.max((s / 2) * 1.25, 90) && d < bestD) {
+        best = id;
+        bestD = d;
+      }
+    };
+    consider(config.sun.id);
+    for (const p of config.planets) consider(p.id);
+    return best;
+  };
+
+  /**
+   * Drag the rocket: a capture-phase pointerdown keeps the camera from
+   * panning, then window listeners track the drag. Dropping on a body
+   * flies the rocket there; dropping on empty sky flies it back home.
+   */
+  const onRocketDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    stopFollow();
+    const w = toWorld(e.clientX, e.clientY);
+    dragRef.current = {
+      cur: w,
+      hover: null,
+      startClient: { x: e.clientX, y: e.clientY },
+      moved: false,
+      lastX: w.x,
+    };
+    setDragActive(true);
+    const onMove = (ev: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      d.cur = toWorld(ev.clientX, ev.clientY);
+      if (
+        Math.hypot(ev.clientX - d.startClient.x, ev.clientY - d.startClient.y) >
+        8
+      ) {
+        d.moved = true;
+      }
+      d.hover = pickHover(d.cur);
+    };
+    const onUp = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      const d = dragRef.current;
+      dragRef.current = null;
+      setDragActive(false);
+      if (!d) return;
+      d.cur = toWorld(ev.clientX, ev.clientY);
+      const target = d.hover ?? pickHover(d.cur);
+      if (target && target !== rocketHostId) {
+        launchRocket(d.cur, 0, target);
+        focusCamera(target);
+      } else if (d.moved) {
+        launchRocket(d.cur, 0, rocketHostId);
+      } else {
+        // A gentle tap: a little squash hello.
+        setLandingSquash(true);
+        window.clearTimeout(squashTimer.current);
+        squashTimer.current = window.setTimeout(
+          () => setLandingSquash(false),
+          600,
+        );
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  };
+
+  /**
+   * Navigator click: zoom so the body and everything orbiting it fits
+   * (the sun with all planet rings, a planet with its moon rings),
+   * glide there, pop its speech bubble, hop once, flash a dashed ring.
+   */
+  const handleNavigate = (id: string) => {
+    const q = bodyPos(id);
+    if (!q) return;
+    window.clearTimeout(hideTimer.current);
+    window.clearTimeout(jumpTimer.current);
+    window.clearTimeout(highlightTimer.current);
+    setActiveId(id);
+    setJumpId(id);
+    setHighlightId(id);
+    jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
+    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+    focusCamera(id);
+  };
+
+  // --- Hero rocket pose ---------------------------------------------------
+  const dragNow = dragActive ? dragRef.current : null;
+  const dragHoverId = dragNow?.hover ?? null;
+  const dragHoverPos = dragHoverId ? bodyPos(dragHoverId) : null;
+
+  let rocketX = CENTER;
+  let rocketY = CENTER;
+  let rocketRot = PARK_ROT;
+  let rocketFlame = 0;
+  if (dragNow) {
+    const dx = dragNow.cur.x - dragNow.lastX;
+    dragNow.lastX = dragNow.cur.x;
+    rocketX = dragNow.cur.x;
+    rocketY = dragNow.cur.y;
+    rocketRot = Math.max(-24, Math.min(24, dx * 0.5));
+    rocketFlame = 0.85;
+  } else if (flight) {
+    const p = Math.min(1, (performance.now() - flight.startAt) / flight.dur);
+    const e = easeInOutCubicFn(p);
+    const end = parkPos(flight.toId) ?? { x: CENTER, y: CENTER };
+    const u = 1 - e;
+    rocketX = u * u * flight.fx + 2 * u * e * flight.cx + e * e * end.x;
+    rocketY = u * u * flight.fy + 2 * u * e * flight.cy + e * e * end.y;
+    const vx = 2 * u * (flight.cx - flight.fx) + 2 * e * (end.x - flight.cx);
+    const vy = 2 * u * (flight.cy - flight.fy) + 2 * e * (end.y - flight.cy);
+    const heading = (Math.atan2(vy, vx) * 180) / Math.PI + 90;
+    if (p < 0.16) {
+      rocketRot = lerpAngle(flight.fromRot, heading, easeOutCubic(p / 0.16));
+    } else if (p > 0.76) {
+      rocketRot = lerpAngle(
+        heading,
+        PARK_ROT,
+        easeInOutCubicFn((p - 0.76) / 0.24),
+      );
+    } else {
+      rocketRot = heading;
+    }
+    rocketFlame =
+      p < 0.12 ? p / 0.12 : p > 0.84 ? Math.max(0, (1 - p) / 0.16) : 1;
+  } else {
+    const pp = parkPos(rocketHostId);
+    if (pp) {
+      rocketX = pp.x;
+      rocketY = pp.y;
+    }
+  }
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
@@ -276,7 +574,7 @@ export function GeneratorSystem() {
         limitToBounds={false}
         doubleClick={{ disabled: true }}
         wheel={{ step: 0.15 }}
-        panning={{ velocityDisabled: true }}
+        panning={{ velocityDisabled: true, disabled: dragActive }}
         onPanningStart={stopFollow}
         onWheel={stopFollow}
         onPinchStart={stopFollow}
@@ -357,7 +655,14 @@ export function GeneratorSystem() {
                   y={CENTER}
                   active={activeId === config.sun.id}
                   jumping={jumpId === config.sun.id}
-                  highlighted={highlightId === config.sun.id}
+                  highlighted={
+                    highlightId === config.sun.id ||
+                    dragHoverId === config.sun.id ||
+                    rocketInboundId === config.sun.id
+                  }
+                  highlightMode={
+                    highlightId === config.sun.id ? "flash" : "steady"
+                  }
                   onTap={handleNavigate}
                   spin
                 />
@@ -374,7 +679,14 @@ export function GeneratorSystem() {
                         y={q.y}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
-                        highlighted={highlightId === p.id}
+                        highlighted={
+                          highlightId === p.id ||
+                          dragHoverId === p.id ||
+                          rocketInboundId === p.id
+                        }
+                        highlightMode={
+                          highlightId === p.id ? "flash" : "steady"
+                        }
                         onTap={handleNavigate}
                       />
                     );
@@ -398,6 +710,41 @@ export function GeneratorSystem() {
                     );
                   });
                 })}
+
+                {/* Golden tether from the dragged rocket to its target */}
+                {dragNow?.hover && dragHoverPos && (
+                  <svg
+                    width={WORLD}
+                    height={WORLD}
+                    viewBox={`0 0 ${WORLD} ${WORLD}`}
+                    className="pointer-events-none absolute inset-0 z-[35]"
+                    aria-hidden
+                  >
+                    <line
+                      x1={dragNow.cur.x}
+                      y1={dragNow.cur.y}
+                      x2={dragHoverPos.x}
+                      y2={dragHoverPos.y}
+                      stroke="#ffd94d"
+                      strokeWidth={7}
+                      strokeDasharray="26 20"
+                      strokeLinecap="round"
+                      opacity={0.9}
+                      className="rocket-tether"
+                    />
+                  </svg>
+                )}
+
+                <HeroRocket
+                  x={rocketX}
+                  y={rocketY}
+                  rotation={rocketRot}
+                  flame={rocketFlame}
+                  squash={landingSquash}
+                  dragging={dragActive}
+                  interactive={!flight}
+                  onDown={onRocketDown}
+                />
               </div>
             </TransformComponent>
 
@@ -413,6 +760,14 @@ export function GeneratorSystem() {
               activeId={activeId}
               focusedId={focusedId}
               onSelect={handleNavigate}
+              rocket={{
+                img: heroRocketImg,
+                hostId: flight ? flight.toId : rocketHostId,
+                flying: flight !== null,
+                armed: rocketArmed,
+                onChip: () => setRocketArmed((a) => !a),
+                onDestination: handleRocketDestination,
+              }}
             />
 
             <div className="fixed right-4 top-4">
