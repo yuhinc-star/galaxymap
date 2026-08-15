@@ -1233,14 +1233,6 @@ export function SolarSystem() {
       ? getPanelInfo(focusedId)
       : null;
 
-  // Chat-mode companion suggestion: when the fan is visiting a body the
-  // rocket isn't on, offer the way back to the star you're actually
-  // chatting with — one tap re-fans the strip around the rocket's host.
-  const chatNavInfo =
-    chatActive && focusedId && focusedId !== talkId && !flight && !dragActive
-      ? talkPanel
-      : null;
-
   // --- Contextual hints ---------------------------------------------------
   // The current situation, told to the hint guide so tips surface when they
   // matter. Priority: the mode you're in beats what you're looking at.
@@ -1682,16 +1674,6 @@ export function SolarSystem() {
                     else openChat(suggestionInfo.id);
                   }}
                   onDismiss={() => setChatSuggestionId(null)}
-                />
-              )}
-              {/* Chat mode: the fan wandered off the rocket's host — offer
-                  the way back to the star you're actually chatting with. */}
-              {chatNavInfo && (
-                <RocketChatInvite
-                  key={`chat-${chatNavInfo.id}`}
-                  name={chatNavInfo.name}
-                  img={chatNavInfo.img}
-                  onChat={() => handleNavigate(chatNavInfo.id)}
                 />
               )}
             </SuggestionStack>
