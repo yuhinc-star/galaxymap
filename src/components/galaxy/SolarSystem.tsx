@@ -8,6 +8,60 @@ import { Starfield } from "./Starfield";
 
 const TAU = Math.PI * 2;
 
+/** Deterministic pseudo-random so SSR and hydration draw identical rings. */
+function seeded(seed: number) {
+  let s = (seed * 9301 + 49297) % 233280;
+  return () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+}
+
+/**
+ * A hand-drawn ring: a closed path whose radius wobbles on two sine
+ * frequencies, like a circle painted with a brush instead of a compass.
+ */
+function wobblyRing(cx: number, cy: number, r: number, seed: number): string {
+  const rand = seeded(seed);
+  const w1 = 2 + Math.floor(rand() * 3);
+  const w2 = 5 + Math.floor(rand() * 4);
+  const p1 = rand() * TAU;
+  const p2 = rand() * TAU;
+  const a1 = r * 0.012;
+  const a2 = r * 0.007;
+  const N = 96;
+  let d = "";
+  for (let i = 0; i <= N; i++) {
+    const a = (i / N) * TAU;
+    const rr = r + a1 * Math.sin(w1 * a + p1) + a2 * Math.cos(w2 * a + p2);
+    d += `${i === 0 ? "M" : "L"}${(cx + rr * Math.cos(a)).toFixed(1)} ${(cy + rr * Math.sin(a)).toFixed(1)}`;
+  }
+  return `${d} Z`;
+}
+
+interface RingStyle {
+  d: string;
+  dash: string;
+  width: number;
+  opacity: number;
+}
+
+/**
+ * Each planet's ring gets its own hand-painted character: slightly
+ * off-center, uneven dash length and gap, varied stroke weight.
+ */
+const RING_STYLES: RingStyle[] = PLANETS.map((p, i) => {
+  const rand = seeded(i * 13 + 7);
+  const cx = CENTER + (rand() - 0.5) * 26;
+  const cy = CENTER + (rand() - 0.5) * 26;
+  return {
+    d: wobblyRing(cx, cy, p.orbitR, i * 7 + 3),
+    dash: `${(30 + rand() * 14).toFixed(0)} ${(20 + rand() * 10).toFixed(0)}`,
+    width: 8.5 + rand() * 2.5,
+    opacity: 0.76 + rand() * 0.16,
+  };
+});
+
 export function SolarSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bounceId, setBounceId] = useState<string | null>(null);
@@ -100,29 +154,28 @@ export function SolarSystem() {
                   className="pointer-events-none absolute inset-0"
                   aria-hidden
                 >
-                  {PLANETS.map((p) => (
-                    <circle
-                      key={p.id}
-                      cx={CENTER}
-                      cy={CENTER}
-                      r={p.orbitR}
-                      fill="none"
-                      stroke="white"
-                      strokeOpacity={0.85}
-                      strokeWidth={10}
-                      strokeDasharray="36 26"
-                      strokeLinecap="round"
-                    />
-                  ))}
-                  <circle
-                    cx={earth.x}
-                    cy={earth.y}
-                    r={MOON.orbitR}
+                  {PLANETS.map((p, i) => {
+                    const ring = RING_STYLES[i]!;
+                    return (
+                      <path
+                        key={p.id}
+                        d={ring.d}
+                        fill="none"
+                        stroke="white"
+                        strokeOpacity={ring.opacity}
+                        strokeWidth={ring.width}
+                        strokeDasharray={ring.dash}
+                        strokeLinecap="round"
+                      />
+                    );
+                  })}
+                  <path
+                    d={wobblyRing(earth.x, earth.y, MOON.orbitR, 99)}
                     fill="none"
                     stroke="white"
-                    strokeOpacity={0.75}
-                    strokeWidth={6}
-                    strokeDasharray="22 16"
+                    strokeOpacity={0.72}
+                    strokeWidth={5.5}
+                    strokeDasharray="19 15"
                     strokeLinecap="round"
                   />
                 </svg>

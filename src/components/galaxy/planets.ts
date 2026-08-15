@@ -43,22 +43,27 @@ export const SUN: BodyDef = {
   id: "sun",
   name: "Sun",
   img: sunImg,
-  size: 380,
+  size: 430,
   line: "I'm the star of the show. Literally.",
   breathe: 6,
   delay: 0,
 };
 
+/**
+ * Chunky storybook proportions, like the reference posters: planets are
+ * big relative to the gap between rings and happily overlap their own
+ * orbit lines. Not to realistic scale — charm over astronomy.
+ */
 export const PLANETS: PlanetDef[] = [
-  { id: "mercury", name: "Mercury", img: mercuryImg, size: 74, orbitR: 330, period: 14, startAngle: 0.6, line: "Fastest planet in the club!", breathe: 3.4, delay: 0.6 },
-  { id: "venus", name: "Venus", img: venusImg, size: 116, orbitR: 445, period: 22, startAngle: 2.4, line: "Hottest around — and it's not close.", breathe: 4.1, delay: 1.3 },
-  { id: "earth", name: "Earth", img: earthImg, size: 126, orbitR: 565, period: 32, startAngle: 4.1, line: "You are here. Hi!", breathe: 4.6, delay: 0.2 },
-  { id: "mars", name: "Mars", img: marsImg, size: 96, orbitR: 665, period: 44, startAngle: 5.3, line: "One day I'll have wifi.", breathe: 3.8, delay: 1.7 },
-  { id: "jupiter", name: "Jupiter", img: jupiterImg, size: 215, orbitR: 825, period: 70, startAngle: 1.2, line: "Biggest planet. Humble too.", breathe: 5.6, delay: 0.4 },
-  { id: "saturn", name: "Saturn", img: saturnImg, size: 210, orbitR: 1025, period: 95, startAngle: 3.3, line: "These rings? All natural.", breathe: 4.9, delay: 1.1 },
-  { id: "uranus", name: "Uranus", img: uranusImg, size: 165, orbitR: 1165, period: 125, startAngle: 5.9, line: "I roll sideways through life.", breathe: 4.4, delay: 0.8 },
-  { id: "neptune", name: "Neptune", img: neptuneImg, size: 150, orbitR: 1290, period: 155, startAngle: 2.0, line: "Brrr… it's windy out here.", breathe: 4.2, delay: 1.5 },
-  { id: "pluto", name: "Pluto", img: plutoImg, size: 58, orbitR: 1400, period: 190, startAngle: 4.6, line: "Still a planet in my heart.", breathe: 3.0, delay: 0.3 },
+  { id: "mercury", name: "Mercury", img: mercuryImg, size: 95, orbitR: 350, period: 14, startAngle: 0.6, line: "Fastest planet in the club!", breathe: 3.4, delay: 0.6 },
+  { id: "venus", name: "Venus", img: venusImg, size: 148, orbitR: 480, period: 22, startAngle: 2.4, line: "Hottest around — and it's not close.", breathe: 4.1, delay: 1.3 },
+  { id: "earth", name: "Earth", img: earthImg, size: 158, orbitR: 610, period: 32, startAngle: 4.1, line: "You are here. Hi!", breathe: 4.6, delay: 0.2 },
+  { id: "mars", name: "Mars", img: marsImg, size: 125, orbitR: 735, period: 44, startAngle: 5.3, line: "One day I'll have wifi.", breathe: 3.8, delay: 1.7 },
+  { id: "jupiter", name: "Jupiter", img: jupiterImg, size: 258, orbitR: 895, period: 70, startAngle: 1.2, line: "Biggest planet. Humble too.", breathe: 5.6, delay: 0.4 },
+  { id: "saturn", name: "Saturn", img: saturnImg, size: 262, orbitR: 1075, period: 95, startAngle: 3.3, line: "These rings? All natural.", breathe: 4.9, delay: 1.1 },
+  { id: "uranus", name: "Uranus", img: uranusImg, size: 182, orbitR: 1220, period: 125, startAngle: 5.9, line: "I roll sideways through life.", breathe: 4.4, delay: 0.8 },
+  { id: "neptune", name: "Neptune", img: neptuneImg, size: 172, orbitR: 1350, period: 155, startAngle: 2.0, line: "Brrr… it's windy out here.", breathe: 4.2, delay: 1.5 },
+  { id: "pluto", name: "Pluto", img: plutoImg, size: 80, orbitR: 1435, period: 190, startAngle: 4.6, line: "Still a planet in my heart.", breathe: 3.0, delay: 0.3 },
 ];
 
 /** The Moon circles Earth instead of the Sun. */
@@ -66,8 +71,8 @@ export const MOON = {
   id: "moon",
   name: "Moon",
   img: moonImg,
-  size: 46,
-  orbitR: 100,
+  size: 58,
+  orbitR: 120,
   period: 5,
   line: "I only shine at night.",
   breathe: 3.1,
@@ -89,7 +94,7 @@ export interface DrifterDef extends BodyDef {
  * astronaut and satellite in the reference posters. Non-interactive.
  */
 export const DRIFTERS: DrifterDef[] = [
-  { id: "rocket", name: "Rocket", img: rocketImg, size: 150, orbitR: 1180, period: 170, startAngle: 2.9, dir: -1, line: "", breathe: 4.4, delay: 0.5 },
-  { id: "astronaut", name: "Astronaut", img: astronautImg, size: 140, orbitR: 760, period: 220, startAngle: 5.6, dir: 1, line: "", breathe: 5.2, delay: 1.2 },
-  { id: "satellite", name: "Satellite", img: satelliteImg, size: 130, orbitR: 1340, period: 250, startAngle: 1.0, dir: 1, line: "", breathe: 4.8, delay: 0.9 },
+  { id: "rocket", name: "Rocket", img: rocketImg, size: 155, orbitR: 1150, period: 170, startAngle: 2.9, dir: -1, line: "", breathe: 4.4, delay: 0.5 },
+  { id: "astronaut", name: "Astronaut", img: astronautImg, size: 145, orbitR: 672, period: 220, startAngle: 5.6, dir: 1, line: "", breathe: 5.2, delay: 1.2 },
+  { id: "satellite", name: "Satellite", img: satelliteImg, size: 135, orbitR: 1395, period: 250, startAngle: 1.0, dir: 1, line: "", breathe: 4.8, delay: 0.9 },
 ];
