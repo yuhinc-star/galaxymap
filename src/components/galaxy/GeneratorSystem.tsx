@@ -44,8 +44,16 @@ export function GeneratorSystem() {
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
   /** Camera follow: keeps the navigator-picked body centered as it orbits. */
-  const followRef = useRef<{ id: string; scale: number; startAt: number } | null>(null);
+  const followRef = useRef<{
+    id: string;
+    scale: number;
+    from: { x: number; y: number; scale: number };
+    startAt: number;
+  } | null>(null);
   const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
+  /** Latest camera state, so a glide eases from exactly where the camera
+      is now — even mid-flight from a previous pick. */
+  const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
 
   const config = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
 
@@ -190,22 +198,32 @@ export function GeneratorSystem() {
     return 200;
   };
 
-  // Camera follow: once the navigator glide lands, re-center the picked
-  // body every frame so it stays pinned to the viewport center as it orbits.
+  // Camera follow, chase-cam style: every frame we ease from the camera
+  // state captured at click time toward the body's *current* position, so
+  // the glide bends with the moving body and lands exactly on it — no
+  // end-of-glide snap. After the glide the body stays pinned to center.
   useEffect(() => {
     const f = followRef.current;
     const apply = setTransformRef.current;
     if (!f || !apply) return;
-    if (performance.now() - f.startAt < 470) return; // let the glide finish
     const q = bodyPos(f.id);
     if (!q) {
       followRef.current = null;
       return;
     }
+    const tx = window.innerWidth / 2 - q.x * f.scale;
+    const ty = window.innerHeight / 2 - q.y * f.scale;
+    const p = Math.min(1, (performance.now() - f.startAt) / 650);
+    if (p >= 1) {
+      apply(tx, ty, f.scale, 0);
+      return;
+    }
+    // easeInOutCubic
+    const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
     apply(
-      window.innerWidth / 2 - q.x * f.scale,
-      window.innerHeight / 2 - q.y * f.scale,
-      f.scale,
+      f.from.x + (tx - f.from.x) * e,
+      f.from.y + (ty - f.from.y) * e,
+      f.from.scale + (f.scale - f.from.scale) * e,
       0,
     );
   }, [t]);
@@ -215,10 +233,7 @@ export function GeneratorSystem() {
    * (the sun with all planet rings, a planet with its moon rings),
    * glide there, pop its speech bubble, hop once, flash a dashed ring.
    */
-  const handleNavigate = (
-    id: string,
-    setTransform: (x: number, y: number, s: number, ms: number) => void,
-  ) => {
+  const handleNavigate = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
     window.clearTimeout(hideTimer.current);
@@ -234,13 +249,19 @@ export function GeneratorSystem() {
       (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
       (2 * frameRadius(id));
     const s = Math.min(Math.max(fit, 0.16), 1.35);
-    followRef.current = { id, scale: s, startAt: performance.now() };
-    setTransform(
-      window.innerWidth / 2 - q.x * s,
-      window.innerHeight / 2 - q.y * s,
-      s,
-      450,
-    );
+    const st = stateRef.current;
+    followRef.current = {
+      id,
+      scale: s,
+      from: st
+        ? { x: st.positionX, y: st.positionY, scale: st.scale }
+        : {
+            x: window.innerWidth / 2 - q.x * s,
+            y: window.innerHeight / 2 - q.y * s,
+            scale: s,
+          },
+      startAt: performance.now(),
+    };
   };
 
   return (
@@ -266,8 +287,9 @@ export function GeneratorSystem() {
         onWheel={stopFollow}
         onPinchStart={stopFollow}
       >
-        {({ zoomIn, zoomOut, resetTransform, setTransform }) => {
+        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;
+          stateRef.current = state;
           return (
           <>
             <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}>
@@ -398,7 +420,7 @@ export function GeneratorSystem() {
             <Navigator
               items={navItems}
               activeId={activeId}
-              onSelect={(id) => handleNavigate(id, setTransform)}
+              onSelect={handleNavigate}
             />
 
             <div className="fixed right-4 top-4">
