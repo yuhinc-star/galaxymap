@@ -13,6 +13,7 @@ import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import {
   Dices,
   Home,
+  MessagesSquare,
   Minus,
   Palette,
   Plus,
@@ -40,6 +41,14 @@ import { ensureSpritesReady, warmSpritePool } from "./spritePool";
 import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 import type { OrbitShapeKind } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
+import { ChatPanel, type ChatSubjectInfo } from "./ChatPanel";
+import {
+  chaseChatSlot,
+  computeChatLayout,
+  fitChatCamera,
+  type ChatChaseState,
+  type ChatLayout,
+} from "./chatLayout";
 import { Drifter } from "./Drifter";
 import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
 import { HintGuide } from "./HintGuide";
@@ -61,6 +70,7 @@ const GENERATOR_HINTS = [
   "Drag the little rocket onto any star — or tap its chip in the navigator!",
   "A star's page grows its family, summons the rocket… or says goodbye!",
   "Roll 'New system' for a fresh galaxy — the palette paints new skies!",
+  "The chat button lines the whole family up in the sky — say hi!",
 ];
 
 /** Parked rocket stands on its host's upper-right shoulder. */
@@ -159,6 +169,8 @@ export function GeneratorSystem() {
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
+  /** Chat mode: the family lines up in a sky strip beside the chat panel. */
+  const [chatOpen, setChatOpen] = useState(false);
   const hideTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
@@ -192,6 +204,18 @@ export function GeneratorSystem() {
   /** Latest camera state, so a glide eases from exactly where the camera
       is now — even mid-flight from a previous pick. */
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
+  /** Chat column: subject + layout captured when chat opens. */
+  const chatSubjectRef = useRef<{ info: ChatSubjectInfo; layout: ChatLayout } | null>(null);
+  /** 0 = orbits, 1 = column — ramps while chat opens and closes. */
+  const chatMixRef = useRef(0);
+  /** Per-body rendered pose while the column forms and dissolves. */
+  const chatRenderRef = useRef(new Map<string, ChatChaseState>());
+  /** Camera state captured when chat opens, glided back to on close. */
+  const preChatCamRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
+  /** The body chat was opened for (focus itself clears when chat opens). */
+  const chatFocusRef = useRef<string | null>(null);
+  /** The sky strip container — the chat camera frames inside it. */
+  const stripRef = useRef<HTMLDivElement>(null);
 
   const baseConfig = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
 
@@ -233,8 +257,9 @@ export function GeneratorSystem() {
         config.planets.reduce((n, p) => n + countMoons(p.moons), 0) +
         config.drifters.length,
       bg: bgIndex,
+      chat: chatOpen ? "open" : "closed",
     });
-  }, [config, seed, planetCount, extras, bgIndex]);
+  }, [config, seed, planetCount, extras, bgIndex, chatOpen]);
 
   useEffect(() => {
     let raf = 0;
@@ -321,6 +346,13 @@ export function GeneratorSystem() {
     setDepartingIds([]);
     lastTapRef.current = null;
     followRef.current = null;
+    // A new world ends any chat — the old family is gone.
+    setChatOpen(false);
+    chatSubjectRef.current = null;
+    chatRenderRef.current.clear();
+    chatMixRef.current = 0;
+    preChatCamRef.current = null;
+    chatFocusRef.current = null;
     // The rocket always starts parked on the new sun.
     setRocketHostId("sun");
     setRocketArmed(false);
@@ -370,6 +402,29 @@ export function GeneratorSystem() {
     setInfoId(null);
   }, []);
 
+  /** Open chat mode: whatever holds focus (the sun by default) anchors
+      the bottom of the strip and its children line up above it. */
+  const openChat = () => {
+    if (chatOpen) return;
+    chatFocusRef.current = focusedId;
+    stopFollow();
+    setRocketArmed(false);
+    const st = stateRef.current;
+    preChatCamRef.current = st
+      ? { positionX: st.positionX, positionY: st.positionY, scale: st.scale }
+      : null;
+    chatSubjectRef.current = null;
+    chatRenderRef.current.clear();
+    setChatOpen(true);
+    recordCrashEvent("chat-open", { focused: focusedId ?? config.sun.id });
+  };
+
+  const closeChat = () => {
+    if (!chatOpen) return;
+    setChatOpen(false);
+    recordCrashEvent("chat-close", {});
+  };
+
   // Orbit math: bodies advance along their own wobbly closed curves.
   const planetPos = new Map<string, { x: number; y: number }>();
   for (const p of config.planets) {
@@ -399,7 +454,9 @@ export function GeneratorSystem() {
     })),
   ];
 
-  /** Recursive moon position: mini-moons ride on their parent moon. */
+  /** Recursive moon position: mini-moons ride on their parent moon.
+      Chat-set moons report their chased column pose, and their own
+      mini-moons ride that rendered position. */
   const moonWorldPos = (
     moons: GeneratedMoon[],
     id: string,
@@ -408,12 +465,14 @@ export function GeneratorSystem() {
   ): { x: number; y: number } | null => {
     for (const m of moons) {
       const a = m.startAngle + (t * TAU) / m.period;
-      const pos = {
-        x: px + m.orbitR * Math.cos(a),
-        y: py + m.orbitR * Math.sin(a),
-      };
-      if (m.id === id) return pos;
-      const sub = moonWorldPos(m.moons, id, pos.x, pos.y);
+      const r = chatAdjust(
+        m.id,
+        px + m.orbitR * Math.cos(a),
+        py + m.orbitR * Math.sin(a),
+        m.size,
+      );
+      if (m.id === id) return { x: r.x, y: r.y };
+      const sub = moonWorldPos(m.moons, id, r.x, r.y);
       if (sub) return sub;
     }
     return null;
@@ -435,12 +494,123 @@ export function GeneratorSystem() {
 
   /** Display size of any body (sun, planet or moon). */
   const bodySize = (id: string): number | null => {
+    // While the chat column forms, chat-set bodies render at slot size.
+    const cr = chatRenderRef.current.get(id);
+    if (cr && chatMixRef.current > 0.004) return cr.size;
     if (id === config.sun.id) return config.sun.size;
     const p = config.planets.find((pp) => pp.id === id);
     if (p) return p.size;
     const m = findMoonById(config.planets, id);
     return m ? m.size : null;
   };
+
+  // --- Chat mode: line the family up in the sky strip -------------------
+  // The mix ramps 0→1 while chat opens and back when it closes; bodies in
+  // the chat set chase a blend of their live orbit pose and their column
+  // slot, so they glide smoothly in both directions.
+  const chatMixTarget = chatOpen ? 1 : 0;
+  chatMixRef.current += (chatMixTarget - chatMixRef.current) * 0.12;
+  if (!chatOpen && chatMixRef.current < 0.004) {
+    chatMixRef.current = 0;
+    chatSubjectRef.current = null;
+    chatRenderRef.current.clear();
+    preChatCamRef.current = null;
+  }
+  const chatMix = chatMixRef.current;
+  const chatActive = chatMix > 0.004;
+
+  /** Blend + chase one body toward its column slot (frame-guarded). */
+  const chatAdjust = (id: string, x: number, y: number, size: number) => {
+    const subj = chatSubjectRef.current;
+    if (!subj || chatMixRef.current <= 0.004) return { x, y, size };
+    const r = chaseChatSlot(
+      chatRenderRef.current,
+      id,
+      { x, y, size },
+      subj.layout.slots.get(id),
+      chatMixRef.current,
+      t,
+    );
+    return { x: r.x, y: r.y, size: r.size };
+  };
+
+  // Build the subject once per opening: whatever held focus (the sun by
+  // default), anchored where it is right now. chatAdjust is inert while
+  // the subject is being built, so anchors read live positions.
+  if (chatOpen && !chatSubjectRef.current) {
+    const fid = chatFocusRef.current;
+    let subject: { info: ChatSubjectInfo; layout: ChatLayout } | null = null;
+    const p = fid ? config.planets.find((pp) => pp.id === fid) : undefined;
+    const m = fid && !p ? findMoonById(config.planets, fid) : null;
+    if (p) {
+      const anchor = planetPos.get(p.id) ?? { x: CENTER, y: CENTER };
+      subject = {
+        info: { id: p.id, name: p.name, img: p.img, line: p.line, kindLabel: "Planet" },
+        layout: computeChatLayout(
+          p.id,
+          anchor,
+          p.size,
+          p.moons.map((mm) => ({ id: mm.id, size: mm.size })),
+        ),
+      };
+    } else if (m) {
+      const anchor = bodyPos(m.id) ?? { x: CENTER, y: CENTER };
+      const parent = findMoonParent(config.planets, m.id);
+      const parentIsPlanet =
+        parent != null && config.planets.some((pp) => pp.id === parent.id);
+      subject = {
+        info: {
+          id: m.id,
+          name: m.name,
+          img: m.img,
+          line: m.line,
+          kindLabel: parentIsPlanet ? "Moon" : "Tiny moon",
+        },
+        layout: computeChatLayout(
+          m.id,
+          anchor,
+          m.size,
+          m.moons.map((c) => ({ id: c.id, size: c.size })),
+        ),
+      };
+    }
+    if (!subject) {
+      subject = {
+        info: {
+          id: config.sun.id,
+          name: config.sun.name,
+          img: config.sun.img,
+          line: config.sun.line,
+          kindLabel: "Star",
+        },
+        layout: computeChatLayout(
+          config.sun.id,
+          { x: CENTER, y: CENTER },
+          config.sun.size,
+          config.planets.map((pp) => ({ id: pp.id, size: pp.size })),
+        ),
+      };
+    }
+    chatSubjectRef.current = subject;
+  }
+  const chatSubj = chatSubjectRef.current;
+
+  // Planets in the chat set render at their chased pose — the map feeds
+  // moons, rings, rocket parking and hover-picking, so all of them ride
+  // along into the column.
+  if (chatSubj && chatActive) {
+    for (const p of config.planets) {
+      if (!chatSubj.layout.slots.has(p.id)) continue;
+      const q = planetPos.get(p.id);
+      if (!q) continue;
+      const r = chatAdjust(p.id, q.x, q.y, p.size);
+      planetPos.set(p.id, { x: r.x, y: r.y });
+    }
+  }
+  // Names stay readable while the camera zooms the column out.
+  const chatLabelBoost = chatActive
+    ? Math.min(2.6, Math.max(1, 1 / (stateRef.current?.scale ?? 1)))
+    : 1;
 
   /** Where the parked rocket rests: for planets and moons, the host's
       upper-right shoulder; for the sun, a point on its slow orbit loop.
