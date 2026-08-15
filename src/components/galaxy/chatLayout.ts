@@ -159,12 +159,22 @@ export function computeChatLayout(
   for (const k of kids) {
     const radius = k.rho / scale;
     const size = k.dia / scale;
+    // Belt and braces: whatever the wobble shapes and chase do, the
+    // settled disc and its hanging name must end up inside the strip.
+    const longName = k.name.length > 16;
+    const nameHalfW = longName
+      ? Math.min(190 * scale, k.name.length * k.font * 0.34)
+      : (k.name.length * k.font * 0.68) / 2;
+    const maxOff = Math.max(0, stripW * 0.5 - 8 - Math.max(k.dia / 2, nameHalfW));
+    const off = k.rho * Math.cos(k.angle);
+    const clampedOff = Math.abs(off) > maxOff ? Math.sign(off) * maxOff : off;
+    const yOff = k.rho * Math.sin(k.angle);
     slots.set(k.id, {
-      x: anchor.x + radius * Math.cos(k.angle),
-      y: anchor.y + radius * Math.sin(k.angle),
+      x: anchor.x + clampedOff / scale,
+      y: anchor.y + yOff / scale,
       size,
-      angle: k.angle,
-      radius,
+      angle: Math.atan2(yOff, clampedOff),
+      radius: Math.hypot(clampedOff, yOff) / scale,
       labelBoost: k.font / (planetLabelSize(size, k.name) * scale),
     });
   }
