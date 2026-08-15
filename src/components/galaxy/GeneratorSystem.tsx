@@ -1682,7 +1682,7 @@ export function GeneratorSystem() {
             def={chatSized ? { ...m, size: r.size } : m}
             x={r.x}
             y={r.y}
-            labelBoost={chatSubj?.layout.slots.get(m.id)?.labelBoost ?? 1}
+            labelBoost={fanSubj?.layout.slots.get(m.id)?.labelBoost ?? 1}
             active={activeId === m.id}
             jumping={jumpId === m.id}
             highlighted={
@@ -1722,17 +1722,16 @@ export function GeneratorSystem() {
       <TransformWrapper
         key={`${seed}-${planetCount}`}
         initialScale={0.36}
-        minScale={0.12}
+        minScale={chatOpen && fanSubj ? fanSubj.layout.camera.scale : 0.12}
         maxScale={2.5}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
-        wheel={{ step: 0.15, disabled: chatActive }}
+        wheel={{ step: 0.15 }}
         panning={{ velocityDisabled: true, disabled: dragActive || chatActive }}
-        pinch={{ disabled: chatActive }}
         onPanning={stopFollow}
-        onWheel={stopFollow}
-        onPinchStart={stopFollow}
+        onWheel={chatUserZoom}
+        onPinchStart={chatUserZoom}
       >
         {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;
@@ -1850,7 +1849,7 @@ export function GeneratorSystem() {
                         def={chatSized && cr ? { ...p, size: cr.size } : p}
                         x={q.x}
                         y={q.y}
-                        labelBoost={chatSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
+                        labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         newborn={newbornId === p.id}
@@ -1932,18 +1931,14 @@ export function GeneratorSystem() {
               onInfo={handleInfoSelect}
               departingIds={departingIds}
               chatMode={chatActive}
-              rocket={
-                chatActive
-                  ? undefined
-                  : {
-                      img: heroRocketImg,
-                      hostId: flight ? flight.toId : rocketHostId,
-                      flying: flight !== null,
-                      armed: rocketArmed,
-                      onChip: () => setRocketArmed((a) => !a),
-                      onDestination: handleRocketDestination,
-                    }
-              }
+              rocket={{
+                img: heroRocketImg,
+                hostId: flight ? flight.toId : rocketHostId,
+                flying: flight !== null,
+                armed: rocketArmed,
+                onChip: () => setRocketArmed((a) => !a),
+                onDestination: handleRocketDestination,
+              }}
             />
 
             {/* Double-click info panel: details + grow-this-family */}
@@ -1957,19 +1952,17 @@ export function GeneratorSystem() {
                 onDelete={
                   panelInfo.id === config.sun.id ||
                   departingIds.length > 0 ||
-                  (chatActive && panelInfo.id === chatSubj?.info.id)
+                  (chatActive &&
+                    (panelInfo.id === chatSubj?.info.id ||
+                      panelInfo.id === fanSubj?.id))
                     ? undefined
                     : handleRemoveBody
                 }
-                rocket={
-                  chatActive
-                    ? undefined
-                    : {
-                        here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
-                        flying: flight !== null,
-                        onSummon: () => handleRocketDestination(panelInfo.id),
-                      }
-                }
+                rocket={{
+                  here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
+                  flying: flight !== null,
+                  onSummon: () => handleRocketDestination(panelInfo.id),
+                }}
               />
             )}
 
@@ -2047,8 +2040,10 @@ export function GeneratorSystem() {
             </div>
 
             <div
-              className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] flex flex-col gap-2 transition-opacity duration-300 ${
-                chatActive ? "pointer-events-none opacity-0" : "opacity-100"
+              className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] flex-col gap-2 transition-opacity duration-300 ${
+                chatActive
+                  ? "hidden sm:flex left-[calc(clamp(290px,33vw,460px)-3.5rem)]"
+                  : "flex right-[max(1rem,env(safe-area-inset-right))]"
               }`}
             >
               <button
@@ -2064,7 +2059,7 @@ export function GeneratorSystem() {
                 type="button"
                 aria-label="Zoom in"
                 onClick={() => {
-                  stopFollow();
+                  chatUserZoom();
                   zoomIn();
                 }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
@@ -2075,7 +2070,7 @@ export function GeneratorSystem() {
                 type="button"
                 aria-label="Zoom out"
                 onClick={() => {
-                  stopFollow();
+                  chatUserZoom();
                   zoomOut();
                 }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
@@ -2086,7 +2081,7 @@ export function GeneratorSystem() {
                 type="button"
                 aria-label="Recenter"
                 onClick={() => {
-                  stopFollow();
+                  chatUserZoom();
                   resetTransform();
                 }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
