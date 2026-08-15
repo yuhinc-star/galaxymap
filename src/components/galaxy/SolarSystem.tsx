@@ -598,16 +598,10 @@ export function SolarSystem() {
         img: MOON.img,
         kindLabel: "Moon",
         line: MOON.line,
-        facts: [
-          { label: "Orbits", value: "Earth" },
-          { label: "One lap", value: fmtPeriod(MOON.period) },
-          { label: "Size", value: "Pebble moon" },
-        ],
         childrenLabel: "Tiny moons",
         childrenCap: 2,
         children: [],
         add,
-        remove: null,
       };
     }
     const p = PLANETS.find((pp) => pp.id === id);
