@@ -28,6 +28,7 @@ import {
   findMoonById,
   findMoonParent,
   generateSystem,
+  removeBodyFromSystem,
   MAX_MOONS_PER_BODY,
   MAX_SYSTEM_PLANETS,
   MIN_MOON_PARENT_SIZE,
@@ -37,7 +38,7 @@ import {
 import type { OrbitShapeKind } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { Drifter } from "./Drifter";
-import { HeroRocket, ROCKET_H } from "./HeroRocket";
+import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
@@ -323,19 +324,19 @@ export function GeneratorSystem() {
 
   /** Where the parked rocket rests: for planets and moons, the host's
       upper-right shoulder; for the sun, a point on its slow orbit loop.
-      The rocket is screen-fixed in size, so its world-space standoff
-      shrinks as the camera zooms in (and grows as it zooms out). */
+      The standoff matches the rocket's world-space footprint — which
+      only counter-scales when zoomed IN (see rocketWorldScale). */
   const parkPos = (id: string): { x: number; y: number } | null => {
     const c = bodyPos(id);
     const s = bodySize(id);
     if (!c || !s) return null;
-    const scale = stateRef.current?.scale ?? 1;
+    const k = rocketWorldScale(stateRef.current?.scale ?? 1);
     if (id === config.sun.id) {
-      const r = s / 2 + (ROCKET_H * SUN_ORBIT_STANDOFF) / scale;
+      const r = s / 2 + ROCKET_H * SUN_ORBIT_STANDOFF * k;
       const a = PARK_ANGLE + (t * TAU) / SUN_ORBIT_PERIOD;
       return { x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) };
     }
-    const r = s / 2 + (ROCKET_H * 0.4) / scale;
+    const r = s / 2 + ROCKET_H * 0.4 * k;
     return {
       x: c.x + r * Math.cos(PARK_ANGLE),
       y: c.y + r * Math.sin(PARK_ANGLE),
@@ -356,6 +357,8 @@ export function GeneratorSystem() {
    */
   const frameRadius = (id: string): number => {
     if (id === config.sun.id) {
+      // Every planet may have been waved goodbye — frame just the sun.
+      if (config.planets.length === 0) return config.sun.size * 1.2;
       return (
         Math.max(...config.planets.map((p) => p.orbit.maxR + p.size / 2)) + 80
       );
@@ -713,6 +716,47 @@ export function GeneratorSystem() {
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
   };
 
+  /**
+   * The panel's "say goodbye" button: remove the body and everything
+   * orbiting it, then tidy up every bit of state that pointed at the
+   * departed family. The sun itself can never leave.
+   */
+  const handleRemoveBody = () => {
+    if (!infoId || infoId === config.sun.id) return;
+    const next = removeBodyFromSystem(config, infoId);
+    if (!next) return;
+    const removedId = infoId;
+    /** True when id is the removed body or rides anywhere under it. */
+    const gone = (id: string | null): boolean => {
+      if (!id) return false;
+      if (id === removedId) return true;
+      const p = config.planets.find((pp) => pp.id === removedId);
+      const root = p
+        ? p.moons
+        : (findMoonById(config.planets, removedId)?.moons ?? []);
+      const walk = (ms: GeneratedMoon[]): boolean =>
+        ms.some((m) => m.id === id || walk(m.moons));
+      return walk(root);
+    };
+    // A rocket flying to a departing body turns back home; one parked
+    // there moves back to the sun right away (never renders on a ghost).
+    if (flight && gone(flight.toId)) {
+      setFlight(null);
+      setRocketInboundId(null);
+    }
+    if (gone(rocketHostId)) setRocketHostId(config.sun.id);
+    if (focusedId && gone(focusedId)) {
+      followRef.current = null;
+      setFocusedId(null);
+    }
+    if (activeId && gone(activeId)) setActiveId(null);
+    if (highlightId && gone(highlightId)) setHighlightId(null);
+    if (jumpId && gone(jumpId)) setJumpId(null);
+    if (newbornId && gone(newbornId)) setNewbornId(null);
+    setExtras(next);
+    setInfoId(null);
+  };
+
   /** Everything the information panel shows about a body. */
   const getPanelInfo = (id: string): BodyPanelInfo | null => {
     const add = getAddMenuInfo(id);
@@ -739,6 +783,7 @@ export function GeneratorSystem() {
           img: p.img,
         })),
         add,
+        remove: null, // the sun is the heart of the system — it stays
       };
     }
     const p = config.planets.find((pp) => pp.id === id);
@@ -770,6 +815,13 @@ export function GeneratorSystem() {
         childrenCap: MAX_MOONS_PER_BODY,
         children: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
         add,
+        remove: {
+          actionLabel: "Say goodbye to this planet",
+          note:
+            p.moons.length > 0
+              ? `Its ${p.moons.length} moon${p.moons.length > 1 ? "s" : ""} wave${p.moons.length > 1 ? "" : "s"} goodbye too!`
+              : undefined,
+        },
       };
     }
     const m = findMoonById(config.planets, id);
@@ -804,6 +856,15 @@ export function GeneratorSystem() {
         childrenCap: MAX_MOONS_PER_BODY,
         children: m.moons.map((c) => ({ id: c.id, name: c.name, img: c.img })),
         add,
+        remove: {
+          actionLabel: parentIsPlanet
+            ? "Say goodbye to this moon"
+            : "Say goodbye to this tiny moon",
+          note:
+            m.moons.length > 0
+              ? `Its ${m.moons.length} tiny moon${m.moons.length > 1 ? "s" : ""} wave${m.moons.length > 1 ? "" : "s"} goodbye too!`
+              : undefined,
+        },
       };
     }
     return null;
@@ -1135,6 +1196,7 @@ export function GeneratorSystem() {
               <BodyInfoPanel
                 info={panelInfo}
                 onAdd={handleAddBody}
+                onRemove={handleRemoveBody}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
               />

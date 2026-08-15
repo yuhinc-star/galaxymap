@@ -5,11 +5,19 @@ import heroRocketImg from "@/assets/planets/hero-rocket.png";
 import heroFlameImg from "@/assets/planets/hero-flame.png";
 
 /**
- * Display height in SCREEN px — the rocket keeps a fixed on-screen size at
- * every zoom level (counter-scaled against the camera), so it can be seen,
- * grabbed and parked even on tiny moons.
+ * Display height in SCREEN px when zoomed in — see rocketWorldScale.
  */
 export const ROCKET_H = 96;
+
+/**
+ * World-space scale of the rocket at a camera zoom. Zoomed IN past 1x the
+ * rocket counter-scales against the camera (fixed ~96px on screen), so it
+ * can be seen, grabbed and parked even on tiny moons. Zoomed OUT it keeps
+ * its world size and shrinks along with everything else — otherwise it
+ * would loom disproportionately large over a small body at overview.
+ */
+export const rocketWorldScale = (cameraScale: number) =>
+  1 / Math.max(1, cameraScale);
 /** Sprite aspect is 407x1067 after alpha-trimming. */
 export const ROCKET_W = Math.round((ROCKET_H * 407) / 1067);
 const FLAME_H = 61;
@@ -35,8 +43,9 @@ interface HeroRocketProps {
  * The hero rocket: a classic red-and-cream toy rocket the user flies
  * between bodies. Parked, it stands on its host's shoulder with a gentle
  * sway; in flight a brushy flame flickers underneath. Drag it onto any
- * body — sun, planet or moon — or send it via the navigator. It renders
- * at a fixed on-screen size no matter the zoom.
+ * body — sun, planet or moon — or send it via the navigator. It holds a
+ * fixed on-screen size when zoomed in, and shrinks with the world when
+ * zoomed out (see rocketWorldScale).
  */
 export function HeroRocket({
   x,
@@ -48,12 +57,13 @@ export function HeroRocket({
   interactive,
   onDown,
 }: HeroRocketProps) {
-  // Counter-scale against the camera zoom: the rocket's footprint in world
-  // px shrinks as you zoom in, keeping its on-screen size constant.
+  // Counter-scale against the camera zoom only when zoomed IN: the
+  // rocket's footprint in world px shrinks as you zoom in, keeping its
+  // on-screen size constant; zooming out lets it shrink with the world.
   const scaleRef = useRef<HTMLDivElement>(null);
   useTransformEffect(({ state }) => {
     const el = scaleRef.current;
-    if (el) el.style.transform = `scale(${1 / state.scale})`;
+    if (el) el.style.transform = `scale(${rocketWorldScale(state.scale)})`;
   });
 
   return (

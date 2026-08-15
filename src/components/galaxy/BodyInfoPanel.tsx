@@ -1,4 +1,5 @@
-import { Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus, Trash2, X } from "lucide-react";
 
 export interface BodyPanelChild {
   id: string;
@@ -10,6 +11,12 @@ export interface BodyPanelAdd {
   canAdd: boolean;
   actionLabel?: string | undefined;
   fullNote?: string | undefined;
+}
+
+export interface BodyPanelRemove {
+  actionLabel: string;
+  /** e.g. moons that wave goodbye together with their planet. */
+  note?: string | undefined;
 }
 
 export interface BodyPanelInfo {
@@ -25,11 +32,14 @@ export interface BodyPanelInfo {
   childrenCap: number;
   children: BodyPanelChild[];
   add: BodyPanelAdd;
+  /** Null for the sun — the heart of the system can never leave. */
+  remove: BodyPanelRemove | null;
 }
 
 interface BodyInfoPanelProps {
   info: BodyPanelInfo;
   onAdd: () => void;
+  onRemove: () => void;
   /** Fly to a child body and open its own panel. */
   onSelect: (id: string) => void;
   onClose: () => void;
@@ -45,9 +55,14 @@ interface BodyInfoPanelProps {
 export function BodyInfoPanel({
   info,
   onAdd,
+  onRemove,
   onSelect,
   onClose,
 }: BodyInfoPanelProps) {
+  // "Say goodbye" asks for a second tap before anything is removed.
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => setConfirming(false), [info.id]);
+
   return (
     <aside
       aria-label={`About ${info.name}`}
@@ -157,6 +172,41 @@ export function BodyInfoPanel({
             </p>
           )}
         </section>
+
+        {/* Saying goodbye: two taps, then the body (and its whole moon
+            family) leaves the system */}
+        {info.remove && (
+          <section className="rounded-2xl border-2 border-dashed border-white/20 px-3 py-2.5">
+            <h3 className="font-hand text-lg font-bold uppercase tracking-[0.18em] text-white/55">
+              Too crowded?
+            </h3>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirming) {
+                  onRemove();
+                } else {
+                  setConfirming(true);
+                }
+              }}
+              className={`mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-full px-4 py-1.5 font-hand text-2xl font-bold uppercase leading-none tracking-wider shadow-md transition-transform hover:scale-105 active:scale-95 ${
+                confirming
+                  ? "bg-red-400 text-space-deep"
+                  : "border-2 border-dashed border-white/30 text-white/75"
+              }`}
+            >
+              <Trash2 className="h-5 w-5" strokeWidth={2.5} />
+              {confirming ? "Really? Tap again!" : info.remove.actionLabel}
+            </button>
+            {(confirming || info.remove.note) && (
+              <p className="mt-1 font-hand text-lg font-bold uppercase leading-tight tracking-wider text-white/45">
+                {confirming
+                  ? "There's no bringing it back!"
+                  : info.remove.note}
+              </p>
+            )}
+          </section>
+        )}
       </div>
     </aside>
   );
