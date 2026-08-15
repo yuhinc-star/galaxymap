@@ -248,6 +248,22 @@
   animation: panel-in 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
 
+/* On phones the info panel is a bottom sheet: it rises from the bottom edge. */
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@utility animate-sheet-in {
+  animation: sheet-in 0.32s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
 /* Single joyful hop with squash-and-stretch, for navigator "find me". */
 @keyframes planet-jump {
   0% {

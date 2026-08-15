@@ -145,6 +145,9 @@ export function SolarSystem() {
   const [dragActive, setDragActive] = useState(false);
   /** Body currently showing its information panel. */
   const [infoId, setInfoId] = useState<string | null>(null);
+  /** Phone shrink for the rocket's fixed on-screen size — decided after
+      mount so SSR and hydration render identical park positions. */
+  const [rocketShrink, setRocketShrink] = useState(1);
   /** Double-tap detection on the focused body (tap → focus, double-tap → panel). */
   const lastTapRef = useRef<{ id: string; t: number } | null>(null);
   /** Live drag data — read every frame by the render loop. */
@@ -191,6 +194,20 @@ export function SolarSystem() {
   // palette switches and hopping to "Make your own" never wait on loads.
   useEffect(() => {
     warmSpritePool(BACKGROUNDS.map((b) => b.src));
+  }, []);
+
+  // Phones open with the whole world in view instead of a 0.36x close-up:
+  // one silent transform after mount (SSR keeps the desktop default).
+  useEffect(() => {
+    if (window.innerWidth >= 640) return;
+    setRocketShrink(0.72);
+    const s = Math.max(0.12, Math.min(0.36, (window.innerWidth / WORLD) * 1.02));
+    setTransformRef.current?.(
+      (window.innerWidth - WORLD * s) / 2,
+      (window.innerHeight - WORLD * s) / 2,
+      s,
+      0,
+    );
   }, []);
 
   const cycleBg = useCallback(() => {
@@ -392,7 +409,7 @@ export function SolarSystem() {
     const c = bodyPos(id);
     const s = bodySize(id);
     if (!c || !s) return null;
-    const k = rocketWorldScale(stateRef.current?.scale ?? 1);
+    const k = rocketWorldScale(stateRef.current?.scale ?? 1, rocketShrink);
     if (id === SUN.id) {
       const r = s / 2 + ROCKET_H * SUN_ORBIT_STANDOFF * k;
       const a = PARK_ANGLE + (t * TAU) / SUN_ORBIT_PERIOD;
@@ -876,9 +893,9 @@ export function SolarSystem() {
               </div>
             </TransformComponent>
 
-            <header className="pointer-events-none fixed left-4 top-4 flex items-center gap-2">
+            <header className="pointer-events-none fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2">
               <Sparkle className="h-5 w-5 text-star" aria-hidden />
-              <span className="font-display text-xl font-semibold tracking-wide text-star">
+              <span className="font-display text-base font-semibold tracking-wide text-star sm:text-xl">
                 Pocket Galaxy
               </span>
             </header>
@@ -914,7 +931,7 @@ export function SolarSystem() {
               />
             )}
 
-            <div className="fixed right-4 top-4">
+            <div className="fixed right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))]">
               <Link
                 to="/generator"
                 aria-label="Open the Galaxy Generator"
@@ -926,7 +943,7 @@ export function SolarSystem() {
               </Link>
             </div>
 
-            <div className="fixed bottom-5 right-4 flex flex-col gap-2">
+            <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] flex flex-col gap-2">
               <button
                 type="button"
                 aria-label={`Change background (now: ${BACKGROUNDS[bgIndex]!.name})`}

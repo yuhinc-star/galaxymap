@@ -62,7 +62,7 @@ export function HintGuide({ pageId, hints }: HintGuideProps) {
         <div
           key={step}
           role="status"
-          className="animate-panel-in fixed bottom-5 left-1/2 z-30 w-[26rem] max-w-[calc(100vw-2rem)] -translate-x-1/2"
+          className="animate-panel-in fixed left-1/2 top-[max(7rem,calc(env(safe-area-inset-top)+6rem))] z-30 w-[26rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 sm:bottom-5 sm:top-auto"
         >
           <div className="flex items-center gap-3 rounded-3xl border-2 border-dashed border-star/70 bg-space-deep/90 px-4 py-2.5 shadow-xl backdrop-blur-sm">
             <Sparkle
@@ -88,7 +88,7 @@ export function HintGuide({ pageId, hints }: HintGuideProps) {
               type="button"
               aria-label="Skip the hints"
               onClick={finish}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/20 hover:text-white"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/20 hover:text-white sm:h-6 sm:w-6"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -100,7 +100,7 @@ export function HintGuide({ pageId, hints }: HintGuideProps) {
         aria-label="Show the exploration hints"
         title="Hints"
         onClick={() => setStep(0)}
-        className="fixed bottom-5 right-[4.5rem] z-20 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+        className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(4.5rem,calc(env(safe-area-inset-right)+3.5rem))] z-20 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
       >
         <Lightbulb className="h-5 w-5" />
       </button>
