@@ -483,11 +483,12 @@ export function GeneratorSystem() {
     const end = parkPos(toId);
     if (!end) return;
     const dist = Math.hypot(end.x - from.x, end.y - from.y);
-    if (dist < 30) return;
     const dur = Math.min(3.4, Math.max(1.15, dist / 1500)) * 1000;
     arcSideRef.current *= -1;
-    const nx = -(end.y - from.y) / dist;
-    const ny = (end.x - from.x) / dist;
+    // Even a near-zero hop flies — dropping right on a tiny moon's park
+    // spot must still land there. Guard the degenerate zero-length normal.
+    const nx = dist > 1 ? -(end.y - from.y) / dist : 0;
+    const ny = dist > 1 ? (end.x - from.x) / dist : -1;
     const lift = Math.min(430, Math.max(120, dist * 0.26)) * arcSideRef.current;
     setFlight({
       fx: from.x,
@@ -981,7 +982,12 @@ export function GeneratorSystem() {
             y={my}
             active={activeId === m.id}
             jumping={jumpId === m.id}
-            highlighted={highlightId === m.id}
+            highlighted={
+              highlightId === m.id ||
+              dragHoverId === m.id ||
+              rocketInboundId === m.id
+            }
+            highlightMode={highlightId === m.id ? "flash" : "steady"}
             newborn={newbornId === m.id}
             onTap={handleBodyTap}
           />
