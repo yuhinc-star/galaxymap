@@ -389,7 +389,7 @@ export function SolarSystem() {
             <Navigator
               items={navItems}
               activeId={activeId}
-              onSelect={(id) => handleNavigate(id, state.scale, setTransform)}
+              onSelect={(id) => handleNavigate(id, setTransform)}
             />
 
             <div className="fixed right-4 top-4">
