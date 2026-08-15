@@ -192,7 +192,12 @@ export function GeneratorSystem() {
 
   // Warm every sprite and sky in the background right after mount, so a later
   // "New system" warp or palette switch never waits on image loads.
+  // Phones skip the full-pool warm: force-decoding ~50 large images at
+  // once spikes memory hard enough to kill a mobile tab. Rendered sprites
+  // load via their <img> tags; the warp still pre-decodes exactly the
+  // next system's sprites via ensureSpritesReady.
   useEffect(() => {
+    if (window.innerWidth < 640) return;
     warmSpritePool(BACKGROUNDS.map((b) => b.src));
   }, []);
 
@@ -215,8 +220,15 @@ export function GeneratorSystem() {
   useEffect(() => {
     let raf = 0;
     const t0 = performance.now();
+    // Phones get a 30fps clock — the ultra-slow orbits look identical and
+    // the main thread does half the React work.
+    const mobile = window.matchMedia("(max-width: 639px)").matches;
+    let lastSet = 0;
     const loop = (now: number) => {
-      setT((now - t0) / 1000);
+      if (!mobile || now - lastSet >= 33) {
+        lastSet = now;
+        setT((now - t0) / 1000);
+      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -1056,6 +1068,8 @@ export function GeneratorSystem() {
       <img
         key={BACKGROUNDS[bgIndex]!.src}
         src={BACKGROUNDS[bgIndex]!.src}
+        srcSet={`${BACKGROUNDS[bgIndex]!.srcSm} 1280w, ${BACKGROUNDS[bgIndex]!.src} 2048w`}
+        sizes="100vw"
         alt=""
         draggable={false}
         className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"

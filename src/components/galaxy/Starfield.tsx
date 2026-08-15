@@ -81,8 +81,11 @@ export function Starfield({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    // Coarse pointers (phones): smaller backing store + sparser sky — the
+    // full-density canvas costs real GPU memory and CPU on a small screen.
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
     // Cap backing-store pixels so huge worlds stay cheap on mobile GPUs.
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5, 2048 / Math.max(w, h));
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5, (coarse ? 1024 : 2048) / Math.max(w, h));
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     const ctx = canvas.getContext("2d");
@@ -92,7 +95,7 @@ export function Starfield({
     const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)] as T;
 
     // Twinkling confetti dots — an extremely slow animated layer over the painted sky.
-    const stars: Star[] = Array.from({ length: 420 }, () => ({
+    const stars: Star[] = Array.from({ length: coarse ? 240 : 420 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: 1 + Math.random() * 3,
@@ -103,7 +106,7 @@ export function Starfield({
     }));
 
     // Solid 5-point candy stars — small but luminous against the dark sky.
-    const solidStars: SolidStar[] = Array.from({ length: 20 }, () => ({
+    const solidStars: SolidStar[] = Array.from({ length: coarse ? 14 : 20 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: 6 + Math.random() * 8,
@@ -114,7 +117,7 @@ export function Starfield({
     }));
 
     // Plus-shaped sparkles scattered between the dots.
-    const sparkles: Sparkle[] = Array.from({ length: 32 }, () => ({
+    const sparkles: Sparkle[] = Array.from({ length: coarse ? 20 : 32 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       size: 7 + Math.random() * 8,
@@ -124,7 +127,7 @@ export function Starfield({
     }));
 
     // Hand-drawn spiral swirls, very slowly turning.
-    const spirals: Spiral[] = Array.from({ length: 8 }, () => ({
+    const spirals: Spiral[] = Array.from({ length: coarse ? 5 : 8 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       maxR: 16 + Math.random() * 18,
@@ -147,7 +150,7 @@ export function Starfield({
     };
 
     const comets: Comet[] = [];
-    let nextCometIn = 2000 + Math.random() * 2500;
+    let nextCometIn = (coarse ? 2 : 1) * (2000 + Math.random() * 2500);
     let last = performance.now();
     let raf = 0;
 
@@ -219,7 +222,7 @@ export function Starfield({
 
       nextCometIn -= dt;
       if (nextCometIn <= 0) {
-        nextCometIn = 3500 + Math.random() * 4500;
+        nextCometIn = (coarse ? 2 : 1) * (3500 + Math.random() * 4500);
         const angle = Math.random() * Math.PI * 2;
         const speed = 0.12 + Math.random() * 0.18; // px per ms (very slow)
         comets.push({
