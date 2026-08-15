@@ -12,11 +12,10 @@ interface RocketChatInviteProps {
 
 /**
  * Chat invite pill in the SuggestionStack: "Chat with <name>?" with the
- * body's face. Two lives — in the galaxy view it is the rocket's
- * post-landing handshake (time-boxed, dismissible); in chat mode it
- * points back to the star you're actually chatting with when the fan has
- * wandered off (state-driven, no dismiss). The rocket decides who we talk
- * to; this pill is its handshake.
+ * body's face. It is the rocket's post-landing handshake in galaxy mode:
+ * time-boxed and dismissible. Chat mode never repeats this prompt for the
+ * conversation that is already open. The rocket decides who we talk to;
+ * this pill is its handshake before a conversation begins.
  */
 export function RocketChatInvite({
   name,
