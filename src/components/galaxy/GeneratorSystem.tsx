@@ -101,6 +101,7 @@ export function GeneratorSystem() {
     setSeed(next);
     setActiveId(null);
     setHighlightId(null);
+    setFocusedId(null);
     followRef.current = null;
   }, []);
 
@@ -112,6 +113,7 @@ export function GeneratorSystem() {
     });
     setActiveId(null);
     setHighlightId(null);
+    setFocusedId(null);
     followRef.current = null;
   }, []);
 
@@ -235,6 +237,7 @@ export function GeneratorSystem() {
     setActiveId(id);
     setJumpId(id);
     setHighlightId(id);
+    setFocusedId(id);
     jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
