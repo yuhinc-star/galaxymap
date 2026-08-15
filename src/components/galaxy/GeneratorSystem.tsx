@@ -37,6 +37,7 @@ import {
   type SystemConfig,
 } from "./systemGenerator";
 import { ensureSpritesReady, warmSpritePool } from "./spritePool";
+import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 import type { OrbitShapeKind } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { Drifter } from "./Drifter";
@@ -111,6 +112,10 @@ const ORBIT_KIND_LABELS: Record<OrbitShapeKind, string> = {
   tilt: "Tilted ellipse",
   wobble: "Extra wobbly",
 };
+
+/** Total moon count including nested mini-moons (for the crash context). */
+const countMoons = (ms: GeneratedMoon[]): number =>
+  ms.reduce((n, m) => n + 1 + countMoons(m.moons), 0);
 
 /**
  * The Galaxy Generator: every seed assembles a brand-new solar-system-like
@@ -217,6 +222,20 @@ export function GeneratorSystem() {
   }, [seed, planetCount]);
   const config = extras ?? baseConfig;
 
+  // Flight recorder: keep the last-known world state in the heartbeat, so a
+  // killed phone tab still tells us which system it was showing.
+  useEffect(() => {
+    setCrashContext({
+      system: `gen:${seed}/${planetCount}${extras ? "+grown" : ""}`,
+      bodies:
+        1 +
+        config.planets.length +
+        config.planets.reduce((n, p) => n + countMoons(p.moons), 0) +
+        config.drifters.length,
+      bg: bgIndex,
+    });
+  }, [config, seed, planetCount, extras, bgIndex]);
+
   useEffect(() => {
     let raf = 0;
     const t0 = performance.now();
@@ -317,6 +336,7 @@ export function GeneratorSystem() {
     window.clearTimeout(diceTimer.current);
     diceTimer.current = window.setTimeout(() => setDiceRolling(false), 650);
     const next = Math.floor(Math.random() * 1_000_000_000) + 1;
+    recordCrashEvent("warp", { reason: "regenerate", seed: next, planetCount });
     // Pre-decode the next system's art while the old one warps out.
     const ready = ensureSpritesReady(
       collectSystemSpriteUrls(generateSystem(next, planetCount)),
@@ -332,6 +352,7 @@ export function GeneratorSystem() {
     const next = Math.min(MAX_PLANETS, Math.max(MIN_PLANETS, planetCount + delta));
     // At the bounds nothing changes — don't play a pointless warp.
     if (next === planetCount) return;
+    recordCrashEvent("warp", { reason: "count", seed, planetCount: next });
     const ready = ensureSpritesReady(
       collectSystemSpriteUrls(generateSystem(seed, next)),
     );
@@ -523,6 +544,8 @@ export function GeneratorSystem() {
     setFlight(null);
     setRocketHostId(dest);
     setRocketInboundId(null);
+    recordCrashEvent("rocket-land", { on: dest });
+    setCrashContext({ rocket: `parked:${dest}` });
     if (dest !== config.sun.id) {
       setLandingSquash(true);
       window.clearTimeout(squashTimer.current);
@@ -600,6 +623,8 @@ export function GeneratorSystem() {
       dur,
     });
     setRocketInboundId(toId);
+    recordCrashEvent("rocket-launch", { to: toId });
+    setCrashContext({ rocket: `flying->${toId}` });
   };
 
   /** Navigator move mode: send the rocket to the picked body — sun,
@@ -725,6 +750,7 @@ export function GeneratorSystem() {
   const handleNavigate = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
+    recordCrashEvent("navigate", id);
     setInfoId(null);
     window.clearTimeout(hideTimer.current);
     window.clearTimeout(jumpTimer.current);
@@ -803,6 +829,7 @@ export function GeneratorSystem() {
         ? addPlanetToSystem(config)
         : addMoonToSystem(config, infoId);
     if (!result) return;
+    recordCrashEvent("body-add", { parent: infoId, newId: result.newId });
     setExtras(result.next);
     // Newborn celebration: pop-in, a hello bubble and the golden ring.
     setNewbornId(result.newId);
@@ -828,6 +855,7 @@ export function GeneratorSystem() {
     const next = removeBodyFromSystem(config, infoId);
     if (!next) return;
     const removedId = infoId;
+    recordCrashEvent("body-remove", { id: removedId });
     // Every id leaving with it: the body plus its whole moon subtree.
     const ids: string[] = [];
     const collect = (ms: GeneratedMoon[]) =>

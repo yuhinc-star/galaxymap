@@ -1,3 +1,4 @@
+import { setCrashContext } from "@/lib/crash-reporter";
 import sunImg from "@/assets/planets/sun.png";
 import sun2Img from "@/assets/planets/sun-2.png";
 import sun3Img from "@/assets/planets/sun-3.png";
@@ -133,6 +134,8 @@ const decodeOne = (url: string): Promise<void> => {
   img.src = url;
   const done = () => {
     decodedUrls.add(url);
+    // Flight recorder: decoded-bitmap count is the prime OOM suspect.
+    setCrashContext({ spritesDecoded: decodedUrls.size });
   };
   if (typeof img.decode === "function") {
     return img.decode().then(done, done);
