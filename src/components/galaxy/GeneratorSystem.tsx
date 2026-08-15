@@ -1653,8 +1653,15 @@ export function GeneratorSystem() {
 
   // Post-landing invite: shared by galaxy and chat mode. It is created by
   // the touchdown effect, so it can never appear while the rocket is flying.
+  // Never suggest chatting with the star we're already chatting with: in
+  // chat mode the conversation follows the rocket automatically, so the
+  // invite for its host would be redundant — it only makes sense with the
+  // chat panel closed (galaxy view).
   const suggestionInfo =
-    chatSuggestionId && !flight && !dragActive
+    chatSuggestionId &&
+    !flight &&
+    !dragActive &&
+    !(chatOpen && chatSuggestionId === talkId)
       ? getPanelInfo(chatSuggestionId)
       : null;
 
