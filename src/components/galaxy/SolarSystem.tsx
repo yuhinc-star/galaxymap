@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
-import { Minus, Plus, RotateCcw, Sparkle } from "lucide-react";
+import { Minus, Palette, Plus, RotateCcw, Sparkle } from "lucide-react";
+import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, DRIFTERS, MOON, PLANETS, SUN, WORLD } from "./planets";
 import { Drifter } from "./Drifter";
 import { Planet } from "./Planet";
@@ -65,6 +66,8 @@ const RING_STYLES: RingStyle[] = PLANETS.map((p, i) => {
 export function SolarSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bounceId, setBounceId] = useState<string | null>(null);
+  /** Which hand-painted sky is showing; restored from localStorage after mount. */
+  const [bgIndex, setBgIndex] = useState(0);
   /** Animation clock, seconds. Starts at 0 so SSR and hydration agree. */
   const [t, setT] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
@@ -79,6 +82,21 @@ export function SolarSystem() {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    const saved = Number(window.localStorage.getItem("galaxy-bg"));
+    if (Number.isInteger(saved) && saved >= 0 && saved < BACKGROUNDS.length) {
+      setBgIndex(saved);
+    }
+  }, []);
+
+  const cycleBg = useCallback(() => {
+    setBgIndex((i) => {
+      const next = (i + 1) % BACKGROUNDS.length;
+      window.localStorage.setItem("galaxy-bg", String(next));
+      return next;
+    });
   }, []);
 
   const handleTap = useCallback((id: string) => {
@@ -134,13 +152,13 @@ export function SolarSystem() {
                 className="relative"
                 style={{ width: WORLD, height: WORLD }}
               >
-                {/* Soft nebula glow behind the whole system */}
-                <div
-                  className="pointer-events-none absolute inset-0"
-                  style={{
-                    background:
-                      "radial-gradient(circle at center, oklch(0.34 0.09 300 / 0.5), transparent 62%)",
-                  }}
+                {/* Hand-painted gouache sky, straight from the reference style */}
+                <img
+                  key={BACKGROUNDS[bgIndex]!.src}
+                  src={BACKGROUNDS[bgIndex]!.src}
+                  alt=""
+                  draggable={false}
+                  className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
                 />
 
                 {/* Twinkling stars and comets */}
@@ -243,6 +261,15 @@ export function SolarSystem() {
             </header>
 
             <div className="fixed bottom-5 right-4 flex flex-col gap-2">
+              <button
+                type="button"
+                aria-label={`Change background (now: ${BACKGROUNDS[bgIndex]!.name})`}
+                title={`Sky: ${BACKGROUNDS[bgIndex]!.name}`}
+                onClick={cycleBg}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <Palette className="h-5 w-5" />
+              </button>
               <button
                 type="button"
                 aria-label="Zoom in"

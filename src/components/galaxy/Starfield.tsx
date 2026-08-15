@@ -91,8 +91,8 @@ export function Starfield({
 
     const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)] as T;
 
-    // Dense field of tiny confetti dots packed across the whole sky.
-    const stars: Star[] = Array.from({ length: 950 }, () => ({
+    // Twinkling confetti dots — a light animated layer over the painted sky.
+    const stars: Star[] = Array.from({ length: 280 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: 1 + Math.random() * 3,
@@ -103,7 +103,7 @@ export function Starfield({
     }));
 
     // Solid 5-point candy stars, the signature doodle of the references.
-    const solidStars: SolidStar[] = Array.from({ length: 85 }, () => ({
+    const solidStars: SolidStar[] = Array.from({ length: 20 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: 6 + Math.random() * 10,
@@ -114,7 +114,7 @@ export function Starfield({
     }));
 
     // Plus-shaped sparkles scattered between the dots.
-    const sparkles: Sparkle[] = Array.from({ length: 45 }, () => ({
+    const sparkles: Sparkle[] = Array.from({ length: 28 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       size: 7 + Math.random() * 9,
@@ -124,7 +124,7 @@ export function Starfield({
     }));
 
     // Hand-drawn spiral swirls, slowly turning.
-    const spirals: Spiral[] = Array.from({ length: 14 }, () => ({
+    const spirals: Spiral[] = Array.from({ length: 6 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       maxR: 16 + Math.random() * 18,
