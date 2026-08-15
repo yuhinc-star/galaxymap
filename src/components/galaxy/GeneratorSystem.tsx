@@ -43,6 +43,9 @@ export function GeneratorSystem() {
   const bounceTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
+  /** Camera follow: keeps the navigator-picked body centered as it orbits. */
+  const followRef = useRef<{ id: string; scale: number; startAt: number } | null>(null);
+  const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
 
   const config = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
 
@@ -88,6 +91,7 @@ export function GeneratorSystem() {
     setSeed(next);
     setActiveId(null);
     setHighlightId(null);
+    followRef.current = null;
   }, []);
 
   const changeCount = useCallback((delta: number) => {
@@ -98,9 +102,16 @@ export function GeneratorSystem() {
     });
     setActiveId(null);
     setHighlightId(null);
+    followRef.current = null;
+  }, []);
+
+  /** Any manual camera move takes control back from the follow mode. */
+  const stopFollow = useCallback(() => {
+    followRef.current = null;
   }, []);
 
   const handleTap = useCallback((id: string) => {
+    followRef.current = null;
     window.clearTimeout(hideTimer.current);
     window.clearTimeout(bounceTimer.current);
     setActiveId(id);
@@ -132,6 +143,46 @@ export function GeneratorSystem() {
     })),
   ];
 
+  /** Current world position of any navigator-listed body. */
+  const bodyPos = (id: string): { x: number; y: number } | null => {
+    if (id === config.sun.id) return { x: CENTER, y: CENTER };
+    const pq = planetPos.get(id);
+    if (pq) return pq;
+    // Moons ride on their planet's position.
+    for (const p of config.planets) {
+      const m = p.moons.find((mm) => mm.id === id);
+      if (m) {
+        const base = planetPos.get(p.id)!;
+        const a = m.startAngle + (t * TAU) / m.period;
+        return {
+          x: base.x + m.orbitR * Math.cos(a),
+          y: base.y + m.orbitR * Math.sin(a),
+        };
+      }
+    }
+    return null;
+  };
+
+  // Camera follow: once the navigator glide lands, re-center the picked
+  // body every frame so it stays pinned to the viewport center as it orbits.
+  useEffect(() => {
+    const f = followRef.current;
+    const apply = setTransformRef.current;
+    if (!f || !apply) return;
+    if (performance.now() - f.startAt < 470) return; // let the glide finish
+    const q = bodyPos(f.id);
+    if (!q) {
+      followRef.current = null;
+      return;
+    }
+    apply(
+      window.innerWidth / 2 - q.x * f.scale,
+      window.innerHeight / 2 - q.y * f.scale,
+      f.scale,
+      0,
+    );
+  }, [t]);
+
   /**
    * Navigator click: pan the camera to the body, pop its speech bubble,
    * make it hop once, and flash a dashed ring around it.
@@ -141,23 +192,7 @@ export function GeneratorSystem() {
     scale: number,
     setTransform: (x: number, y: number, s: number, ms: number) => void,
   ) => {
-    let q =
-      id === config.sun.id ? { x: CENTER, y: CENTER } : planetPos.get(id);
-    if (!q) {
-      // Moons ride on their planet's position.
-      for (const p of config.planets) {
-        const m = p.moons.find((mm) => mm.id === id);
-        if (m) {
-          const pq = planetPos.get(p.id)!;
-          const a = m.startAngle + (t * TAU) / m.period;
-          q = {
-            x: pq.x + m.orbitR * Math.cos(a),
-            y: pq.y + m.orbitR * Math.sin(a),
-          };
-          break;
-        }
-      }
-    }
+    const q = bodyPos(id);
     if (!q) return;
     window.clearTimeout(hideTimer.current);
     window.clearTimeout(jumpTimer.current);
@@ -169,6 +204,7 @@ export function GeneratorSystem() {
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
     const s = Math.min(Math.max(scale, 0.6), 1.05);
+    followRef.current = { id, scale: s, startAt: performance.now() };
     setTransform(
       window.innerWidth / 2 - q.x * s,
       window.innerHeight / 2 - q.y * s,
@@ -196,8 +232,13 @@ export function GeneratorSystem() {
         doubleClick={{ disabled: true }}
         wheel={{ step: 0.15 }}
         panning={{ velocityDisabled: true }}
+        onPanningStart={stopFollow}
+        onWheel={stopFollow}
+        onPinchStart={stopFollow}
       >
-        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => (
+        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
+          setTransformRef.current = setTransform;
+          return (
           <>
             <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}>
               <div className="relative" style={{ width: WORLD, height: WORLD }}>
@@ -392,7 +433,10 @@ export function GeneratorSystem() {
               <button
                 type="button"
                 aria-label="Zoom in"
-                onClick={() => zoomIn()}
+                onClick={() => {
+                  stopFollow();
+                  zoomIn();
+                }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
                 <Plus className="h-5 w-5" />
@@ -400,7 +444,10 @@ export function GeneratorSystem() {
               <button
                 type="button"
                 aria-label="Zoom out"
-                onClick={() => zoomOut()}
+                onClick={() => {
+                  stopFollow();
+                  zoomOut();
+                }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
                 <Minus className="h-5 w-5" />
@@ -408,14 +455,18 @@ export function GeneratorSystem() {
               <button
                 type="button"
                 aria-label="Recenter"
-                onClick={() => resetTransform()}
+                onClick={() => {
+                  stopFollow();
+                  resetTransform();
+                }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
                 <RotateCcw className="h-5 w-5" />
               </button>
             </div>
           </>
-        )}
+          );
+        }}
       </TransformWrapper>
     </div>
   );
