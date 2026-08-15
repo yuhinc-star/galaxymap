@@ -1265,14 +1265,14 @@ export function SolarSystem() {
 
   // --- Zoom-out pill --------------------------------------------------------
   // The body's parent is the zoom-out landing spot: a planet's parent is
-  // the sun, the Moon's parent is Earth. At the sun the pill offers the
-  // whole-sky view instead — except in chat mode, where the family
-  // boundary hides it once the fan sits on the chat subject.
+  // the sun, the Moon's parent is Earth. Chat mode plays by the same
+  // rule — the fan can step up past the chat's root star, generation by
+  // generation, all the way to the Sun, where the last zoom-out is the
+  // whole sky (which also closes the conversation).
   const zoomOutTarget: ZoomOutTarget | null = (() => {
     if (!focusedId) return null;
-    if (chatOpen && (!chatSubj || focusedId === chatSubj.info.id)) return null;
     if (focusedId === SUN.id) {
-      return chatOpen ? null : { id: "", name: "Whole sky", img: null };
+      return { id: "", name: "Whole sky", img: null };
     }
     if (focusedId === MOON.id) {
       const earth = PLANETS.find((pp) => pp.id === "earth");
@@ -1281,6 +1281,29 @@ export function SolarSystem() {
     const p = PLANETS.find((pp) => pp.id === focusedId);
     return p ? { id: SUN.id, name: SUN.name, img: SUN.img } : null;
   })();
+
+  /** Zoom out one generation — the shared move behind the "visit the
+      parent" pill and the chat-mode zoom-out button. From the Sun the
+      last step is the whole sky; in chat mode that final zoom-out also
+      closes the conversation (you stepped out of the whole family). */
+  const handleZoomOut = (id: string) => {
+    chatUserZoom();
+    if (!id) {
+      // "Whole sky": glide all the way back out to the full system.
+      setInfoId(null);
+      followRef.current = null;
+      setFocusedId(null);
+      if (chatOpen) {
+        // Skip the pre-chat camera restore — the whole-sky reset owns
+        // the camera on the way out.
+        preChatCamRef.current = null;
+        closeChat();
+      }
+      resetTransform();
+      return;
+    }
+    handleNavigate(id);
+  };
 
   let rocketX = CENTER;
   let rocketY = CENTER;
@@ -1649,18 +1672,7 @@ export function SolarSystem() {
               <ZoomOutPill
                 key={zoomOutTarget ? `${zoomOutTarget.id}:${zoomOutTarget.name}` : "none"}
                 target={zoomOutTarget}
-                onZoomOut={(id) => {
-                  chatUserZoom();
-                  if (!id) {
-                    // "Whole sky": glide all the way back out to the full system.
-                    setInfoId(null);
-                    followRef.current = null;
-                    setFocusedId(null);
-                    resetTransform();
-                    return;
-                  }
-                  handleNavigate(id);
-                }}
+                onZoomOut={handleZoomOut}
               />
               {summonInfo && (
                 <RocketSummonInvite
