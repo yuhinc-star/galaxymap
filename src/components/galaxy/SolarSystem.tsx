@@ -112,6 +112,8 @@ interface RingStyle {
   dash: string;
   width: number;
   opacity: number;
+  cx: number;
+  cy: number;
 }
 
 /**
@@ -127,6 +129,8 @@ const RING_STYLES: RingStyle[] = PLANETS.map((p, i) => {
     dash: `${(34 + rand() * 14).toFixed(0)} ${(22 + rand() * 10).toFixed(0)}`,
     width: 10 + rand() * 3,
     opacity: 0.76 + rand() * 0.16,
+    cx,
+    cy,
   };
 });
 
@@ -1106,28 +1110,47 @@ export function SolarSystem() {
                 >
                   {PLANETS.map((p, i) => {
                     const ring = RING_STYLES[i]!;
+                    // In chat mode the ring breathes toward its fan-arc
+                    // radius, carrying its planet along with it.
+                    const s = ringScaleRef.current.get(p.id) ?? 1;
                     return (
-                      <path
+                      <g
                         key={p.id}
-                        d={ring.d}
-                        fill="none"
-                        stroke="white"
-                        strokeOpacity={ring.opacity}
-                        strokeWidth={ring.width}
-                        strokeDasharray={ring.dash}
-                        strokeLinecap="round"
-                      />
+                        transform={`translate(${ring.cx} ${ring.cy}) scale(${s}) translate(${-ring.cx} ${-ring.cy})`}
+                      >
+                        <path
+                          d={ring.d}
+                          fill="none"
+                          stroke="white"
+                          strokeOpacity={ring.opacity}
+                          strokeWidth={ring.width / s}
+                          strokeDasharray={ring.dash
+                            .split(" ")
+                            .map((v) => (+v / s).toFixed(1))
+                            .join(" ")}
+                          strokeLinecap="round"
+                        />
+                      </g>
                     );
                   })}
-                  <path
-                    d={wobblyRing(earth.x, earth.y, MOON.orbitR, 99)}
-                    fill="none"
-                    stroke="white"
-                    strokeOpacity={0.72}
-                    strokeWidth={6.5}
-                    strokeDasharray="22 17"
-                    strokeLinecap="round"
-                  />
+                  {(() => {
+                    const s = ringScaleRef.current.get(MOON.id) ?? 1;
+                    return (
+                      <g
+                        transform={`translate(${earth.x} ${earth.y}) scale(${s}) translate(${-earth.x} ${-earth.y})`}
+                      >
+                        <path
+                          d={wobblyRing(earth.x, earth.y, MOON.orbitR, 99)}
+                          fill="none"
+                          stroke="white"
+                          strokeOpacity={0.72}
+                          strokeWidth={6.5 / s}
+                          strokeDasharray={`${(22 / s).toFixed(1)} ${(17 / s).toFixed(1)}`}
+                          strokeLinecap="round"
+                        />
+                      </g>
+                    );
+                  })()}
                 </svg>
 
                 {/* Warm glow behind the Sun */}
@@ -1181,7 +1204,7 @@ export function SolarSystem() {
                         def={chatSized && cr ? { ...p, size: cr.size } : p}
                         x={q.x}
                         y={q.y}
-                        labelBoost={chatSubj?.layout.slots.has(p.id) ? chatLabelBoost : 1}
+                        labelBoost={chatSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={
@@ -1205,7 +1228,7 @@ export function SolarSystem() {
                   }
                   x={moonPos.x}
                   y={moonPos.y}
-                  labelBoost={chatSubj?.layout.slots.has(MOON.id) ? chatLabelBoost : 1}
+                  labelBoost={chatSubj?.layout.slots.get(MOON.id)?.labelBoost ?? 1}
                   active={activeId === MOON.id}
                   jumping={jumpId === MOON.id}
                   highlighted={
