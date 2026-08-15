@@ -26,6 +26,7 @@ import {
   addMoonToSystem,
   addPlanetToSystem,
   findMoonById,
+  findMoonParent,
   generateSystem,
   MAX_MOONS_PER_BODY,
   MAX_SYSTEM_PLANETS,
@@ -33,7 +34,8 @@ import {
   type GeneratedMoon,
   type SystemConfig,
 } from "./systemGenerator";
-import { AddBodyMenu } from "./AddBodyMenu";
+import type { OrbitShapeKind } from "./orbitShapes";
+import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { Drifter } from "./Drifter";
 import { HeroRocket, ROCKET_H } from "./HeroRocket";
 import { Navigator, type NavigatorEntry } from "./Navigator";
@@ -61,7 +63,7 @@ interface RocketFlight {
   dur: number;
 }
 
-/** What the double-tap "add a body" bubble offers for a body. */
+/** What the info panel's "grow this family" section offers for a body. */
 interface AddMenuInfo {
   canAdd: boolean;
   actionLabel?: string;
@@ -75,6 +77,20 @@ const easeInOutCubicFn = (p: number) =>
 const lerpAngle = (a: number, b: number, t: number) => {
   const d = ((b - a + 540) % 360) - 180;
   return a + d * t;
+};
+
+/** "One year: ~12 min" — orbit periods read better as minutes. */
+const fmtPeriod = (s: number) =>
+  s >= 120 ? `~${Math.round(s / 60)} min` : `~${Math.round(s)} s`;
+
+/** Hand-lettered labels for the six orbit families. */
+const ORBIT_KIND_LABELS: Record<OrbitShapeKind, string> = {
+  ring: "Gently wobbly ring",
+  egg: "Egg",
+  bean: "Bean",
+  peanut: "Peanut",
+  tilt: "Tilted ellipse",
+  wobble: "Extra wobbly",
 };
 
 /**
@@ -103,8 +119,8 @@ export function GeneratorSystem() {
   /** Runtime-grown system: once the user adds bodies by double-clicking,
       this replaces the seeded config (regenerating resets it). */
   const [extras, setExtras] = useState<SystemConfig | null>(null);
-  /** Focused body currently showing its "add a body" bubble. */
-  const [addMenuId, setAddMenuId] = useState<string | null>(null);
+  /** Focused body currently showing its information panel. */
+  const [infoId, setInfoId] = useState<string | null>(null);
   /** Just-born body playing its pop-in animation. */
   const [newbornId, setNewbornId] = useState<string | null>(null);
   const [seed, setSeed] = useState(DEFAULT_SEED);
@@ -186,7 +202,7 @@ export function GeneratorSystem() {
     setHighlightId(null);
     setFocusedId(null);
     setExtras(null);
-    setAddMenuId(null);
+    setInfoId(null);
     setNewbornId(null);
     lastTapRef.current = null;
     followRef.current = null;
@@ -209,7 +225,7 @@ export function GeneratorSystem() {
     setHighlightId(null);
     setFocusedId(null);
     setExtras(null);
-    setAddMenuId(null);
+    setInfoId(null);
     setNewbornId(null);
     lastTapRef.current = null;
     followRef.current = null;
@@ -225,7 +241,7 @@ export function GeneratorSystem() {
   const stopFollow = useCallback(() => {
     followRef.current = null;
     setFocusedId(null);
-    setAddMenuId(null);
+    setInfoId(null);
   }, []);
 
   // Orbit math: bodies advance along their own wobbly closed curves.
@@ -461,6 +477,7 @@ export function GeneratorSystem() {
   /** Navigator move mode: send the rocket to the picked sun or planet. */
   const handleRocketDestination = (id: string) => {
     setRocketArmed(false);
+    setInfoId(null);
     if (flight || id === rocketHostId) return;
     const from = parkPos(rocketHostId);
     if (!from) return;
@@ -565,7 +582,7 @@ export function GeneratorSystem() {
   const handleNavigate = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
-    setAddMenuId(null);
+    setInfoId(null);
     window.clearTimeout(hideTimer.current);
     window.clearTimeout(jumpTimer.current);
     window.clearTimeout(highlightTimer.current);
@@ -578,17 +595,23 @@ export function GeneratorSystem() {
     focusCamera(id);
   };
 
-  /** Double-tap on the focused body: float the add-a-body bubble above it. */
-  const openAddMenu = (id: string) => {
+  /** Double-tap on the focused body: open its information panel. */
+  const openInfo = (id: string) => {
     window.clearTimeout(hideTimer.current);
     setActiveId(null);
-    setAddMenuId(id);
+    setInfoId(id);
+  };
+
+  /** Panel child-row click: fly to that body and open its own panel. */
+  const handleInfoSelect = (id: string) => {
+    handleNavigate(id);
+    setInfoId(id);
   };
 
   /**
    * Body tap with double-tap detection: a quick second tap on the body
-   * that holds camera focus opens its "add a body" bubble. The first tap
-   * still does its usual happy jump — the bubble simply replaces it.
+   * that holds camera focus opens its information panel. The first tap
+   * still does its usual happy jump — the panel simply replaces it.
    */
   const handleBodyTap = (id: string) => {
     const now = Date.now();
@@ -596,13 +619,13 @@ export function GeneratorSystem() {
     lastTapRef.current = { id, t: now };
     if (focusedId === id && last?.id === id && now - last.t < 450) {
       lastTapRef.current = null;
-      openAddMenu(id);
+      openInfo(id);
       return;
     }
     handleNavigate(id);
   };
 
-  /** What the add-a-body bubble offers for this body, if anything. */
+  /** What the info panel offers to grow for this body, if anything. */
   const getAddMenuInfo = (id: string): AddMenuInfo | null => {
     if (id === config.sun.id) {
       return config.planets.length < MAX_SYSTEM_PLANETS
@@ -626,14 +649,16 @@ export function GeneratorSystem() {
     return null;
   };
 
-  /** The bubble's button: grow the family and celebrate the newborn. */
+  /**
+   * The panel's "grow this family" button. The panel stays open so the
+   * newborn shows up in its family list right away.
+   */
   const handleAddBody = () => {
-    if (!addMenuId) return;
+    if (!infoId) return;
     const result =
-      addMenuId === config.sun.id
+      infoId === config.sun.id
         ? addPlanetToSystem(config)
-        : addMoonToSystem(config, addMenuId);
-    setAddMenuId(null);
+        : addMoonToSystem(config, infoId);
     if (!result) return;
     setExtras(result.next);
     // Newborn celebration: pop-in, a hello bubble and the golden ring.
@@ -648,15 +673,109 @@ export function GeneratorSystem() {
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
   };
 
+  /** Everything the information panel shows about a body. */
+  const getPanelInfo = (id: string): BodyPanelInfo | null => {
+    const add = getAddMenuInfo(id);
+    if (!add) return null;
+    if (id === config.sun.id) {
+      return {
+        id,
+        name: config.sun.name,
+        img: config.sun.img,
+        kindLabel: "Sun",
+        line: config.sun.line,
+        facts: [
+          { label: "Size", value: "Supergiant star" },
+          {
+            label: "Planets in orbit",
+            value: `${config.planets.length} of ${MAX_SYSTEM_PLANETS}`,
+          },
+        ],
+        childrenLabel: "Planets",
+        childrenCap: MAX_SYSTEM_PLANETS,
+        children: config.planets.map((p) => ({
+          id: p.id,
+          name: p.name,
+          img: p.img,
+        })),
+        add,
+      };
+    }
+    const p = config.planets.find((pp) => pp.id === id);
+    if (p) {
+      return {
+        id,
+        name: p.name,
+        img: p.img,
+        kindLabel: "Planet",
+        line: p.line,
+        facts: [
+          {
+            label: "Size",
+            value:
+              p.size >= 250
+                ? "Gas giant"
+                : p.size >= 150
+                  ? "Mid-sized world"
+                  : "Pebble planet",
+          },
+          { label: "Orbit shape", value: ORBIT_KIND_LABELS[p.orbit.kind] },
+          { label: "One year", value: fmtPeriod(p.period) },
+          {
+            label: "Moons",
+            value: `${p.moons.length} of ${MAX_MOONS_PER_BODY}`,
+          },
+        ],
+        childrenLabel: "Moons",
+        childrenCap: MAX_MOONS_PER_BODY,
+        children: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
+        add,
+      };
+    }
+    const m = findMoonById(config.planets, id);
+    if (m) {
+      const parent = findMoonParent(config.planets, id);
+      const parentIsPlanet =
+        parent != null && config.planets.some((pp) => pp.id === parent.id);
+      return {
+        id,
+        name: m.name,
+        img: m.img,
+        kindLabel: parentIsPlanet ? "Moon" : "Tiny moon",
+        line: m.line,
+        facts: [
+          ...(parent ? [{ label: "Orbits", value: parent.name }] : []),
+          { label: "One lap", value: fmtPeriod(m.period) },
+          {
+            label: "Size",
+            value:
+              m.size >= 60
+                ? "Chunky moon"
+                : m.size >= MIN_MOON_PARENT_SIZE
+                  ? "Little moon"
+                  : "Tiny moon",
+          },
+          {
+            label: "Tiny moons",
+            value: `${m.moons.length} of ${MAX_MOONS_PER_BODY}`,
+          },
+        ],
+        childrenLabel: "Tiny moons",
+        childrenCap: MAX_MOONS_PER_BODY,
+        children: m.moons.map((c) => ({ id: c.id, name: c.name, img: c.img })),
+        add,
+      };
+    }
+    return null;
+  };
+
   // --- Hero rocket pose ---------------------------------------------------
   const dragNow = dragActive ? dragRef.current : null;
   const dragHoverId = dragNow?.hover ?? null;
   const dragHoverPos = dragHoverId ? bodyPos(dragHoverId) : null;
 
-  // --- Add-a-body bubble anchor --------------------------------------------
-  const menuPos = addMenuId ? bodyPos(addMenuId) : null;
-  const menuSize = addMenuId ? bodySize(addMenuId) : null;
-  const menuInfo = addMenuId ? getAddMenuInfo(addMenuId) : null;
+  // --- Info panel -----------------------------------------------------------
+  const panelInfo = infoId ? getPanelInfo(infoId) : null;
 
   let rocketX = CENTER;
   let rocketY = CENTER;
@@ -919,19 +1038,7 @@ export function GeneratorSystem() {
                   </svg>
                 )}
 
-                {/* Double-tap bubble: grow this body's family */}
-                {addMenuId && menuPos && menuSize != null && menuInfo && (
-                  <AddBodyMenu
-                    x={menuPos.x}
-                    y={menuPos.y}
-                    bodyR={menuSize / 2}
-                    canAdd={menuInfo.canAdd}
-                    actionLabel={menuInfo.actionLabel}
-                    fullNote={menuInfo.fullNote}
-                    onAdd={handleAddBody}
-                    onClose={() => setAddMenuId(null)}
-                  />
-                )}
+                {/* Body details live in the screen-space info panel */}
 
                 <HeroRocket
                   x={rocketX}
@@ -967,6 +1074,16 @@ export function GeneratorSystem() {
                 onDestination: handleRocketDestination,
               }}
             />
+
+            {/* Double-click info panel: details + grow-this-family */}
+            {panelInfo && (
+              <BodyInfoPanel
+                info={panelInfo}
+                onAdd={handleAddBody}
+                onSelect={handleInfoSelect}
+                onClose={() => setInfoId(null)}
+              />
+            )}
 
             <div className="fixed right-4 top-4">
               <Link
