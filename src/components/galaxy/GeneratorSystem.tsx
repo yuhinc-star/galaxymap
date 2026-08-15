@@ -116,8 +116,7 @@ export function GeneratorSystem() {
   const squashTimer = useRef<number | undefined>(undefined);
   const newbornTimer = useRef<number | undefined>(undefined);
   /** Double-tap detection on the focused body (tap → focus, double-tap → add). */
-  const tapTimer = useRef<number | undefined>(undefined);
-  const tapIdRef = useRef<string | null>(null);
+  const lastTapRef = useRef<{ id: string; t: number } | null>(null);
   /** Live drag data — read every frame by the render loop. */
   const dragRef = useRef<{
     cur: { x: number; y: number };
@@ -587,29 +586,19 @@ export function GeneratorSystem() {
   };
 
   /**
-   * Body tap with double-tap detection: when you're already zoomed in on
-   * a body (it holds camera focus), a quick second tap opens the "add a
-   * body" bubble instead of re-triggering the focus jump. Single taps on
-   * the focused body are delayed by 300ms to tell the two apart.
+   * Body tap with double-tap detection: a quick second tap on the body
+   * that holds camera focus opens its "add a body" bubble. The first tap
+   * still does its usual happy jump — the bubble simply replaces it.
    */
   const handleBodyTap = (id: string) => {
-    if (focusedId === id) {
-      if (tapIdRef.current === id) {
-        window.clearTimeout(tapTimer.current);
-        tapIdRef.current = null;
-        openAddMenu(id);
-        return;
-      }
-      tapIdRef.current = id;
-      window.clearTimeout(tapTimer.current);
-      tapTimer.current = window.setTimeout(() => {
-        tapIdRef.current = null;
-        handleNavigate(id);
-      }, 300);
+    const now = Date.now();
+    const last = lastTapRef.current;
+    lastTapRef.current = { id, t: now };
+    if (focusedId === id && last?.id === id && now - last.t < 450) {
+      lastTapRef.current = null;
+      openAddMenu(id);
       return;
     }
-    window.clearTimeout(tapTimer.current);
-    tapIdRef.current = null;
     handleNavigate(id);
   };
 
@@ -785,7 +774,7 @@ export function GeneratorSystem() {
         doubleClick={{ disabled: true }}
         wheel={{ step: 0.15 }}
         panning={{ velocityDisabled: true, disabled: dragActive }}
-        onPanningStart={stopFollow}
+        onPanning={stopFollow}
         onWheel={stopFollow}
         onPinchStart={stopFollow}
       >
