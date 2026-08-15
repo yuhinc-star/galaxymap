@@ -241,24 +241,22 @@ export function GeneratorSystem() {
   }, []);
 
   /**
-   * Regenerate / count-change transition: the old world warps out first,
-   * then the swap happens and the seed-keyed world remounts and warps in.
-   * The swap waits for BOTH the exit beat and the next system's sprites to
-   * be fully decoded, so the new world never pops in half-painted. Extra
-   * clicks during the warp are ignored so the two beats never overlap.
+   * Prepare the incoming artwork while the current world remains fully
+   * visible. Only once it is paint-ready do we play the exit and swap on its
+   * final frame. This avoids a blank hold when decoding takes longer than the
+   * exit animation. Extra clicks are ignored until the full beat finishes.
    */
   const warpTo = (apply: () => void, ready: Promise<unknown> = Promise.resolve()) => {
     if (warpingRef.current) return;
     warpingRef.current = true;
-    setWarping(true);
     window.clearTimeout(warpTimer.current);
-    const exitDone = new Promise<void>((resolve) => {
-      warpTimer.current = window.setTimeout(resolve, 370);
-    });
-    void Promise.all([exitDone, ready]).then(() => {
-      apply();
-      warpingRef.current = false;
-      setWarping(false);
+    void ready.then(() => {
+      setWarping(true);
+      warpTimer.current = window.setTimeout(() => {
+        apply();
+        warpingRef.current = false;
+        setWarping(false);
+      }, 360);
     });
   };
 
