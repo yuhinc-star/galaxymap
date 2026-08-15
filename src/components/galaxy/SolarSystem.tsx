@@ -1196,7 +1196,9 @@ export function SolarSystem() {
                   .sort((a, b) => b.size - a.size)
                   .map((p) => {
                     const q = positions.get(p.id)!;
-                    const cr = chatRenderRef.current.get(p.id);
+                    const cr =
+                      chatRenderRef.current.get(p.id) ??
+                      chatRideRef.current.get(p.id);
                     const chatSized = cr != null && Math.abs(cr.size - p.size) > 0.5;
                     return (
                       <Planet
