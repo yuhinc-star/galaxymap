@@ -81,6 +81,10 @@ export function Starfield({
   const w = width ?? size;
   const h = height ?? size;
 
+  // Keep the draw loop reading the latest chat mix without re-running the
+  // canvas effect (which would reset star positions).
+  chatMixRef.current = chatMix;
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -93,9 +97,6 @@ export function Starfield({
     canvas.height = h * dpr;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    // Keep the draw loop reading the latest chat mix without re-running
-    // the effect (which would reset star positions).
-    chatMixRef.current = chatMix;
     ctx.scale(dpr, dpr);
 
     const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)] as T;
