@@ -22,15 +22,25 @@ interface Comet {
 const STAR_COLORS = ["#ffffff", "#ffe066", "#7de2d1", "#ff9de2", "#ffd6a5"];
 
 /** Twinkling starfield with occasional shooting comets, drawn on canvas. */
-export function Starfield({ size }: { size: number }) {
+export function Starfield({
+  size,
+  width,
+  height,
+}: {
+  size: number;
+  width?: number;
+  height?: number;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const w = width ?? size;
+  const h = height ?? size;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.scale(dpr, dpr);
