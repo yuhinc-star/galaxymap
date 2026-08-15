@@ -982,7 +982,7 @@ export function GeneratorSystem() {
   /** Panel child-row click: fly to that body and open its own panel. */
   const handleInfoSelect = (id: string) => {
     handleNavigate(id);
-    if (!chatOpen) setInfoId(id);
+    setInfoId(id);
   };
 
   /**
@@ -991,15 +991,12 @@ export function GeneratorSystem() {
    * still does its usual happy jump — the panel simply replaces it.
    */
   const handleBodyTap = (id: string) => {
-    // In chat mode every tap is just a hello — no camera, no panel.
-    if (chatOpen) {
-      handleNavigate(id);
-      return;
-    }
     const now = Date.now();
     const last = lastTapRef.current;
     lastTapRef.current = { id, t: now };
-    if (focusedId === id && last?.id === id && now - last.t < 450) {
+    // In chat mode there is no camera focus, so a quick second tap on any
+    // lined-up body opens its page. Outside chat the body must hold focus.
+    if (last?.id === id && now - last.t < 450 && (chatOpen || focusedId === id)) {
       lastTapRef.current = null;
       openInfo(id);
       return;
