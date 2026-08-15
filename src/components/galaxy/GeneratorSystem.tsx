@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { Link } from "@tanstack/react-router";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import {
@@ -10,10 +17,12 @@ import {
   RotateCcw,
   Sparkle,
 } from "lucide-react";
+import heroRocketImg from "@/assets/planets/hero-rocket.png";
 import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, WORLD } from "./planets";
 import { generateSystem } from "./systemGenerator";
 import { Drifter } from "./Drifter";
+import { HeroRocket, ROCKET_H } from "./HeroRocket";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
@@ -23,6 +32,30 @@ const MIN_PLANETS = 2;
 const MAX_PLANETS = 8;
 const DEFAULT_SEED = 20260214;
 const DEFAULT_COUNT = 6;
+
+/** Parked rocket stands on its host's upper-right shoulder. */
+const PARK_ANGLE = (-80 * Math.PI) / 180;
+const PARK_ROT = 10;
+
+interface RocketFlight {
+  fx: number;
+  fy: number;
+  cx: number;
+  cy: number;
+  toId: string;
+  fromRot: number;
+  startAt: number;
+  dur: number;
+}
+
+const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3);
+const easeInOutCubicFn = (p: number) =>
+  p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+/** Shortest-path angle interpolation (degrees). */
+const lerpAngle = (a: number, b: number, t: number) => {
+  const d = ((b - a + 540) % 360) - 180;
+  return a + d * t;
+};
 
 /**
  * The Galaxy Generator: every seed assembles a brand-new solar-system-like
@@ -36,6 +69,16 @@ export function GeneratorSystem() {
   /** Navigator "find me": dashed ring + single hop. */
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [jumpId, setJumpId] = useState<string | null>(null);
+  /** Body the hero rocket is parked on (always starts on the sun). */
+  const [rocketHostId, setRocketHostId] = useState<string>("sun");
+  /** Navigator move mode: the next sun/planet pick is the destination. */
+  const [rocketArmed, setRocketArmed] = useState(false);
+  /** Live flight, or null while parked. */
+  const [flight, setFlight] = useState<RocketFlight | null>(null);
+  /** Destination wearing a steady golden ring while the rocket flies. */
+  const [rocketInboundId, setRocketInboundId] = useState<string | null>(null);
+  const [landingSquash, setLandingSquash] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
@@ -43,6 +86,17 @@ export function GeneratorSystem() {
   const hideTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
+  const squashTimer = useRef<number | undefined>(undefined);
+  /** Live drag data — read every frame by the render loop. */
+  const dragRef = useRef<{
+    cur: { x: number; y: number };
+    hover: string | null;
+    startClient: { x: number; y: number };
+    moved: boolean;
+    lastX: number;
+  } | null>(null);
+  /** Alternates the flight arc's bend side. */
+  const arcSideRef = useRef(1);
   /** Camera follow: keeps the navigator-picked body centered as it orbits. */
   const followRef = useRef<{
     id: string;
@@ -101,6 +155,13 @@ export function GeneratorSystem() {
     setHighlightId(null);
     setFocusedId(null);
     followRef.current = null;
+    // The rocket always starts parked on the new sun.
+    setRocketHostId("sun");
+    setRocketArmed(false);
+    setFlight(null);
+    setRocketInboundId(null);
+    setDragActive(false);
+    dragRef.current = null;
   }, []);
 
   const changeCount = useCallback((delta: number) => {
@@ -113,6 +174,12 @@ export function GeneratorSystem() {
     setHighlightId(null);
     setFocusedId(null);
     followRef.current = null;
+    setRocketHostId("sun");
+    setRocketArmed(false);
+    setFlight(null);
+    setRocketInboundId(null);
+    setDragActive(false);
+    dragRef.current = null;
   }, []);
 
   /** Any manual camera move takes control back from the follow mode. */
@@ -162,6 +229,25 @@ export function GeneratorSystem() {
       }
     }
     return null;
+  };
+
+  /** Display size of a rocket-landable body (sun or planet — no moons). */
+  const bodySize = (id: string): number | null => {
+    if (id === config.sun.id) return config.sun.size;
+    const p = config.planets.find((pp) => pp.id === id);
+    return p ? p.size : null;
+  };
+
+  /** Where the parked rocket stands: the host's upper-right shoulder. */
+  const parkPos = (id: string): { x: number; y: number } | null => {
+    const c = bodyPos(id);
+    const s = bodySize(id);
+    if (!c || !s) return null;
+    const r = s / 2 + ROCKET_H * 0.4;
+    return {
+      x: c.x + r * Math.cos(PARK_ANGLE),
+      y: c.y + r * Math.sin(PARK_ANGLE),
+    };
   };
 
   /**
