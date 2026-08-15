@@ -716,6 +716,47 @@ export function GeneratorSystem() {
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
   };
 
+  /**
+   * The panel's "say goodbye" button: remove the body and everything
+   * orbiting it, then tidy up every bit of state that pointed at the
+   * departed family. The sun itself can never leave.
+   */
+  const handleRemoveBody = () => {
+    if (!infoId || infoId === config.sun.id) return;
+    const next = removeBodyFromSystem(config, infoId);
+    if (!next) return;
+    const removedId = infoId;
+    /** True when id is the removed body or rides anywhere under it. */
+    const gone = (id: string | null): boolean => {
+      if (!id) return false;
+      if (id === removedId) return true;
+      const p = config.planets.find((pp) => pp.id === removedId);
+      const root = p
+        ? p.moons
+        : (findMoonById(config.planets, removedId)?.moons ?? []);
+      const walk = (ms: GeneratedMoon[]): boolean =>
+        ms.some((m) => m.id === id || walk(m.moons));
+      return walk(root);
+    };
+    // A rocket flying to a departing body turns back home; one parked
+    // there moves back to the sun right away (never renders on a ghost).
+    if (flight && gone(flight.toId)) {
+      setFlight(null);
+      setRocketInboundId(null);
+    }
+    if (gone(rocketHostId)) setRocketHostId(config.sun.id);
+    if (focusedId && gone(focusedId)) {
+      followRef.current = null;
+      setFocusedId(null);
+    }
+    if (activeId && gone(activeId)) setActiveId(null);
+    if (highlightId && gone(highlightId)) setHighlightId(null);
+    if (jumpId && gone(jumpId)) setJumpId(null);
+    if (newbornId && gone(newbornId)) setNewbornId(null);
+    setExtras(next);
+    setInfoId(null);
+  };
+
   /** Everything the information panel shows about a body. */
   const getPanelInfo = (id: string): BodyPanelInfo | null => {
     const add = getAddMenuInfo(id);
@@ -742,6 +783,7 @@ export function GeneratorSystem() {
           img: p.img,
         })),
         add,
+        remove: null, // the sun is the heart of the system — it stays
       };
     }
     const p = config.planets.find((pp) => pp.id === id);
