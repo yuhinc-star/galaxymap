@@ -79,7 +79,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
         aria-label="Open the navigator"
         title="Navigator"
         onClick={() => setOpen(true)}
-        className="animate-pop-in fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-space-deep/90 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 active:scale-95"
+        className={`animate-pop-in fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 ${chatMode ? "hidden sm:flex" : "flex"} h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-space-deep/90 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 active:scale-95`}
       >
         <List className="h-5 w-5" />
       </button>
