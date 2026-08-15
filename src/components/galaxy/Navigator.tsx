@@ -5,7 +5,7 @@ export interface NavigatorEntry {
   id: string;
   name: string;
   img: string;
-  moons?: { id: string; name: string; img: string }[];
+  moons?: { id: string; name: string; img: string }[] | undefined;
 }
 
 interface NavigatorProps {
