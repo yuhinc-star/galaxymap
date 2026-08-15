@@ -288,23 +288,30 @@ export function GeneratorSystem() {
     setDiceRolling(true);
     window.clearTimeout(diceTimer.current);
     diceTimer.current = window.setTimeout(() => setDiceRolling(false), 650);
+    const next = Math.floor(Math.random() * 1_000_000_000) + 1;
+    // Pre-decode the next system's art while the old one warps out.
+    const ready = ensureSpritesReady(
+      collectSystemSpriteUrls(generateSystem(next, planetCount)),
+    );
     warpTo(() => {
-      const next = Math.floor(Math.random() * 1_000_000_000) + 1;
       window.localStorage.setItem("galaxy-gen-seed", String(next));
       setSeed(next);
       resetForNewSystem();
-    });
+    }, ready);
   };
 
   const changeCount = (delta: number) => {
+    const next = Math.min(MAX_PLANETS, Math.max(MIN_PLANETS, planetCount + delta));
+    // At the bounds nothing changes — don't play a pointless warp.
+    if (next === planetCount) return;
+    const ready = ensureSpritesReady(
+      collectSystemSpriteUrls(generateSystem(seed, next)),
+    );
     warpTo(() => {
-      setPlanetCount((c) => {
-        const next = Math.min(MAX_PLANETS, Math.max(MIN_PLANETS, c + delta));
-        window.localStorage.setItem("galaxy-gen-count", String(next));
-        return next;
-      });
+      window.localStorage.setItem("galaxy-gen-count", String(next));
+      setPlanetCount(next);
       resetForNewSystem();
-    });
+    }, ready);
   };
 
   /** Any manual camera move takes control back from the follow mode. */
