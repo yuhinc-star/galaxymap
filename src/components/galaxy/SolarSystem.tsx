@@ -406,6 +406,7 @@ export function SolarSystem() {
             <Navigator
               items={navItems}
               activeId={activeId}
+              focusedId={focusedId}
               onSelect={handleNavigate}
             />
 

@@ -416,6 +416,7 @@ export function GeneratorSystem() {
             <Navigator
               items={navItems}
               activeId={activeId}
+              focusedId={focusedId}
               onSelect={handleNavigate}
             />
 
