@@ -31,7 +31,8 @@ const DEFAULT_COUNT = 6;
  */
 export function GeneratorSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [bounceId, setBounceId] = useState<string | null>(null);
+  /** Body the camera is currently locked onto (navigator "you are here"). */
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   /** Navigator "find me": dashed ring + single hop. */
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [jumpId, setJumpId] = useState<string | null>(null);
@@ -40,7 +41,6 @@ export function GeneratorSystem() {
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
-  const bounceTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
   /** Camera follow: keeps the navigator-picked body centered as it orbits. */
@@ -99,6 +99,7 @@ export function GeneratorSystem() {
     setSeed(next);
     setActiveId(null);
     setHighlightId(null);
+    setFocusedId(null);
     followRef.current = null;
   }, []);
 
@@ -110,22 +111,14 @@ export function GeneratorSystem() {
     });
     setActiveId(null);
     setHighlightId(null);
+    setFocusedId(null);
     followRef.current = null;
   }, []);
 
   /** Any manual camera move takes control back from the follow mode. */
   const stopFollow = useCallback(() => {
     followRef.current = null;
-  }, []);
-
-  const handleTap = useCallback((id: string) => {
-    followRef.current = null;
-    window.clearTimeout(hideTimer.current);
-    window.clearTimeout(bounceTimer.current);
-    setActiveId(id);
-    setBounceId(id);
-    bounceTimer.current = window.setTimeout(() => setBounceId(null), 700);
-    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    setFocusedId(null);
   }, []);
 
   // Orbit math: bodies advance along their own wobbly closed curves.
@@ -242,6 +235,7 @@ export function GeneratorSystem() {
     setActiveId(id);
     setJumpId(id);
     setHighlightId(id);
+    setFocusedId(id);
     jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
@@ -362,10 +356,9 @@ export function GeneratorSystem() {
                   x={CENTER}
                   y={CENTER}
                   active={activeId === config.sun.id}
-                  bouncing={bounceId === config.sun.id}
                   jumping={jumpId === config.sun.id}
                   highlighted={highlightId === config.sun.id}
-                  onTap={handleTap}
+                  onTap={handleNavigate}
                   spin
                 />
 
@@ -380,10 +373,9 @@ export function GeneratorSystem() {
                         x={q.x}
                         y={q.y}
                         active={activeId === p.id}
-                        bouncing={bounceId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={highlightId === p.id}
-                        onTap={handleTap}
+                        onTap={handleNavigate}
                       />
                     );
                   })}
@@ -399,10 +391,9 @@ export function GeneratorSystem() {
                         x={q.x + m.orbitR * Math.cos(a)}
                         y={q.y + m.orbitR * Math.sin(a)}
                         active={activeId === m.id}
-                        bouncing={bounceId === m.id}
                         jumping={jumpId === m.id}
                         highlighted={highlightId === m.id}
-                        onTap={handleTap}
+                        onTap={handleNavigate}
                       />
                     );
                   });
@@ -420,6 +411,7 @@ export function GeneratorSystem() {
             <Navigator
               items={navItems}
               activeId={activeId}
+              focusedId={focusedId}
               onSelect={handleNavigate}
             />
 

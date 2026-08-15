@@ -67,7 +67,8 @@ const RING_STYLES: RingStyle[] = PLANETS.map((p, i) => {
 
 export function SolarSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [bounceId, setBounceId] = useState<string | null>(null);
+  /** Body the camera is currently locked onto (navigator "you are here"). */
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   /** Navigator "find me": dashed ring + single hop. */
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [jumpId, setJumpId] = useState<string | null>(null);
@@ -76,7 +77,6 @@ export function SolarSystem() {
   /** Animation clock, seconds. Starts at 0 so SSR and hydration agree. */
   const [t, setT] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
-  const bounceTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
   /** Camera follow: keeps the navigator-picked body centered as it orbits. */
@@ -120,16 +120,7 @@ export function SolarSystem() {
   /** Any manual camera move takes control back from the follow mode. */
   const stopFollow = useCallback(() => {
     followRef.current = null;
-  }, []);
-
-  const handleTap = useCallback((id: string) => {
-    followRef.current = null;
-    window.clearTimeout(hideTimer.current);
-    window.clearTimeout(bounceTimer.current);
-    setActiveId(id);
-    setBounceId(id);
-    bounceTimer.current = window.setTimeout(() => setBounceId(null), 700);
-    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    setFocusedId(null);
   }, []);
 
   /** Navigator entries: the Sun, then every planet (Earth carries the Moon). */
@@ -226,9 +217,10 @@ export function SolarSystem() {
   }, [t]);
 
   /**
-   * Navigator click: zoom so the body and everything orbiting it fits
-   * (the sun with all planet rings, a planet with its moon rings),
-   * glide there, pop its speech bubble, hop once, flash a dashed ring.
+   * Navigator click or direct planet tap: zoom so the body and everything
+   * orbiting it fits (the sun with all planet rings, a planet with its
+   * moon rings), glide there, keep it centered, pop its speech bubble,
+   * hop once, flash a dashed ring, and mark it in the navigator.
    */
   const handleNavigate = (id: string) => {
     const q = bodyPos(id);
@@ -239,6 +231,7 @@ export function SolarSystem() {
     setActiveId(id);
     setJumpId(id);
     setHighlightId(id);
+    setFocusedId(id);
     jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
@@ -360,10 +353,9 @@ export function SolarSystem() {
                   x={CENTER}
                   y={CENTER}
                   active={activeId === SUN.id}
-                  bouncing={bounceId === SUN.id}
                   jumping={jumpId === SUN.id}
                   highlighted={highlightId === SUN.id}
-                  onTap={handleTap}
+                  onTap={handleNavigate}
                   spin
                 />
 
@@ -380,10 +372,9 @@ export function SolarSystem() {
                         x={q.x}
                         y={q.y}
                         active={activeId === p.id}
-                        bouncing={bounceId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={highlightId === p.id}
-                        onTap={handleTap}
+                        onTap={handleNavigate}
                       />
                     );
                   })}
@@ -393,10 +384,9 @@ export function SolarSystem() {
                   x={moonPos.x}
                   y={moonPos.y}
                   active={activeId === MOON.id}
-                  bouncing={bounceId === MOON.id}
                   jumping={jumpId === MOON.id}
                   highlighted={highlightId === MOON.id}
-                  onTap={handleTap}
+                  onTap={handleNavigate}
                 />
               </div>
             </TransformComponent>
@@ -411,6 +401,7 @@ export function SolarSystem() {
             <Navigator
               items={navItems}
               activeId={activeId}
+              focusedId={focusedId}
               onSelect={handleNavigate}
             />
 
