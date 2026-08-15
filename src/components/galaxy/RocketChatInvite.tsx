@@ -4,20 +4,15 @@ import { MessageCircleHeart, X } from "lucide-react";
  * The rocket's post-landing handshake: after the rocket touches down on a
  * star it offers to start a conversation with its new host — the same
  * notification-pill style as the "visit the parent" pill, stacked below it.
- * With the chat already open on another star, the pill offers to SWITCH
- * the conversation over to the rocket's new host.
  */
 export function RocketChatInvite({
   name,
   img,
-  switching = false,
   onChat,
   onDismiss,
 }: {
   name: string;
   img: string;
-  /** Chat is already open with someone else — offer to switch over. */
-  switching?: boolean;
   onChat: () => void;
   onDismiss: () => void;
 }) {
