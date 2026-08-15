@@ -30,7 +30,7 @@ interface NavigatorProps {
   onInfo?: ((id: string) => void) | undefined;
   /** Bodies mid-goodbye animation — their entries dim and go inert. */
   departingIds?: string[] | undefined;
-  rocket?: NavigatorRocket;
+  rocket?: NavigatorRocket | undefined;
   /** Chat mode: slimmer panel listing only the bodies on screen; hidden on
       phones where the chat sheet already covers the whole display. */
   chatMode?: boolean;

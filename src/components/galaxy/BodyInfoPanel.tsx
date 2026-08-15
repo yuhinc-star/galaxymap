@@ -45,7 +45,7 @@ interface BodyInfoPanelProps {
   /** Chat mode: the panel floats over the chat sheet instead of the galaxy. */
   chatMode?: boolean;
   /** "Say goodbye" — omitted for the sun and for the chat subject. */
-  onDelete?: () => void;
+  onDelete?: (() => void) | undefined;
 }
 
 /**
