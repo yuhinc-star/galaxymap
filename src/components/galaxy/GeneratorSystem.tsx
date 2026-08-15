@@ -121,6 +121,62 @@ export function GeneratorSystem() {
     drifterPos.set(d.id, { x: CENTER + q.x, y: CENTER + q.y });
   }
 
+  /** Navigator entries: the sun, then every planet with its moons nested. */
+  const navItems: NavigatorEntry[] = [
+    { id: config.sun.id, name: config.sun.name, img: config.sun.img },
+    ...config.planets.map((p) => ({
+      id: p.id,
+      name: p.name,
+      img: p.img,
+      moons: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
+    })),
+  ];
+
+  /**
+   * Navigator click: pan the camera to the body, pop its speech bubble,
+   * make it hop once, and flash a dashed ring around it.
+   */
+  const handleNavigate = (
+    id: string,
+    scale: number,
+    setTransform: (x: number, y: number, s: number, ms: number) => void,
+  ) => {
+    let q =
+      id === config.sun.id ? { x: CENTER, y: CENTER } : planetPos.get(id);
+    if (!q) {
+      // Moons ride on their planet's position.
+      for (const p of config.planets) {
+        const m = p.moons.find((mm) => mm.id === id);
+        if (m) {
+          const pq = planetPos.get(p.id)!;
+          const a = m.startAngle + (t * TAU) / m.period;
+          q = {
+            x: pq.x + m.orbitR * Math.cos(a),
+            y: pq.y + m.orbitR * Math.sin(a),
+          };
+          break;
+        }
+      }
+    }
+    if (!q) return;
+    window.clearTimeout(hideTimer.current);
+    window.clearTimeout(jumpTimer.current);
+    window.clearTimeout(highlightTimer.current);
+    setActiveId(id);
+    setJumpId(id);
+    setHighlightId(id);
+    jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
+    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+    const s = Math.min(Math.max(scale, 0.6), 1.05);
+    setTransform(
+      window.innerWidth / 2 - q.x * s,
+      window.innerHeight / 2 - q.y * s,
+      s,
+      450,
+    );
+  };
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
       <img
@@ -141,7 +197,7 @@ export function GeneratorSystem() {
         wheel={{ step: 0.15 }}
         panning={{ velocityDisabled: true }}
       >
-        {({ zoomIn, zoomOut, resetTransform }) => (
+        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => (
           <>
             <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}>
               <div className="relative" style={{ width: WORLD, height: WORLD }}>
