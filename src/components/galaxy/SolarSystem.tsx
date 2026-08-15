@@ -5,6 +5,7 @@ import { Dices, Minus, Palette, Plus, RotateCcw, Sparkle } from "lucide-react";
 import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, DRIFTERS, MOON, PLANETS, SUN, WORLD } from "./planets";
 import { Drifter } from "./Drifter";
+import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
 
@@ -67,12 +68,17 @@ const RING_STYLES: RingStyle[] = PLANETS.map((p, i) => {
 export function SolarSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bounceId, setBounceId] = useState<string | null>(null);
+  /** Navigator "find me": dashed ring + single hop. */
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [jumpId, setJumpId] = useState<string | null>(null);
   /** Which hand-painted sky is showing; restored from localStorage after mount. */
   const [bgIndex, setBgIndex] = useState(0);
   /** Animation clock, seconds. Starts at 0 so SSR and hydration agree. */
   const [t, setT] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
   const bounceTimer = useRef<number | undefined>(undefined);
+  const highlightTimer = useRef<number | undefined>(undefined);
+  const jumpTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     let raf = 0;
