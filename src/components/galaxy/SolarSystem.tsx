@@ -407,6 +407,7 @@ export function SolarSystem() {
     angle: number,
     orbitR: number,
     size: number,
+    parentId?: string,
   ) => {
     const subj = chatSubjectRef.current;
     const mix = chatMixRef.current;
@@ -567,7 +568,7 @@ export function SolarSystem() {
             earth.y + MOON.orbitR * Math.sin(moonAngle),
             MOON.size,
           )
-        : chatRide(MOON.id, earth.x, earth.y, moonAngle, MOON.orbitR, MOON.size);
+        : chatRide(MOON.id, earth.x, earth.y, moonAngle, MOON.orbitR, MOON.size, "earth");
     moonPos = { x: rm.x, y: rm.y };
   }
   const moonChatSize =
