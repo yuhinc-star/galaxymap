@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Send, X } from "lucide-react";
+import heroRocketImg from "@/assets/planets/hero-rocket.png";
 
 export interface ChatSubjectInfo {
   id: string;
@@ -37,6 +38,9 @@ const SUGGESTIONS = [
 interface ChatPanelProps {
   subject: ChatSubjectInfo;
   onClose: () => void;
+  /** The rocket is still flying to this subject — the conversation (and
+      its suggestions) only begin once it lands. */
+  waiting?: boolean;
 }
 
 /**
@@ -45,7 +49,7 @@ interface ChatPanelProps {
  * into a strip beside it). Styled like the Navigator and info panel —
  * hand-lettered Amatic names, golden accents, dashed-star charm.
  */
-export function ChatPanel({ subject, onClose }: ChatPanelProps) {
+export function ChatPanel({ subject, onClose, waiting = false }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
@@ -71,7 +75,7 @@ export function ChatPanel({ subject, onClose }: ChatPanelProps) {
 
   const send = (raw: string) => {
     const text = raw.trim();
-    if (!text || typing) return;
+    if (!text || typing || waiting) return;
     const replyCount = messages.filter((m) => m.from === "body").length;
     const reply =
       replyCount === 0
@@ -101,7 +105,7 @@ export function ChatPanel({ subject, onClose }: ChatPanelProps) {
         />
         <div className="min-w-0 flex-1">
           <span className="font-hand text-xs font-bold uppercase tracking-[0.28em] text-white/60">
-            {subject.kindLabel} · now chatting
+            {subject.kindLabel} · {waiting ? "rocket flying over" : "now chatting"}
           </span>
           <h2 className="truncate font-hand text-3xl font-bold uppercase leading-tight tracking-wider text-star">
             {subject.name}
@@ -117,7 +121,24 @@ export function ChatPanel({ subject, onClose }: ChatPanelProps) {
         </button>
       </div>
 
-      {messages.length === 0 ? (
+      {waiting ? (
+        /* The rocket carries the conversation — nobody answers until it
+           lands, so the greeting and suggestions wait for touchdown. */
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+          <img
+            src={heroRocketImg}
+            alt=""
+            draggable={false}
+            className="h-24 w-24 select-none object-contain animate-bounce [animation-duration:1.6s]"
+          />
+          <p className="font-hand text-4xl font-bold uppercase tracking-[0.12em] text-orbit-label">
+            The little rocket is flying over…
+          </p>
+          <p className="max-w-xs font-display text-sm text-white/60">
+            {subject.name} answers as soon as the rocket lands.
+          </p>
+        </div>
+      ) : messages.length === 0 ? (
         /* Empty state: big portrait + conversation starters */
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <img
@@ -205,13 +226,14 @@ export function ChatPanel({ subject, onClose }: ChatPanelProps) {
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={`Message ${subject.name}…`}
+          disabled={waiting}
+          placeholder={waiting ? "Waiting for the rocket…" : `Message ${subject.name}…`}
           aria-label={`Message ${subject.name}`}
-          className="min-w-0 flex-1 rounded-full border border-white/20 bg-space/60 px-4 py-2.5 font-display text-sm text-white outline-none placeholder:text-white/40 focus:border-star/60"
+          className="min-w-0 flex-1 rounded-full border border-white/20 bg-space/60 px-4 py-2.5 font-display text-sm text-white outline-none placeholder:text-white/40 focus:border-star/60 disabled:opacity-50"
         />
         <button
           type="submit"
-          disabled={!draft.trim() || typing}
+          disabled={waiting || !draft.trim() || typing}
           aria-label="Send message"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-star text-space shadow-md transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
         >
