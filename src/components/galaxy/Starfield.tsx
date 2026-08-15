@@ -69,12 +69,15 @@ export function Starfield({
   size,
   width,
   height,
+  chatMix = 0,
 }: {
   size: number;
   width?: number;
   height?: number;
+  chatMix?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chatMixRef = useRef(chatMix);
   const w = width ?? size;
   const h = height ?? size;
 
