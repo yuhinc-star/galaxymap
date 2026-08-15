@@ -214,7 +214,12 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
   return (
     <nav
       aria-label="System navigator"
-      className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 ${chatMode ? "hidden sm:flex" : "flex"} max-h-[62vh] w-[min(15rem,calc(100vw-5rem))] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm`}
+      className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 ${chatMode ? "hidden sm:flex" : "flex"} max-h-[62vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm ${
+        chatMode
+          ? // Fill the galaxy strip (its width minus the side margins).
+            "w-[calc(clamp(290px,33vw,460px)-2rem)]"
+          : "w-[min(15rem,calc(100vw-5rem))]"
+      }`}
     >
       <div className="flex items-center justify-between px-4 pb-1 pt-3">
         <span className="font-hand text-2xl font-bold uppercase tracking-[0.2em] text-white">
