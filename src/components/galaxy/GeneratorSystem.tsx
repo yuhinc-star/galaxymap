@@ -1634,6 +1634,29 @@ export function GeneratorSystem() {
   // --- Info panel -----------------------------------------------------------
   const panelInfo = infoId ? getPanelInfo(infoId) : null;
 
+  // --- Chat subject: the rocket decides -----------------------------------
+  // We chat with the star the rocket is parked on — or the one it is
+  // flying to (it lands there in a moment). Falls back to the fan's root
+  // subject if the host can't be resolved right now.
+  const talkId = flight ? flight.toId : rocketHostId;
+  const talkPanel = getPanelInfo(talkId);
+  const talkInfo: ChatSubjectInfo | null = talkPanel
+    ? {
+        id: talkPanel.id,
+        name: talkPanel.name,
+        img: talkPanel.img,
+        kindLabel: talkPanel.kindLabel,
+        line: talkPanel.line ?? "",
+      }
+    : (chatSubj?.info ?? null);
+
+  // Post-landing invite bubble (galaxy view only): the rocket offers a
+  // chat with its new host.
+  const suggestionInfo =
+    chatSuggestionId && !chatActive && !flight && !dragActive
+      ? getPanelInfo(chatSuggestionId)
+      : null;
+
   // --- Zoom-out pill --------------------------------------------------------
   // The body's parent is the zoom-out landing spot: a planet's parent is
   // the sun, a moon's parent is whatever it orbits. At the root sun the
@@ -1713,6 +1736,9 @@ export function GeneratorSystem() {
       rocketFlame = SUN_ORBIT_FLAME + 0.1 * Math.sin(t * 7);
     }
   }
+  // Keep the live pose reachable between frames: mid-flight re-targets
+  // and the chat invite anchor read it.
+  rocketPoseRef.current = { x: rocketX, y: rocketY, rot: rocketRot };
 
   /** Moon rings, recursively: each ring is centered on its parent's spot. */
   const renderMoonRings = (
@@ -2070,8 +2096,8 @@ export function GeneratorSystem() {
               <button
                 type="button"
                 aria-label="Chat with this world"
-                title="Chat mode — the family lines up to talk"
-                onClick={openChat}
+                title="Chat mode — the rocket introduces its host"
+                onClick={() => openChat()}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
                 <MessagesSquare className="h-5 w-5" />
