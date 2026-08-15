@@ -64,6 +64,7 @@
   --color-star: var(--star);
   --color-orbit-label: var(--orbit-label);
   --font-display: "Fredoka", ui-rounded, "Comic Sans MS", system-ui, sans-serif;
+  --font-hand: "Amatic SC", "Fredoka", ui-rounded, system-ui, sans-serif;
 }
 
 :root {
