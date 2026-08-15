@@ -2,6 +2,21 @@ import { useRef } from "react";
 import type { BodyDef } from "./planets";
 import { SpeechBubble } from "./SpeechBubble";
 
+/** Hand-wobbled closed ring (r≈68 in a 160 viewBox) for the navigator
+    highlight — deliberately imperfect so it reads as drawn, not orbital. */
+const HIGHLIGHT_RING_PATH = (() => {
+  const pts: string[] = [];
+  const N = 48;
+  for (let i = 0; i <= N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    const r = 68 + Math.sin(a * 3 + 0.7) * 3.2 + Math.sin(a * 5 + 2.1) * 1.8;
+    pts.push(
+      `${i === 0 ? "M" : "L"} ${(80 + Math.cos(a) * r).toFixed(1)} ${(80 + Math.sin(a) * r).toFixed(1)}`,
+    );
+  }
+  return `${pts.join(" ")} Z`;
+})();
+
 interface PlanetProps {
   def: BodyDef;
   /** Center position in world px. */
@@ -79,21 +94,36 @@ export function Planet({ def, x, y, active, bouncing, onTap, spin, jumping, high
         {highlighted && (
           <span
             className="pointer-events-none absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2"
-            style={{ width: "148%", height: "148%" }}
+            style={{ width: "158%", height: "158%" }}
             aria-hidden
           >
             <svg viewBox="0 0 160 160" className="navigator-ring h-full w-full">
-              <circle
-                cx="80"
-                cy="80"
-                r="68"
+              {/* Golden wobbly ring — reads as "found!", not another orbit */}
+              <path
+                d={HIGHLIGHT_RING_PATH}
                 fill="none"
-                stroke="white"
-                strokeOpacity="0.95"
-                strokeWidth="7"
-                strokeDasharray="24 16"
+                stroke="#ffd94d"
+                strokeWidth="8"
+                strokeDasharray="30 18"
                 strokeLinecap="round"
               />
+              {/* Twinkling finder sparkles on the ring */}
+              {[0, 90, 180, 270].map((a) => {
+                const rad = (a * Math.PI) / 180;
+                const sx = 80 + Math.cos(rad) * 68;
+                const sy = 80 + Math.sin(rad) * 68;
+                return (
+                  <path
+                    key={a}
+                    d={`M ${sx} ${sy - 11} L ${sx} ${sy + 11} M ${sx - 11} ${sy} L ${sx + 11} ${sy}`}
+                    stroke="#fff3c4"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    className="navigator-sparkle"
+                    style={{ animationDelay: `${a / 500}s` }}
+                  />
+                );
+              })}
             </svg>
           </span>
         )}
