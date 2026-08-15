@@ -13,6 +13,8 @@ export function mulberry32(seed: number) {
 }
 
 export interface OrbitShape {
+  /** The family this curve was drawn from. */
+  kind: OrbitShapeKind;
   /** SVG path of the closed curve, centered near (0,0). */
   d: string;
   /** Point on the curve at parameter angle a (radians). */
@@ -139,5 +141,5 @@ export function makeOrbitShape(
     const pt = pointAt((i / N) * TAU);
     d += `${i === 0 ? "M" : "L"}${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
   }
-  return { d: `${d} Z`, pointAt, maxR };
+  return { kind, d: `${d} Z`, pointAt, maxR };
 }
