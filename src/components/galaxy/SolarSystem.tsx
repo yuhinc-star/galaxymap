@@ -31,6 +31,7 @@ import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { warmSpritePool } from "./spritePool";
 import { Starfield } from "./Starfield";
+import { ZoomOutPill, type ZoomOutTarget } from "./ZoomOutPill";
 import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 
 const TAU = Math.PI * 2;
@@ -41,6 +42,7 @@ const CLASSIC_HINTS = [
   "Tap a planet to make it bounce — tap it again quickly for its storybook page!",
   "Drag the little rocket onto any world — or tap its chip in the navigator!",
   "The navigator finds anyone — double-tap a name for tales & tricks!",
+  "Visiting a world? The pill up top flies you back to its parent star!",
   "Try the palette for new skies… or 'Make your own' galaxy!",
   "The chat button lines the whole family up in the sky — say hi!",
 ];
@@ -1139,6 +1141,25 @@ export function SolarSystem() {
   // --- Info panel ---------------------------------------------------------
   const panelInfo = infoId ? getPanelInfo(infoId) : null;
 
+  // --- Zoom-out pill --------------------------------------------------------
+  // The body's parent is the zoom-out landing spot: a planet's parent is
+  // the sun, the Moon's parent is Earth. At the sun the pill offers the
+  // whole-sky view instead — except in chat mode, where the family
+  // boundary hides it once the fan sits on the chat subject.
+  const zoomOutTarget: ZoomOutTarget | null = (() => {
+    if (!focusedId) return null;
+    if (chatOpen && (!chatSubj || focusedId === chatSubj.info.id)) return null;
+    if (focusedId === SUN.id) {
+      return chatOpen ? null : { id: "", name: "Whole sky", img: null };
+    }
+    if (focusedId === MOON.id) {
+      const earth = PLANETS.find((pp) => pp.id === "earth");
+      return earth ? { id: earth.id, name: earth.name, img: earth.img } : null;
+    }
+    const p = PLANETS.find((pp) => pp.id === focusedId);
+    return p ? { id: SUN.id, name: SUN.name, img: SUN.img } : null;
+  })();
+
   let rocketX = CENTER;
   let rocketY = CENTER;
   let rocketRot = PARK_ROT;
@@ -1489,6 +1510,24 @@ export function SolarSystem() {
                 Make your own
               </Link>
             </div>
+
+            {/* Zoom-out pill: hop up to the parent star (or the whole sky). */}
+            <ZoomOutPill
+              key={zoomOutTarget ? `${zoomOutTarget.id}:${zoomOutTarget.name}` : "none"}
+              target={zoomOutTarget}
+              chatMode={chatActive}
+              onZoomOut={(id) => {
+                if (!id) {
+                  // "Whole sky": glide all the way back out to the full system.
+                  setInfoId(null);
+                  followRef.current = null;
+                  setFocusedId(null);
+                  resetTransform();
+                  return;
+                }
+                handleNavigate(id);
+              }}
+            />
 
             <div
               className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] flex-col gap-2 transition-opacity duration-300 ${
