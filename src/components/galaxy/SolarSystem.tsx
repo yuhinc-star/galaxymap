@@ -115,6 +115,20 @@ export function SolarSystem() {
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
   }, []);
 
+  /** Navigator entries: the Sun, then every planet (Earth carries the Moon). */
+  const navItems: NavigatorEntry[] = [
+    { id: SUN.id, name: SUN.name, img: SUN.img },
+    ...PLANETS.map((p) => ({
+      id: p.id,
+      name: p.name,
+      img: p.img,
+      moons:
+        p.id === "earth"
+          ? [{ id: MOON.id, name: MOON.name, img: MOON.img }]
+          : undefined,
+    })),
+  ];
+
   // Orbit math: every planet advances along its ring at its own speed.
   const positions = new Map<string, { x: number; y: number }>();
   for (const p of PLANETS) {
