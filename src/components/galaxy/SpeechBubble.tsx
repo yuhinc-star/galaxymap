@@ -1,4 +1,5 @@
-import { useTransformContext } from "react-zoom-pan-pinch";
+import { useState } from "react";
+import { useTransformEffect } from "react-zoom-pan-pinch";
 
 interface SpeechBubbleProps {
   text: string;
@@ -9,14 +10,17 @@ interface SpeechBubbleProps {
  * stays the same readable size on screen no matter how far you zoom.
  */
 export function SpeechBubble({ text }: SpeechBubbleProps) {
-  const { transformState } = useTransformContext();
-  const inv = 1 / transformState.scale;
+  const [scale, setScale] = useState(1);
+
+  useTransformEffect(({ state }) => {
+    setScale(state.scale);
+  });
 
   return (
     <div
       className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2"
       style={{
-        transform: `translateX(-50%) scale(${inv})`,
+        transform: `translateX(-50%) scale(${1 / scale})`,
         transformOrigin: "bottom center",
       }}
     >
