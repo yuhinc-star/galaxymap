@@ -67,7 +67,6 @@ const RING_STYLES: RingStyle[] = PLANETS.map((p, i) => {
 
 export function SolarSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [bounceId, setBounceId] = useState<string | null>(null);
   /** Body the camera is currently locked onto (navigator "you are here"). */
   const [focusedId, setFocusedId] = useState<string | null>(null);
   /** Navigator "find me": dashed ring + single hop. */
@@ -78,7 +77,6 @@ export function SolarSystem() {
   /** Animation clock, seconds. Starts at 0 so SSR and hydration agree. */
   const [t, setT] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
-  const bounceTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
   /** Camera follow: keeps the navigator-picked body centered as it orbits. */
@@ -355,7 +353,6 @@ export function SolarSystem() {
                   x={CENTER}
                   y={CENTER}
                   active={activeId === SUN.id}
-                  bouncing={bounceId === SUN.id}
                   jumping={jumpId === SUN.id}
                   highlighted={highlightId === SUN.id}
                   onTap={handleNavigate}
@@ -375,7 +372,6 @@ export function SolarSystem() {
                         x={q.x}
                         y={q.y}
                         active={activeId === p.id}
-                        bouncing={bounceId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={highlightId === p.id}
                         onTap={handleNavigate}
@@ -388,7 +384,6 @@ export function SolarSystem() {
                   x={moonPos.x}
                   y={moonPos.y}
                   active={activeId === MOON.id}
-                  bouncing={bounceId === MOON.id}
                   jumping={jumpId === MOON.id}
                   highlighted={highlightId === MOON.id}
                   onTap={handleNavigate}

@@ -31,7 +31,6 @@ const DEFAULT_COUNT = 6;
  */
 export function GeneratorSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [bounceId, setBounceId] = useState<string | null>(null);
   /** Body the camera is currently locked onto (navigator "you are here"). */
   const [focusedId, setFocusedId] = useState<string | null>(null);
   /** Navigator "find me": dashed ring + single hop. */
@@ -42,7 +41,6 @@ export function GeneratorSystem() {
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
-  const bounceTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
   /** Camera follow: keeps the navigator-picked body centered as it orbits. */
@@ -358,7 +356,6 @@ export function GeneratorSystem() {
                   x={CENTER}
                   y={CENTER}
                   active={activeId === config.sun.id}
-                  bouncing={bounceId === config.sun.id}
                   jumping={jumpId === config.sun.id}
                   highlighted={highlightId === config.sun.id}
                   onTap={handleNavigate}
@@ -376,7 +373,6 @@ export function GeneratorSystem() {
                         x={q.x}
                         y={q.y}
                         active={activeId === p.id}
-                        bouncing={bounceId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={highlightId === p.id}
                         onTap={handleNavigate}
@@ -395,7 +391,6 @@ export function GeneratorSystem() {
                         x={q.x + m.orbitR * Math.cos(a)}
                         y={q.y + m.orbitR * Math.sin(a)}
                         active={activeId === m.id}
-                        bouncing={bounceId === m.id}
                         jumping={jumpId === m.id}
                         highlighted={highlightId === m.id}
                         onTap={handleNavigate}
