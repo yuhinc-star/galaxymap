@@ -19,6 +19,7 @@ import {
   Plus,
   RotateCcw,
   Sparkle,
+  Undo,
 } from "lucide-react";
 import heroRocketImg from "@/assets/planets/hero-rocket.png";
 import { BACKGROUNDS } from "./backgrounds";
@@ -159,6 +160,13 @@ export function GeneratorSystem() {
   /** Runtime-grown system: once the user adds bodies by double-clicking,
       this replaces the seeded config (regenerating resets it). */
   const [extras, setExtras] = useState<SystemConfig | null>(null);
+  /** Snapshot of the previous grown system, so a single "reverse" step
+      can undo the last add, delete, or regenerate. */
+  const [undoState, setUndoState] = useState<{
+    seed: number;
+    extras: SystemConfig | null;
+    rocketHostId: string;
+  } | null>(null);
   /** Focused body currently showing its information panel. */
   const [infoId, setInfoId] = useState<string | null>(null);
   /** Just-born body playing its pop-in animation. */
@@ -382,6 +390,25 @@ export function GeneratorSystem() {
     dragRef.current = null;
   };
 
+  const captureUndo = () => {
+    setUndoState({ seed, extras, rocketHostId: rocketHostId ?? config.sun.id });
+  };
+
+  const restoreUndo = () => {
+    if (!undoState) return;
+    setSeed(undoState.seed);
+    setExtras(undoState.extras);
+    setRocketHostId(undoState.rocketHostId);
+    setUndoState(null);
+    // Clear any transient action states so the restored world doesn't carry
+    // half-finished animations or stale panels.
+    setInfoId(null);
+    setDepartingIds([]);
+    setNewbornId(null);
+    setFlight(null);
+    setRocketInboundId(null);
+  };
+
   const regenerate = () => {
     // Tumble the dice right away so the click feels instant.
     setDiceRolling(true);
@@ -395,6 +422,7 @@ export function GeneratorSystem() {
     );
     warpTo(() => {
       window.localStorage.setItem("galaxy-gen-seed", String(next));
+      captureUndo();
       setSeed(next);
       resetForNewSystem();
     }, ready);
@@ -1420,6 +1448,7 @@ export function GeneratorSystem() {
         : addMoonToSystem(config, infoId);
     if (!result) return;
     recordCrashEvent("body-add", { parent: infoId, newId: result.newId });
+    captureUndo();
     setExtras(result.next);
     // Newborn celebration: pop-in, a hello bubble and the golden ring.
     setNewbornId(result.newId);
@@ -1446,6 +1475,7 @@ export function GeneratorSystem() {
     if (!next) return;
     const removedId = infoId;
     recordCrashEvent("body-remove", { id: removedId });
+    captureUndo();
     // Every id leaving with it: the body plus its whole moon subtree.
     const ids: string[] = [];
     const collect = (ms: GeneratedMoon[]) =>
@@ -2033,23 +2063,29 @@ export function GeneratorSystem() {
             </div>
 
 
-            {/* Zoom-out pill: hop up to the parent star (or the whole sky). */}
-            <ZoomOutPill
-              key={zoomOutTarget ? `${zoomOutTarget.id}:${zoomOutTarget.name}` : "none"}
-              target={zoomOutTarget}
-              chatMode={chatActive}
-              onZoomOut={(id) => {
-                if (!id) {
-                  // "Whole sky": glide all the way back out to the full system.
-                  setInfoId(null);
-                  followRef.current = null;
-                  setFocusedId(null);
-                  resetTransform();
-                  return;
-                }
-                handleNavigate(id);
-              }}
-            />
+            {/*
+              Zoom-out pill: hop up to the parent star (or the whole sky).
+              In chat mode the same job is handled by the strip's bottom-right
+              button, so the pill only appears in the open sky.
+            */}
+            {!chatActive && (
+              <ZoomOutPill
+                key={zoomOutTarget ? `${zoomOutTarget.id}:${zoomOutTarget.name}` : "none"}
+                target={zoomOutTarget}
+                chatMode={false}
+                onZoomOut={(id) => {
+                  if (!id) {
+                    // "Whole sky": glide all the way back out to the full system.
+                    setInfoId(null);
+                    followRef.current = null;
+                    setFocusedId(null);
+                    resetTransform();
+                    return;
+                  }
+                  handleNavigate(id);
+                }}
+              />
+            )}
 
             <div
               className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] flex-col gap-2 transition-opacity duration-300 ${
@@ -2067,39 +2103,86 @@ export function GeneratorSystem() {
               >
                 <Palette className="h-5 w-5" />
               </button>
-              <button
-                type="button"
-                aria-label="Zoom in"
-                onClick={() => {
-                  chatUserZoom();
-                  zoomIn();
-                }}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
-              >
-                <Plus className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                aria-label="Zoom out"
-                onClick={() => {
-                  chatUserZoom();
-                  zoomOut();
-                }}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
-              >
-                <Minus className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                aria-label="Recenter"
-                onClick={() => {
-                  chatUserZoom();
-                  resetTransform();
-                }}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
-              >
-                <RotateCcw className="h-5 w-5" />
-              </button>
+
+              {chatActive ? (
+                <>
+                  <button
+                    type="button"
+                    aria-label={
+                      zoomOutTarget
+                        ? `Zoom out to ${zoomOutTarget.name}`
+                        : "Zoom out"
+                    }
+                    title={
+                      zoomOutTarget
+                        ? `Zoom out to ${zoomOutTarget.name}`
+                        : "Already at the top of this family"
+                    }
+                    disabled={!zoomOutTarget}
+                    onClick={() => {
+                      if (!zoomOutTarget) return;
+                      chatUserZoom();
+                      if (!zoomOutTarget.id) {
+                        setInfoId(null);
+                        followRef.current = null;
+                        setFocusedId(null);
+                        resetTransform();
+                        return;
+                      }
+                      handleNavigate(zoomOutTarget.id);
+                    }}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
+                  >
+                    <Minus className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Reverse last step"
+                    title="Reverse last step"
+                    disabled={!undoState}
+                    onClick={restoreUndo}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
+                  >
+                    <Undo className="h-5 w-5" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Zoom in"
+                    onClick={() => {
+                      chatUserZoom();
+                      zoomIn();
+                    }}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Zoom out"
+                    onClick={() => {
+                      chatUserZoom();
+                      zoomOut();
+                    }}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+                  >
+                    <Minus className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Recenter"
+                    onClick={() => {
+                      chatUserZoom();
+                      resetTransform();
+                    }}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+                  >
+                    <RotateCcw className="h-5 w-5" />
+                  </button>
+                </>
+              )}
             </div>
 
             {!chatActive && <HintGuide pageId="generator" hints={GENERATOR_HINTS} />}
