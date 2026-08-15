@@ -42,7 +42,7 @@ export function Starfield({ size }: { size: number }) {
       base: 0.35 + Math.random() * 0.65,
       speed: 0.6 + Math.random() * 1.8,
       phase: Math.random() * Math.PI * 2,
-      color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)],
+      color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)] ?? "#ffffff",
     }));
 
     const comets: Comet[] = [];
@@ -81,6 +81,7 @@ export function Starfield({ size }: { size: number }) {
 
       for (let i = comets.length - 1; i >= 0; i--) {
         const c = comets[i];
+        if (!c) continue;
         c.life += dt;
         c.x += c.vx * dt;
         c.y += c.vy * dt;
