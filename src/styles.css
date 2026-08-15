@@ -308,3 +308,85 @@
 .navigator-sparkle {
   animation: navigator-sparkle 0.7s ease-in-out infinite;
 }
+
+/* Persistent golden ring — same hand-drawn ring as the navigator flash,
+   but it stays on and keeps turning. Marks the rocket's drag-hover target
+   and its inbound destination. */
+@keyframes navigator-ring-steady {
+  from {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.04);
+  }
+  to {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+.navigator-ring-steady {
+  animation: navigator-ring-steady 6s linear infinite;
+  transform-origin: center;
+  filter: drop-shadow(0 0 6px rgba(255, 217, 77, 0.55));
+}
+
+/* Flicker of the hero rocket's gouache flame. */
+@keyframes rocket-flame-flicker {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  30% {
+    transform: scale(1.12, 0.9);
+  }
+  55% {
+    transform: scale(0.9, 1.1);
+  }
+  80% {
+    transform: scale(1.06, 0.95);
+  }
+}
+
+.rocket-flame {
+  animation: rocket-flame-flicker 0.22s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* Parked rocket: gentle idle sway (reuses the planet breathe). */
+.rocket-parked {
+  animation: planet-breathe 4.8s ease-in-out infinite;
+}
+
+/* Touchdown squash-and-settle — the landing moment. */
+@keyframes rocket-land {
+  0% {
+    transform: scale(1, 1);
+  }
+  28% {
+    transform: scale(1.16, 0.78);
+  }
+  52% {
+    transform: scale(0.93, 1.09);
+  }
+  74% {
+    transform: scale(1.04, 0.95);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+.rocket-land {
+  animation: rocket-land 0.55s ease-out 1;
+}
+
+/* Crawling golden tether from the dragged rocket to its target body. */
+@keyframes rocket-tether-crawl {
+  to {
+    stroke-dashoffset: -46;
+  }
+}
+
+.rocket-tether {
+  animation: rocket-tether-crawl 0.9s linear infinite;
+}

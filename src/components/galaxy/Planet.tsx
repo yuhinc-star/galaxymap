@@ -31,13 +31,15 @@ interface PlanetProps {
   jumping?: boolean;
   /** Spinning dashed ring, shown when found via the navigator. */
   highlighted?: boolean;
+  /** "flash" fades out (navigator find); "steady" stays on (rocket target). */
+  highlightMode?: "flash" | "steady";
 }
 
 /**
  * A celestial body floating in the world: sprite, name label, tap
  * reaction. Position comes from the parent's orbit math.
  */
-export function Planet({ def, x, y, active, bouncing = false, onTap, spin, jumping, highlighted }: PlanetProps) {
+export function Planet({ def, x, y, active, bouncing = false, onTap, spin, jumping, highlighted, highlightMode = "flash" }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
 
   let animation: string | undefined;
@@ -97,7 +99,7 @@ export function Planet({ def, x, y, active, bouncing = false, onTap, spin, jumpi
             style={{ width: "158%", height: "158%" }}
             aria-hidden
           >
-            <svg viewBox="0 0 160 160" className="navigator-ring h-full w-full">
+            <svg viewBox="0 0 160 160" className={`h-full w-full ${highlightMode === "steady" ? "navigator-ring-steady" : "navigator-ring"}`}>
               {/* Golden wobbly ring — reads as "found!", not another orbit */}
               <path
                 d={HIGHLIGHT_RING_PATH}
