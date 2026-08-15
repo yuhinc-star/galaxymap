@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Plus, Rocket, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Pencil, Plus, Rocket, Trash2, X } from "lucide-react";
+import { MAX_BODY_NAME } from "./systemGenerator";
 
 export interface BodyPanelChild {
   id: string;
@@ -46,6 +47,8 @@ interface BodyInfoPanelProps {
   chatMode?: boolean;
   /** "Say goodbye" — omitted for the sun and for the chat subject. */
   onDelete?: (() => void) | undefined;
+  /** Pencil by the name: hand the body a new one (capped, never empty). */
+  onRename?: ((name: string) => void) | undefined;
 }
 
 /**
