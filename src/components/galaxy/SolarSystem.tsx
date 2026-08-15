@@ -285,8 +285,9 @@ export function SolarSystem() {
         onWheel={stopFollow}
         onPinchStart={stopFollow}
       >
-        {({ zoomIn, zoomOut, resetTransform, setTransform }) => {
+        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;
+          stateRef.current = state;
           return (
           <>
             <TransformComponent
@@ -410,7 +411,7 @@ export function SolarSystem() {
             <Navigator
               items={navItems}
               activeId={activeId}
-              onSelect={(id) => handleNavigate(id, setTransform)}
+              onSelect={handleNavigate}
             />
 
             <div className="fixed right-4 top-4">
