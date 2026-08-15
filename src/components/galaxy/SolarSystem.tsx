@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
-import { Minus, Palette, Plus, RotateCcw, Sparkle } from "lucide-react";
+import { Dices, Minus, Palette, Plus, RotateCcw, Sparkle } from "lucide-react";
 import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, DRIFTERS, MOON, PLANETS, SUN, WORLD } from "./planets";
 import { Drifter } from "./Drifter";
@@ -265,6 +266,18 @@ export function SolarSystem() {
                 Pocket Galaxy
               </span>
             </header>
+
+            <div className="fixed right-4 top-4">
+              <Link
+                to="/generator"
+                aria-label="Open the Galaxy Generator"
+                title="Galaxy Generator — roll a random solar system"
+                className="flex h-11 items-center gap-2 rounded-full border border-border bg-card/90 px-4 font-display text-sm font-semibold text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <Dices className="h-4 w-4" />
+                Make your own
+              </Link>
+            </div>
 
             <div className="fixed bottom-5 right-4 flex flex-col gap-2">
               <button
