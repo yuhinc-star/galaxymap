@@ -69,17 +69,17 @@ export function Navigator({ items, activeId, onSelect }: NavigatorProps) {
   return (
     <nav
       aria-label="System navigator"
-      className="animate-pop-in fixed left-4 top-16 z-20 flex max-h-[62vh] w-60 flex-col overflow-hidden rounded-3xl border border-border bg-card/85 shadow-xl backdrop-blur-sm"
+      className="animate-pop-in fixed left-4 top-16 z-20 flex max-h-[62vh] w-60 flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm"
     >
       <div className="flex items-center justify-between px-4 pb-1 pt-3">
-        <span className="font-hand text-2xl font-bold uppercase tracking-[0.2em] text-orbit-label">
+        <span className="font-hand text-2xl font-bold uppercase tracking-[0.2em] text-white">
           Navigator
         </span>
         <button
           type="button"
           aria-label="Collapse the navigator"
           onClick={() => setOpen(false)}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-card-foreground/70 transition-colors hover:bg-accent hover:text-card-foreground"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/20 hover:text-white"
         >
           <ChevronDown className="h-4 w-4" />
         </button>
@@ -89,7 +89,7 @@ export function Navigator({ items, activeId, onSelect }: NavigatorProps) {
           <li key={item.id} className="flex flex-col gap-0.5">
             {renderEntry(item, false)}
             {item.moons && item.moons.length > 0 && (
-              <ul className="ml-6 flex flex-col gap-0.5 border-l-2 border-dashed border-orbit-label/40 pl-2">
+              <ul className="ml-6 flex flex-col gap-0.5 border-l-2 border-dashed border-white/40 pl-2">
                 {item.moons.map((m) => (
                   <li key={m.id}>{renderEntry(m, true)}</li>
                 ))}
