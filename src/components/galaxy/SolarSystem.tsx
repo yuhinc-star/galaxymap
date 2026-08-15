@@ -477,7 +477,7 @@ export function SolarSystem() {
     if (fid === MOON.id) {
       subject = {
         info: { id: MOON.id, name: MOON.name, img: MOON.img, line: MOON.line, kindLabel: "Moon" },
-        layout: computeChatLayout(MOON.id, moonPos, MOON.size, []),
+        layout: computeChatLayout(MOON.id, moonPos, MOON.size, [], stripSize().w, stripSize().h),
       };
     } else {
       const p = fid ? PLANETS.find((pp) => pp.id === fid) : undefined;
@@ -489,7 +489,9 @@ export function SolarSystem() {
             p.id,
             anchor,
             p.size,
-            p.id === "earth" ? [{ id: MOON.id, size: MOON.size }] : [],
+            p.id === "earth" ? [{ id: MOON.id, size: MOON.size, name: MOON.name }] : [],
+            stripSize().w,
+            stripSize().h,
           ),
         };
       }
@@ -501,7 +503,9 @@ export function SolarSystem() {
           SUN.id,
           { x: CENTER, y: CENTER },
           SUN.size,
-          PLANETS.map((pp) => ({ id: pp.id, size: pp.size })),
+          PLANETS.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
+          stripSize().w,
+          stripSize().h,
         ),
       };
     }
