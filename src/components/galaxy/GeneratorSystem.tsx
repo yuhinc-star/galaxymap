@@ -79,6 +79,8 @@ const GENERATOR_HINTS: ContextualHint[] = [
   { id: "hello", context: "focused", text: "Tap a star to say hello… tap it again quickly for its storybook page!" },
   { id: "zoom-out", context: "focused", text: "The pill up top flies you back to the parent star — from the sun, to the whole sky!" },
   { id: "summon", context: "summon", text: "One tap sends the little rocket flying over — or drag it there yourself!" },
+  { id: "rocket-home", context: "at-host", text: "The little rocket lives here — drag it onto another star, or tap its chip in the navigator!" },
+  { id: "chat-link", context: "at-host", text: "Wherever the little rocket lands, that's who answers the chat!" },
   { id: "storybook", context: "storybook", text: "A star's page grows its family, summons the rocket… or says goodbye!" },
   { id: "armed", context: "rocket-armed", text: "Move mode! Tap any star — the rocket will fly straight to it!" },
   { id: "flight", context: "rocket-flight", text: "Wherever the little rocket lands, that's who answers the chat!" },
@@ -1687,11 +1689,13 @@ export function GeneratorSystem() {
         ? "rocket-flight"
         : infoId
           ? "storybook"
-          : summonInfo
-            ? "summon"
-            : focusedId
-              ? "focused"
-              : "explore";
+          : focusedId
+            ? summonInfo
+              ? "summon"
+              : focusedId === talkId
+                ? "at-host"
+                : "focused"
+            : "explore";
 
   // --- Zoom-out pill --------------------------------------------------------
   // The body's parent is the zoom-out landing spot: a planet's parent is

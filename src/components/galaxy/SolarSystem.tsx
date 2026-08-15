@@ -47,6 +47,8 @@ const CLASSIC_HINTS: ContextualHint[] = [
   { id: "hello", context: "focused", text: "Tap a planet to make it bounce — tap it again quickly for its storybook page!" },
   { id: "zoom-out", context: "focused", text: "Visiting a world? The pill up top flies you back to its parent star!" },
   { id: "summon", context: "summon", text: "One tap sends the little rocket flying over — or drag it there yourself!" },
+  { id: "rocket-home", context: "at-host", text: "The little rocket lives here — drag it onto another world, or tap its chip in the navigator!" },
+  { id: "chat-link", context: "at-host", text: "Wherever the little rocket lands, that's who answers the chat!" },
   { id: "storybook", context: "storybook", text: "A world's page tells its tales — and can call the rocket over!" },
   { id: "armed", context: "rocket-armed", text: "Move mode! Tap any world — the rocket will fly straight to it!" },
   { id: "flight", context: "rocket-flight", text: "Wherever the little rocket lands, that's who answers the chat!" },
@@ -1245,11 +1247,13 @@ export function SolarSystem() {
         ? "rocket-flight"
         : infoId
           ? "storybook"
-          : summonInfo
-            ? "summon"
-            : focusedId
-              ? "focused"
-              : "explore";
+          : focusedId
+            ? summonInfo
+              ? "summon"
+              : focusedId === talkId
+                ? "at-host"
+                : "focused"
+            : "explore";
 
   // --- Zoom-out pill --------------------------------------------------------
   // The body's parent is the zoom-out landing spot: a planet's parent is
