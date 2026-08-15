@@ -585,15 +585,10 @@ export function SolarSystem() {
         img: SUN.img,
         kindLabel: "Sun",
         line: SUN.line,
-        facts: [
-          { label: "Size", value: "Supergiant star" },
-          { label: "Planets in orbit", value: `${PLANETS.length}` },
-        ],
         childrenLabel: "Planets",
         childrenCap: PLANETS.length,
         children: PLANETS.map((p) => ({ id: p.id, name: p.name, img: p.img })),
         add,
-        remove: null,
       };
     }
     if (id === MOON.id) {
