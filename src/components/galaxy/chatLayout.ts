@@ -288,3 +288,62 @@ export function rideChatOrbit(
     ringScale: state.scale,
   };
 }
+
+/**
+ * A body that just left the fan (the fan re-focused on another star)
+ * glides back to its live orbit instead of snapping: angle, ring scale
+ * and size chase home along its own ring. Returns done=true once close
+ * enough to hand back to the live loop (the entry is then deleted).
+ */
+export function rideChatOrbitExit(
+  rendered: Map<string, ChatRideState>,
+  id: string,
+  cx: number,
+  cy: number,
+  angle: number,
+  pointAt: (a: number) => { x: number; y: number },
+  size: number,
+  frame: number,
+): { x: number; y: number; size: number; ringScale: number; done: boolean } {
+  const prev = rendered.get(id);
+  if (!prev) {
+    const q0 = pointAt(angle);
+    return { x: cx + q0.x, y: cy + q0.y, size, ringScale: 1, done: true };
+  }
+  if (prev.frame === frame) {
+    const qp = pointAt(prev.angle);
+    return {
+      x: cx + qp.x * prev.scale,
+      y: cy + qp.y * prev.scale,
+      size: prev.size,
+      ringScale: prev.scale,
+      done: false,
+    };
+  }
+  const k = 0.16;
+  const dA = shortAngle(prev.angle, angle);
+  const cur = {
+    angle: prev.angle + dA * k,
+    scale: prev.scale + (1 - prev.scale) * k,
+    size: prev.size + (size - prev.size) * k,
+    frame,
+  };
+  if (
+    Math.abs(dA) < 0.012 &&
+    Math.abs(cur.scale - 1) < 0.012 &&
+    Math.abs(cur.size - size) < 1
+  ) {
+    rendered.delete(id);
+    const q1 = pointAt(angle);
+    return { x: cx + q1.x, y: cy + q1.y, size, ringScale: 1, done: true };
+  }
+  rendered.set(id, cur);
+  const q = pointAt(cur.angle);
+  return {
+    x: cx + q.x * cur.scale,
+    y: cy + q.y * cur.scale,
+    size: cur.size,
+    ringScale: cur.scale,
+    done: false,
+  };
+}

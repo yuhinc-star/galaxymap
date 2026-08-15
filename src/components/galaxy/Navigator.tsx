@@ -56,8 +56,11 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
   const [open, setOpen] = useState<boolean | null>(null);
   const [closing, setClosing] = useState(false);
 
+  // Chat mode enters with the navigator folded away — the lined-up
+  // family keeps the strip; one tap on the list button brings it back.
   useEffect(() => {
-    setOpen(window.matchMedia("(min-width: 640px)").matches);
+    setOpen(window.matchMedia("(min-width: 640px)").matches && !chatMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** Fold the menu away first, then swap to the round list button. */
@@ -104,18 +107,12 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
       }
       onSelect(entry.id);
     };
+    // Same storybook art style in every mode — chat mode only changes
+    // WHICH bodies are listed, never how the entries look.
     const avatarSize =
-      depth === 0
-        ? chatMode ? "h-7 w-7" : "h-9 w-9"
-        : depth === 1
-          ? chatMode ? "h-6 w-6" : "h-7 w-7"
-          : chatMode ? "h-5 w-5" : "h-6 w-6";
+      depth === 0 ? "h-9 w-9" : depth === 1 ? "h-7 w-7" : "h-6 w-6";
     const nameSize =
-      depth === 0
-        ? chatMode ? "text-xl" : "text-2xl"
-        : depth === 1
-          ? chatMode ? "text-base" : "text-lg"
-          : chatMode ? "text-sm" : "text-base";
+      depth === 0 ? "text-2xl" : depth === 1 ? "text-lg" : "text-base";
     return (
       <div className="relative">
         <button
@@ -217,11 +214,16 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
   return (
     <nav
       aria-label="System navigator"
-      className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 ${chatMode ? "hidden sm:flex" : "flex"} max-h-[62vh] ${chatMode ? "w-[min(11.5rem,calc(100vw-5rem))]" : "w-[min(15rem,calc(100vw-5rem))]"} flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm`}
+      className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 ${chatMode ? "hidden sm:flex" : "flex"} max-h-[62vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm ${
+        chatMode
+          ? // Fill the galaxy strip (its width minus the side margins).
+            "w-[calc(clamp(290px,33vw,460px)-2rem)]"
+          : "w-[min(15rem,calc(100vw-5rem))]"
+      }`}
     >
       <div className="flex items-center justify-between px-4 pb-1 pt-3">
-        <span className={`font-hand font-bold uppercase tracking-[0.2em] text-white ${chatMode ? "text-xl" : "text-2xl"}`}>
-          {armed ? "Fly the rocket to…" : chatMode ? "On screen" : "Navigator"}
+        <span className="font-hand text-2xl font-bold uppercase tracking-[0.2em] text-white">
+          {armed ? "Fly the rocket to…" : "Navigator"}
         </span>
         <div className="flex items-center gap-1">
           {armed && (
