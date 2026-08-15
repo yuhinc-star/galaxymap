@@ -118,11 +118,41 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
     return a;
   };
 
+  // --- Names -------------------------------------------------------------
+  // ~45% of bodies get a long catalog name like "Super Big Star 29444
+  // Cajun Cafe"; the rest get a short storybook name. All unique.
+  const usedNames = new Set<string>();
+  const uniqueName = (base: string): string => {
+    if (!usedNames.has(base)) {
+      usedNames.add(base);
+      return base;
+    }
+    const numerals = ["II", "III", "IV", "V", "VI"];
+    for (const n of numerals) {
+      const candidate = `${base} ${n}`;
+      if (!usedNames.has(candidate)) {
+        usedNames.add(candidate);
+        return candidate;
+      }
+    }
+    const fallback = `${base} ${Math.floor(rand() * 900) + 100}`;
+    usedNames.add(fallback);
+    return fallback;
+  };
+  const makeLongName = () =>
+    uniqueName(
+      `${pick(LONG_OPENERS)} ${pick(LONG_TYPES)} ${1000 + Math.floor(rand() * 98999)} ${pick(LONG_SUFFIXES)}`,
+    );
+  const shortNames = shuffled(PLANET_NAMES);
+  let shortIdx = 0;
+  const planetName = () =>
+    rand() < 0.45 ? makeLongName() : uniqueName(shortNames[shortIdx++ % shortNames.length]!);
+
   // --- Sun -------------------------------------------------------------
   const sunSprite = pick(SUN_SPRITES);
   const sun: BodyDef = {
     id: "sun",
-    name: sunSprite.name,
+    name: rand() < 0.4 ? makeLongName() : sunSprite.name,
     img: sunSprite.img,
     size: 700 + rand() * 90,
     line: pick(SUN_LINES),
@@ -132,7 +162,6 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
 
   // --- Planets -----------------------------------------------------------
   const sprites = shuffled(PLANET_SPRITES).slice(0, planetCount);
-  const names = shuffled(PLANET_NAMES);
   // Innermost ring must clear the biggest sun (radius ~395) plus a
   // gas giant's half-width (~155), so nothing parks on the sun's face.
   const inner = 580;
