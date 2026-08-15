@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Rocket, Trash2, X } from "lucide-react";
 
 export interface BodyPanelChild {
   id: string;
@@ -17,6 +17,13 @@ export interface BodyPanelRemove {
   actionLabel: string;
   /** e.g. moons that wave goodbye together with their planet. */
   note?: string | undefined;
+}
+
+export interface BodyPanelRocket {
+  /** Parked on this body — or inbound to it while flying. */
+  here: boolean;
+  flying: boolean;
+  onSummon: () => void;
 }
 
 export interface BodyPanelInfo {
@@ -43,6 +50,8 @@ interface BodyInfoPanelProps {
   /** Fly to a child body and open its own panel. */
   onSelect: (id: string) => void;
   onClose: () => void;
+  /** Summon the hero rocket to this body. */
+  rocket?: BodyPanelRocket | undefined;
 }
 
 /**
@@ -58,6 +67,7 @@ export function BodyInfoPanel({
   onRemove,
   onSelect,
   onClose,
+  rocket,
 }: BodyInfoPanelProps) {
   // "Say goodbye" asks for a second tap before anything is removed.
   const [confirming, setConfirming] = useState(false);
@@ -151,6 +161,33 @@ export function BodyInfoPanel({
             </p>
           )}
         </section>
+
+        {/* Summon the hero rocket — it can land on anything, sun included
+            (where it circles instead of touching down) */}
+        {rocket && (
+          <section className="rounded-2xl border-2 border-dashed border-white/25 px-3 py-2.5">
+            <h3 className="font-hand text-lg font-bold uppercase tracking-[0.18em] text-white/70">
+              Hero rocket
+            </h3>
+            {rocket.here ? (
+              <p className="mt-1 font-hand text-xl font-bold uppercase leading-tight tracking-wider text-star">
+                {rocket.flying
+                  ? "The rocket is on its way!"
+                  : "The rocket is parked here!"}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={rocket.onSummon}
+                disabled={rocket.flying}
+                className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-full bg-star px-4 py-1.5 font-hand text-2xl font-bold uppercase leading-none tracking-wider text-space shadow-md transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
+              >
+                <Rocket className="h-5 w-5" strokeWidth={2.5} />
+                {rocket.flying ? "Rocket is flying…" : "Summon the rocket"}
+              </button>
+            )}
+          </section>
+        )}
 
         {/* The add-a-body action lives inside the panel */}
         <section className="rounded-2xl border-2 border-dashed border-star/60 bg-star/10 px-3 py-2.5">

@@ -1187,6 +1187,7 @@ export function GeneratorSystem() {
               activeId={activeId}
               focusedId={focusedId}
               onSelect={handleNavigate}
+              onInfo={handleInfoSelect}
               rocket={{
                 img: heroRocketImg,
                 hostId: flight ? flight.toId : rocketHostId,
@@ -1205,6 +1206,11 @@ export function GeneratorSystem() {
                 onRemove={handleRemoveBody}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
+                rocket={{
+                  here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
+                  flying: flight !== null,
+                  onSummon: () => handleRocketDestination(panelInfo.id),
+                }}
               />
             )}
 

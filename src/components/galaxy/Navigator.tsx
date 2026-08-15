@@ -26,6 +26,8 @@ interface NavigatorProps {
   /** Body the camera is following right now — the "you are here" marker. */
   focusedId?: string | null;
   onSelect: (id: string) => void;
+  /** Double-click an entry: fly there and open its information panel. */
+  onInfo?: ((id: string) => void) | undefined;
   rocket?: NavigatorRocket;
 }
 
@@ -42,7 +44,7 @@ interface NavigatorProps {
  * the rocket's destination instead of a camera target. The rocket can
  * land on anything — sun, planet or moon — so every entry stays live.
  */
-export function Navigator({ items, activeId, focusedId, onSelect, rocket }: NavigatorProps) {
+export function Navigator({ items, activeId, focusedId, onSelect, onInfo, rocket }: NavigatorProps) {
   const [open, setOpen] = useState(true);
 
   if (!open) {
@@ -81,6 +83,11 @@ export function Navigator({ items, activeId, focusedId, onSelect, rocket }: Navi
         <button
           type="button"
           onClick={handleClick}
+          onDoubleClick={() => {
+            // Move mode owns clicks — a double-click there picks the
+            // destination, it doesn't open the panel.
+            if (!armed) onInfo?.(entry.id);
+          }}
           aria-current={focused ? "true" : undefined}
           className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 text-left transition-colors ${
             armed
