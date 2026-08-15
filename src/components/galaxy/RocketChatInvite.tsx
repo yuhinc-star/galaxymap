@@ -21,7 +21,7 @@ export function RocketChatInvite({
   onChat: () => void;
   onDismiss: () => void;
 }) {
-  const label = switching ? `Switch chat to ${name}` : `Chat with ${name}`;
+  const label = `Chat with ${name}`;
   return (
     <div
       role="status"
