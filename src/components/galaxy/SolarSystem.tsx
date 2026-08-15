@@ -637,8 +637,10 @@ export function SolarSystem() {
   // In chat mode the navigator lists only the family on screen: the
   // subject at the top with its children nested below.
   const chatNavItems: NavigatorEntry[] = (() => {
-    if (!chatSubj) return navItems;
-    const id = chatSubj.info.id;
+    // The navigator lists the family currently on screen — the fanned
+    // star (which may differ from the chat subject after a re-focus).
+    const id = fanSubj?.id ?? chatSubj?.info.id;
+    if (!id) return navItems;
     if (id === SUN.id) return navItems; // the whole system is on screen
     if (id === MOON.id) return [{ id: MOON.id, name: MOON.name, img: MOON.img }];
     const entry = navItems.find((e) => e.id === id);
@@ -1217,17 +1219,16 @@ export function SolarSystem() {
       />
       <TransformWrapper
         initialScale={0.36}
-        minScale={0.12}
+        minScale={chatOpen && fanSubj ? fanSubj.layout.camera.scale : 0.12}
         maxScale={2.5}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
-        wheel={{ step: 0.15, disabled: chatActive }}
+        wheel={{ step: 0.15 }}
         panning={{ velocityDisabled: true, disabled: chatActive }}
-        pinch={{ disabled: chatActive }}
         onPanningStart={stopFollow}
-        onWheel={stopFollow}
-        onPinchStart={stopFollow}
+        onWheel={chatUserZoom}
+        onPinchStart={chatUserZoom}
       >
         {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;
@@ -1350,7 +1351,7 @@ export function SolarSystem() {
                         def={chatSized && cr ? { ...p, size: cr.size } : p}
                         x={q.x}
                         y={q.y}
-                        labelBoost={chatSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
+                        labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={
@@ -1374,7 +1375,7 @@ export function SolarSystem() {
                   }
                   x={moonPos.x}
                   y={moonPos.y}
-                  labelBoost={chatSubj?.layout.slots.get(MOON.id)?.labelBoost ?? 1}
+                  labelBoost={fanSubj?.layout.slots.get(MOON.id)?.labelBoost ?? 1}
                   active={activeId === MOON.id}
                   jumping={jumpId === MOON.id}
                   highlighted={
@@ -1438,18 +1439,14 @@ export function SolarSystem() {
               onSelect={handleNavigate}
               onInfo={handleInfoSelect}
               chatMode={chatActive}
-              rocket={
-                chatActive
-                  ? undefined
-                  : {
-                      img: heroRocketImg,
-                      hostId: flight ? flight.toId : rocketHostId,
-                      flying: flight !== null,
-                      armed: rocketArmed,
-                      onChip: () => setRocketArmed((a) => !a),
-                      onDestination: handleRocketDestination,
-                    }
-              }
+              rocket={{
+                img: heroRocketImg,
+                hostId: flight ? flight.toId : rocketHostId,
+                flying: flight !== null,
+                armed: rocketArmed,
+                onChip: () => setRocketArmed((a) => !a),
+                onDestination: handleRocketDestination,
+              }}
             />
 
             {/* Double-click info panel: details + summon the rocket */}
@@ -1460,15 +1457,11 @@ export function SolarSystem() {
                 onAdd={() => {}}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
-                rocket={
-                  chatActive
-                    ? undefined
-                    : {
-                        here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
-                        flying: flight !== null,
-                        onSummon: () => handleRocketDestination(panelInfo.id),
-                      }
-                }
+                rocket={{
+                  here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
+                  flying: flight !== null,
+                  onSummon: () => handleRocketDestination(panelInfo.id),
+                }}
               />
             )}
 
@@ -1498,8 +1491,10 @@ export function SolarSystem() {
             </div>
 
             <div
-              className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] flex flex-col gap-2 transition-opacity duration-300 ${
-                chatActive ? "pointer-events-none opacity-0" : "opacity-100"
+              className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] flex-col gap-2 transition-opacity duration-300 ${
+                chatActive
+                  ? "hidden sm:flex left-[calc(clamp(290px,33vw,460px)-3.5rem)]"
+                  : "flex right-[max(1rem,env(safe-area-inset-right))]"
               }`}
             >
               <button
@@ -1515,7 +1510,7 @@ export function SolarSystem() {
                 type="button"
                 aria-label="Zoom in"
                 onClick={() => {
-                  stopFollow();
+                  chatUserZoom();
                   zoomIn();
                 }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
@@ -1526,7 +1521,7 @@ export function SolarSystem() {
                 type="button"
                 aria-label="Zoom out"
                 onClick={() => {
-                  stopFollow();
+                  chatUserZoom();
                   zoomOut();
                 }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
@@ -1537,7 +1532,7 @@ export function SolarSystem() {
                 type="button"
                 aria-label="Recenter"
                 onClick={() => {
-                  stopFollow();
+                  chatUserZoom();
                   resetTransform();
                 }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
