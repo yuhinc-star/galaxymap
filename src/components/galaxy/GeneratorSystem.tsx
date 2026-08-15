@@ -1312,15 +1312,15 @@ export function GeneratorSystem() {
    * and every body chases to its fresh place.
    */
   const rebuildChatLayout = (cfg: typeof config) => {
-    const subj = chatSubjectRef.current;
-    if (!subj) return;
-    const id = subj.info.id;
-    // The anchor captured when chat opened stays fixed — re-anchoring to
-    // the chased pose would let the whole fan drift mid-transition.
-    const anchor = subj.layout.anchor;
+    const fan = fanSubjectRef.current;
+    if (!fan) return;
+    const id = fan.id;
+    // The anchor captured when the fan formed stays fixed — re-anchoring
+    // to the chased pose would let the whole fan drift mid-transition.
+    const anchor = fan.layout.anchor;
     const strip = stripSize();
     if (id === cfg.sun.id) {
-      subj.layout = computeChatLayout(
+      fan.layout = computeChatLayout(
         id,
         anchor,
         cfg.sun.size,
@@ -1332,7 +1332,7 @@ export function GeneratorSystem() {
     }
     const p = cfg.planets.find((pp) => pp.id === id);
     if (p) {
-      subj.layout = computeChatLayout(
+      fan.layout = computeChatLayout(
         id,
         anchor,
         p.size,
@@ -1344,7 +1344,7 @@ export function GeneratorSystem() {
     }
     const m = findMoonById(cfg.planets, id);
     if (m) {
-      subj.layout = computeChatLayout(
+      fan.layout = computeChatLayout(
         id,
         anchor,
         m.size,
@@ -1355,20 +1355,61 @@ export function GeneratorSystem() {
     }
   };
 
+  /**
+   * Chat-mode zoom-in on a specific star: the fan re-forms around it —
+   * it anchors the bottom of the strip where it stands right now and its
+   * own children line up above, while the previous fan glides home.
+   */
+  const focusChatFan = (id: string) => {
+    const anchor = bodyPos(id);
+    if (!anchor) return;
+    const strip = stripSize();
+    let size: number;
+    let kids: ChatChildInput[] = [];
+    if (id === config.sun.id) {
+      size = config.sun.size;
+      kids = config.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name }));
+    } else {
+      const p = config.planets.find((pp) => pp.id === id);
+      if (p) {
+        size = p.size;
+        kids = p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name }));
+      } else {
+        const m = findMoonById(config.planets, id);
+        if (!m) return;
+        size = m.size;
+        kids = m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name }));
+      }
+    }
+    fanSubjectRef.current = {
+      id,
+      layout: computeChatLayout(id, anchor, size, kids, strip.w, strip.h),
+    };
+    chatGlideRef.current = true;
+  };
+
   // Keep the chat column in sync with the family: adding or removing a
   // body mid-chat rebuilds the lineup; if the subject itself is gone the
-  // chat set dissolves back to live orbits.
+  // chat set dissolves back to live orbits. If the fanned star is gone,
+  // the fan re-forms around the chat's root subject.
   useEffect(() => {
     if (!chatOpen) return;
     const subj = chatSubjectRef.current;
     if (!subj) return;
+    const gone = (bid: string) =>
+      bid !== config.sun.id &&
+      !config.planets.some((pp) => pp.id === bid) &&
+      !findMoonById(config.planets, bid);
     const id = subj.info.id;
-    if (
-      id !== config.sun.id &&
-      !config.planets.some((pp) => pp.id === id) &&
-      !findMoonById(config.planets, id)
-    ) {
+    if (gone(id)) {
       chatSubjectRef.current = null;
+      fanSubjectRef.current = null;
+      return;
+    }
+    const fan = fanSubjectRef.current;
+    if (fan && gone(fan.id)) {
+      fanSubjectRef.current = null;
+      focusChatFan(id);
       return;
     }
     rebuildChatLayout(config);
