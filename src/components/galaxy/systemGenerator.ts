@@ -332,6 +332,29 @@ export function findMoonById(
   return null;
 }
 
+/** Find the direct parent (planet or moon) of a moon anywhere in the tree. */
+export function findMoonParent(
+  planets: GeneratedPlanet[],
+  id: string,
+): { id: string; name: string } | null {
+  const walk = (
+    moons: GeneratedMoon[],
+    parent: { id: string; name: string },
+  ): { id: string; name: string } | null => {
+    for (const m of moons) {
+      if (m.id === id) return parent;
+      const sub = walk(m.moons, { id: m.id, name: m.name });
+      if (sub) return sub;
+    }
+    return null;
+  };
+  for (const p of planets) {
+    const hit = walk(p.moons, { id: p.id, name: p.name });
+    if (hit) return hit;
+  }
+  return null;
+}
+
 /**
  * Add a planet to the system (double-click the sun). The new orbit parks
  * in the widest gap between existing rings so the family stays evenly
