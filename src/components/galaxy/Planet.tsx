@@ -43,11 +43,23 @@ interface PlanetProps {
 }
 
 /**
+ * Hand-lettered name size for a body: long generated names get a smaller,
+ * wrapping label so they read like a caption instead of one endless line.
+ * Shared with the chat fan layout, which scales labels to fit the strip.
+ */
+export function planetLabelSize(size: number, name: string): number {
+  return name.length > 16
+    ? Math.max(22, Math.min(size * 0.22, 40))
+    : Math.max(32, Math.min(size * 0.3, 72));
+}
+
+/**
  * A celestial body floating in the world: sprite, name label, tap
  * reaction. Position comes from the parent's orbit math.
  */
 export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1 }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
+  const longName = def.name.length > 16;
 
   let animation: string | undefined;
   if (departing) {
@@ -62,12 +74,7 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
       : `planet-breathe ${def.breathe}s ease-in-out ${def.delay}s infinite`;
   }
 
-  // Long generated names get a smaller, wrapping label so they read like
-  // a hand-lettered caption instead of one endless line.
-  const longName = def.name.length > 16;
-  const labelSize = longName
-    ? Math.max(22, Math.min(def.size * 0.22, 40))
-    : Math.max(32, Math.min(def.size * 0.3, 72));
+  const labelSize = planetLabelSize(def.size, def.name);
 
   return (
     <div
