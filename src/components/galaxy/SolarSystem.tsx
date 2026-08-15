@@ -18,7 +18,9 @@ import {
   chatEase,
   computeChatLayout,
   rideChatOrbit,
+  rideChatOrbitExit,
   type ChatChaseState,
+  type ChatChildInput,
   type ChatLayout,
   type ChatRideState,
 } from "./chatLayout";
@@ -283,8 +285,18 @@ export function SolarSystem() {
   /** Any manual camera move takes control back from the follow mode. */
   const stopFollow = useCallback(() => {
     followRef.current = null;
+    // In chat mode the focus marker belongs to the fan — zooming around
+    // must not drop it (or the open info panel).
+    if (chatMixRef.current > 0.004) return;
     setFocusedId(null);
   }, []);
+
+  /** Wheel/pinch/zoom-button: in chat mode the user takes the zoom over
+      from the fan's camera glide once the fan has settled. */
+  const chatUserZoom = () => {
+    stopFollow();
+    if (chatMixRef.current > 0.9) chatGlideRef.current = false;
+  };
 
   /** Open chat mode: whatever holds focus (the sun by default) anchors
       the bottom of the strip and its children line up above it. */
@@ -299,6 +311,8 @@ export function SolarSystem() {
       ? { positionX: st.positionX, positionY: st.positionY, scale: st.scale }
       : null;
     chatSubjectRef.current = null;
+    fanSubjectRef.current = null; // the fan re-forms around this star
+    chatGlideRef.current = true;
     chatRenderRef.current.clear();
     chatRideRef.current.clear();
     ringScaleRef.current.clear();
@@ -366,6 +380,8 @@ export function SolarSystem() {
   if (!chatOpen && chatMixRef.current < 0.004) {
     chatMixRef.current = 0;
     chatSubjectRef.current = null;
+    fanSubjectRef.current = null;
+    chatGlideRef.current = false;
     chatRenderRef.current.clear();
     chatRideRef.current.clear();
     ringScaleRef.current.clear();
@@ -385,7 +401,7 @@ export function SolarSystem() {
   /** Subject glide: the focused body leaves its orbit for the fan base
       at the bottom of the strip (frame-guarded chase). */
   const chatAdjustSubject = (id: string, x: number, y: number, size: number) => {
-    const subj = chatSubjectRef.current;
+    const subj = fanSubjectRef.current;
     if (!subj || chatMixRef.current <= 0.004) return { x, y, size };
     const slot = subj.layout.slots.get(id);
     if (!slot) return { x, y, size };
@@ -415,7 +431,7 @@ export function SolarSystem() {
     size: number,
     parentId?: string,
   ) => {
-    const subj = chatSubjectRef.current;
+    const subj = fanSubjectRef.current;
     const mix = chatMixRef.current;
     const live = {
       x: cx + orbitR * Math.cos(angle),
@@ -425,19 +441,67 @@ export function SolarSystem() {
     if (!subj || mix <= 0.004) return live;
     const slot = subj.layout.slots.get(id);
     if (!slot || id === subj.layout.parentId) {
-      // A moon not in the fan keeps orbiting its parent, tightened so
-      // it never swings under the chat panel.
-      if (id !== subj.layout.parentId && parentId !== undefined) {
-        const k = 1 - 0.45 * chatEase(mix);
-        ringScaleRef.current.set(id, k);
-        return {
-          x: cx + orbitR * k * Math.cos(angle),
-          y: cy + orbitR * k * Math.sin(angle),
-          size,
-        };
+      if (id !== subj.layout.parentId) {
+        const circ = (aa: number) => ({
+          x: orbitR * Math.cos(aa),
+          y: orbitR * Math.sin(aa),
+        });
+        // Just left the fan (it re-focused on another star): glide home
+        // along the ring instead of snapping back onto the orbit.
+        if (chatRideRef.current.has(id)) {
+          const r = rideChatOrbitExit(
+            chatRideRef.current,
+            id,
+            cx,
+            cy,
+            angle,
+            circ,
+            size,
+            t,
+          );
+          if (r.done) ringScaleRef.current.delete(id);
+          else ringScaleRef.current.set(id, r.ringScale);
+          return { x: r.x, y: r.y, size: r.size };
+        }
+        // A former fan subject glides straight back to its live pose.
+        if (chatRenderRef.current.has(id)) {
+          const c = chaseChatTarget(chatRenderRef.current, id, live, live, t);
+          if (
+            Math.abs(c.x - live.x) + Math.abs(c.y - live.y) < 2 &&
+            Math.abs(c.size - live.size) < 1
+          ) {
+            chatRenderRef.current.delete(id);
+          }
+          return { x: c.x, y: c.y, size: c.size };
+        }
+        // A moon not in the fan keeps orbiting its parent, tightened so
+        // it never swings under the chat panel — eased so entering this
+        // band never snaps.
+        if (parentId !== undefined) {
+          const k = 1 - 0.45 * chatEase(mix);
+          const prev = ringScaleRef.current.get(id);
+          const next =
+            prev !== undefined && Math.abs(prev - k) > 0.008
+              ? prev + (k - prev) * 0.16
+              : k;
+          ringScaleRef.current.set(id, next);
+          return {
+            x: cx + orbitR * next * Math.cos(angle),
+            y: cy + orbitR * next * Math.sin(angle),
+            size,
+          };
+        }
       }
       ringScaleRef.current.delete(id);
       return live;
+    }
+    // Seed the ride from the ring's current scale so a body sliding out
+    // of the compressed band doesn't snap out to its full orbit first.
+    if (!chatRideRef.current.has(id)) {
+      const rs = ringScaleRef.current.get(id);
+      if (rs !== undefined) {
+        chatRideRef.current.set(id, { angle, scale: rs, size, frame: t });
+      }
     }
     const r = rideChatOrbit(
       chatRideRef.current,
