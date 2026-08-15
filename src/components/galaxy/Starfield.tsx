@@ -217,17 +217,17 @@ export function Starfield({
         ctx.fill();
       }
 
-      // Colorful comets
+      // Colorful comets (very slow drifting streaks)
       nextCometIn -= dt;
       if (nextCometIn <= 0) {
         nextCometIn = 3500 + Math.random() * 4500;
         const angle = Math.random() * Math.PI * 2;
-        const speed = 0.7 + Math.random() * 0.6; // px per ms
+        const speed = 0.25 + Math.random() * 0.35; // px per ms
         comets.push({
           x: Math.random() * w,
           y: Math.random() * h * 0.6,
           vx: Math.cos(angle) * speed,
-          vy: Math.abs(Math.sin(angle)) * speed * 0.6 + 0.2,
+          vy: Math.abs(Math.sin(angle)) * speed * 0.6 + 0.08,
           life: 0,
           maxLife: 1100 + Math.random() * 500,
           rgb: pick(COMET_COLORS),
