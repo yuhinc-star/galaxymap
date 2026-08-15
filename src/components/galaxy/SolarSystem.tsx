@@ -209,6 +209,7 @@ export function SolarSystem() {
     startAt: number;
   } | null>(null);
   const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
+  const resetTransformRef = useRef<(() => void) | null>(null);
   /** Latest camera state, so a glide eases from exactly where the camera
       is now — even mid-flight from a previous pick. */
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
@@ -1299,7 +1300,7 @@ export function SolarSystem() {
         preChatCamRef.current = null;
         closeChat();
       }
-      resetTransform();
+      resetTransformRef.current?.();
       return;
     }
     handleNavigate(id);
@@ -1401,6 +1402,7 @@ export function SolarSystem() {
       >
         {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;
+          resetTransformRef.current = resetTransform;
           stateRef.current = state;
           return (
           <>

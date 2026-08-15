@@ -234,6 +234,7 @@ export function GeneratorSystem() {
     startAt: number;
   } | null>(null);
   const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
+  const resetTransformRef = useRef<(() => void) | null>(null);
   /** Latest camera state, so a glide eases from exactly where the camera
       is now — even mid-flight from a previous pick. */
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
@@ -1760,7 +1761,7 @@ export function GeneratorSystem() {
         preChatCamRef.current = null;
         closeChat();
       }
-      resetTransform();
+      resetTransformRef.current?.();
       return;
     }
     handleNavigate(id);
@@ -1943,6 +1944,7 @@ export function GeneratorSystem() {
       >
         {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;
+          resetTransformRef.current = resetTransform;
           stateRef.current = state;
           return (
           <>
@@ -2351,6 +2353,16 @@ export function GeneratorSystem() {
                     className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
                   >
                     <RotateCcw className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Reverse last step"
+                    title="Reverse last step"
+                    disabled={!undoState}
+                    onClick={restoreUndo}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
+                  >
+                    <Undo className="h-5 w-5" />
                   </button>
                 </>
               )}
