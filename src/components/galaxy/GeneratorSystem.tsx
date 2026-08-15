@@ -32,6 +32,7 @@ import {
   findMoonParent,
   generateSystem,
   removeBodyFromSystem,
+  renameBodyInSystem,
   MAX_MOONS_PER_BODY,
   MAX_SYSTEM_PLANETS,
   MIN_MOON_PARENT_SIZE,

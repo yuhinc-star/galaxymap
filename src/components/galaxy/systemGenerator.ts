@@ -569,3 +569,56 @@ export function removeBodyFromSystem(
   });
   return changedAny ? { ...system, planets } : null;
 }
+
+/**
+ * Cap for user-given names. Long storybook names are the whole point
+ * ("Super Big Star 29444 Cajun Cafe"), but past this the labels, pills
+ * and panels stop fitting anywhere — long, not endless.
+ */
+export const MAX_BODY_NAME = 60;
+
+/**
+ * Rename the sun, a planet, or any moon in the tree (the info panel's
+ * pencil). Ids never change, so the rocket, camera follow and chat fan
+ * all keep their bearings. Returns the same system when the id is
+ * unknown.
+ */
+export function renameBodyInSystem(
+  system: SystemConfig,
+  id: string,
+  name: string,
+): SystemConfig {
+  if (system.sun.id === id) {
+    return { ...system, sun: { ...system.sun, name } };
+  }
+  const renameMoons = (moons: GeneratedMoon[]): GeneratedMoon[] | null => {
+    let changed = false;
+    const next = moons.map((m) => {
+      if (m.id === id) {
+        changed = true;
+        return { ...m, name };
+      }
+      const sub = renameMoons(m.moons);
+      if (sub) {
+        changed = true;
+        return { ...m, moons: sub };
+      }
+      return m;
+    });
+    return changed ? next : null;
+  };
+  let changedAny = false;
+  const planets = system.planets.map((p) => {
+    if (p.id === id) {
+      changedAny = true;
+      return { ...p, name };
+    }
+    const sub = renameMoons(p.moons);
+    if (sub) {
+      changedAny = true;
+      return { ...p, moons: sub };
+    }
+    return p;
+  });
+  return changedAny ? { ...system, planets } : system;
+}
