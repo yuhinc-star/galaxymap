@@ -23,7 +23,7 @@ interface PlanetProps {
   x: number;
   y: number;
   active: boolean;
-  bouncing: boolean;
+  bouncing?: boolean;
   onTap: (id: string) => void;
   /** Slowly rotate the sprite (used for the Sun's rays). */
   spin?: boolean;
@@ -37,7 +37,7 @@ interface PlanetProps {
  * A celestial body floating in the world: sprite, name label, tap
  * reaction. Position comes from the parent's orbit math.
  */
-export function Planet({ def, x, y, active, bouncing, onTap, spin, jumping, highlighted }: PlanetProps) {
+export function Planet({ def, x, y, active, bouncing = false, onTap, spin, jumping, highlighted }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
 
   let animation: string | undefined;
