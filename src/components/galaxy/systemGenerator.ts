@@ -183,6 +183,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
         img: sprite.img,
         size: 80 + rand() * 40,
         orbit: makeOrbitShape(pick(ORBIT_SHAPE_KINDS), orbitR, Math.floor(rand() * 1e9)),
+        orbitR,
         period: 150 + rand() * 140,
         startAngle: rand() * TAU,
         dir: rand() < 0.5 ? -1 : 1,
