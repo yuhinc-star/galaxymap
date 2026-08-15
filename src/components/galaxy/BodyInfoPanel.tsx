@@ -66,7 +66,30 @@ export function BodyInfoPanel({
   rocket,
   chatMode = false,
   onDelete,
+  onRename,
 }: BodyInfoPanelProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Another body (or a rename landing) closes the editor.
+  useEffect(() => setEditing(false), [info.id, info.name]);
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  const startEdit = () => {
+    setDraft(info.name);
+    setEditing(true);
+  };
+  const commitEdit = () => {
+    // Tidy the input: no empty names, no double spaces, no head/tail
+    // padding — the cap itself is enforced by the input's maxLength.
+    const name = draft.trim().replace(/\s+/g, " ");
+    setEditing(false);
+    if (name && name !== info.name) onRename?.(name);
+  };
+
   return (
     <aside
       aria-label={`About ${info.name}`}
