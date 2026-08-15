@@ -939,9 +939,9 @@ export function SolarSystem() {
                 to="/generator"
                 aria-label="Open the Galaxy Generator"
                 title="Galaxy Generator — roll a random solar system"
-                className="flex h-11 items-center gap-2 rounded-full border border-border bg-card/90 px-4 font-display text-sm font-semibold text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+                className="group flex h-11 items-center gap-2 rounded-full border border-border bg-card/90 px-4 font-display text-sm font-semibold text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
-                <Dices className="h-4 w-4" />
+                <Dices className="h-4 w-4 group-hover:animate-[dice-wiggle_0.5s_ease-in-out]" />
                 Make your own
               </Link>
             </div>

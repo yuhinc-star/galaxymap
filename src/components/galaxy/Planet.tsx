@@ -26,6 +26,8 @@ interface PlanetProps {
   bouncing?: boolean;
   /** Just born via the generator's add-a-body bubble: pop-in animation. */
   newborn?: boolean;
+  /** Saying goodbye: spins away and shrinks out before removal. */
+  departing?: boolean;
   onTap: (id: string) => void;
   /** Slowly rotate the sprite (used for the Sun's rays). */
   spin?: boolean;
@@ -41,12 +43,14 @@ interface PlanetProps {
  * A celestial body floating in the world: sprite, name label, tap
  * reaction. Position comes from the parent's orbit math.
  */
-export function Planet({ def, x, y, active, bouncing = false, newborn = false, onTap, spin, jumping, highlighted, highlightMode = "flash" }: PlanetProps) {
+export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash" }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
 
   let animation: string | undefined;
-  if (newborn) {
-    animation = "planet-birth 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 1";
+  if (departing) {
+    animation = "body-goodbye 0.68s cubic-bezier(0.5, 0, 0.75, 0.4) 1 both";
+  } else if (newborn) {
+    animation = "planet-birth 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) 1";
   } else if (jumping) {
     animation = "planet-jump 0.8s cubic-bezier(0.36, 0, 0.66, 1) 1";
   } else if (!bouncing) {
@@ -64,7 +68,7 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, o
 
   return (
     <div
-      className="absolute"
+      className={`absolute ${departing ? "pointer-events-none" : ""}`}
       style={{
         left: x,
         top: y,
@@ -97,6 +101,40 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, o
           className="h-full w-full object-contain"
           style={{ animation }}
         />
+        {/* Newborn celebration: sparkle crosses bursting outward. */}
+        {newborn &&
+          [0, 60, 120, 180, 240, 300].map((a) => {
+            const rad = (a * Math.PI) / 180;
+            const dx = Math.cos(rad) * def.size * 0.66;
+            const dy = Math.sin(rad) * def.size * 0.66;
+            const s = Math.max(18, def.size * 0.2);
+            return (
+              <svg
+                key={a}
+                viewBox="0 0 24 24"
+                aria-hidden
+                className="birth-sparkle pointer-events-none absolute"
+                style={{
+                  left: "50%",
+                  top: "50%",
+                  width: s,
+                  height: s,
+                  marginLeft: -s / 2,
+                  marginTop: -s / 2,
+                  ["--dx" as string]: `${dx}px`,
+                  ["--dy" as string]: `${dy}px`,
+                  animationDelay: `${a / 850}s`,
+                }}
+              >
+                <path
+                  d="M12 2.5v19M2.5 12h19"
+                  stroke="#fff3c4"
+                  strokeWidth="4.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            );
+          })}
         {highlighted && (
           <span
             className="pointer-events-none absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2"
@@ -135,7 +173,9 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, o
         )}
       </button>
       <span
-        className={`pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 font-hand font-bold uppercase tracking-[0.2em] text-orbit-label ${
+        className={`pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 font-hand font-bold uppercase tracking-[0.2em] text-orbit-label transition-opacity duration-500 ${
+          departing ? "opacity-0" : ""
+        } ${
           longName ? "w-max max-w-[380px] whitespace-normal text-center leading-none" : "whitespace-nowrap"
         }`}
         style={{
