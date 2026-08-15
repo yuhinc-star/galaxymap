@@ -209,3 +209,9 @@
   border: 7px solid transparent;
   border-top-color: var(--color-card);
 }
+
+@keyframes sun-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

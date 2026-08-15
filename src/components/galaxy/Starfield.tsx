@@ -38,14 +38,15 @@ export function Starfield({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    // Cap backing-store pixels so huge worlds stay cheap on mobile GPUs.
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5, 2048 / Math.max(w, h));
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.scale(dpr, dpr);
 
-    const stars: Star[] = Array.from({ length: 260 }, () => ({
+    const stars: Star[] = Array.from({ length: 460 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: 1 + Math.random() * 2.6,
