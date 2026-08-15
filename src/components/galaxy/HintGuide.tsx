@@ -38,8 +38,15 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
   const storageKey = `galaxy-hints-v2-${pageId}`;
   /** Ids queued for the current situation; queue[0] is on screen. */
   const [queue, setQueue] = useState<string[]>([]);
+  /** How many tips were queued when the current run started (for "2/3"). */
+  const [queueTotal, setQueueTotal] = useState(0);
   const seenRef = useRef<Set<string>>(new Set());
   const bootedRef = useRef(false);
+
+  const startQueue = useCallback((ids: string[]) => {
+    setQueue(ids);
+    setQueueTotal(ids.length);
+  }, []);
 
   const persistSeen = useCallback(() => {
     try {
