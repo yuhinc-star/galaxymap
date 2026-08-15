@@ -231,3 +231,53 @@
 @utility animate-pop-in {
   animation: pop-in 0.25s ease-out;
 }
+
+/* Single joyful hop with squash-and-stretch, for navigator "find me". */
+@keyframes planet-jump {
+  0% {
+    transform: translateY(0) scale(1, 1);
+  }
+  22% {
+    transform: translateY(1.5%) scale(1.08, 0.9);
+  }
+  48% {
+    transform: translateY(-9%) scale(0.93, 1.1);
+  }
+  68% {
+    transform: translateY(0) scale(1.05, 0.94);
+  }
+  84% {
+    transform: translateY(-3%) scale(0.98, 1.03);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+.planet-jump {
+  animation: planet-jump 0.8s cubic-bezier(0.36, 0, 0.66, 1) 1;
+}
+
+/* Hand-drawn dashed ring that spins around a body found via the navigator. */
+@keyframes navigator-ring {
+  0% {
+    opacity: 0;
+    transform: rotate(0deg) scale(0.75);
+  }
+  14% {
+    opacity: 0.95;
+    transform: rotate(24deg) scale(1);
+  }
+  78% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(140deg) scale(1.05);
+  }
+}
+
+.navigator-ring {
+  animation: navigator-ring 2.8s ease-out both;
+  transform-origin: center;
+}

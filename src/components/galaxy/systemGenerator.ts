@@ -81,6 +81,26 @@ const SUN_LINES = [
 ];
 
 /**
+ * Long storybook names, in the spirit of "Super Big Star 29444 Cajun
+ * Cafe" — an opener, a body type, a catalog number and a quirky little
+ * establishment. They stress-test the navigator and the wrapping labels.
+ */
+const LONG_OPENERS = [
+  "Super Big", "Mega Tiny", "Ultra Round", "Hyper Happy", "Cosmic Little",
+  "Grand Old", "Wobbly", "Sleepy", "Hungry", "Dancing", "Grumpy", "Jolly",
+];
+const LONG_TYPES = [
+  "Star", "Planet", "World", "Blob", "Orb", "Rock", "Marshmallow",
+  "Pancake", "Meatball", "Gumball",
+];
+const LONG_SUFFIXES = [
+  "Cajun Cafe", "Moon Diner", "Space Bakery", "Cosmic Laundry",
+  "Star Nursery", "Comet Garage", "Nebula Salon", "Orbit School",
+  "Meteor Motel", "Galaxy Farm", "Astro Arcade", "Pizza Place",
+  "Donut Shop", "Bowling Alley",
+];
+
+/**
  * Build a whole random solar-system-like world from a seed. Deterministic:
  * the same seed and planet count always produce the same system, so SSR
  * and hydration render identical frames.
