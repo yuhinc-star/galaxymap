@@ -19,6 +19,7 @@ import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { warmSpritePool } from "./spritePool";
 import { Starfield } from "./Starfield";
+import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 
 const TAU = Math.PI * 2;
 
@@ -197,6 +198,15 @@ export function SolarSystem() {
     }
   }, []);
 
+  // Flight recorder: last-known world state for the heartbeat.
+  useEffect(() => {
+    setCrashContext({
+      system: "classic",
+      bodies: 2 + PLANETS.length + DRIFTERS.length,
+      bg: bgIndex,
+    });
+  }, [bgIndex]);
+
   // Warm the generator's sprite pool + all skies in the background, so
   // palette switches and hopping to "Make your own" never wait on loads.
   // Phones skip the full-pool warm: force-decoding ~50 large images at
@@ -362,6 +372,7 @@ export function SolarSystem() {
   const handleNavigate = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
+    recordCrashEvent("navigate", id);
     setInfoId(null);
     window.clearTimeout(hideTimer.current);
     window.clearTimeout(jumpTimer.current);
@@ -450,6 +461,8 @@ export function SolarSystem() {
     setFlight(null);
     setRocketHostId(dest);
     setRocketInboundId(null);
+    recordCrashEvent("rocket-land", { on: dest });
+    setCrashContext({ rocket: `parked:${dest}` });
     if (dest !== SUN.id) {
       setLandingSquash(true);
       window.clearTimeout(squashTimer.current);
@@ -491,6 +504,8 @@ export function SolarSystem() {
       dur,
     });
     setRocketInboundId(toId);
+    recordCrashEvent("rocket-launch", { to: toId });
+    setCrashContext({ rocket: `flying->${toId}` });
   };
 
   /** Navigator move mode / panel summon: send the rocket to the picked

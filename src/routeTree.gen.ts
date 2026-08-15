@@ -10,11 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as GeneratorRouteImport } from './routes/generator'
+import { Route as ApiPublicCrashReportRouteImport } from './routes/api/public/crash-report'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiagnosticsRoute = DiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GeneratorRoute = GeneratorRouteImport.update({
@@ -22,31 +29,49 @@ const GeneratorRoute = GeneratorRouteImport.update({
   path: '/generator',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCrashReportRoute = ApiPublicCrashReportRouteImport.update({
+  id: '/api/public/crash-report',
+  path: '/api/public/crash-report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/generator': typeof GeneratorRoute
+  '/api/public/crash-report': typeof ApiPublicCrashReportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/generator': typeof GeneratorRoute
+  '/api/public/crash-report': typeof ApiPublicCrashReportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/generator': typeof GeneratorRoute
+  '/api/public/crash-report': typeof ApiPublicCrashReportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/generator'
+  fullPaths: '/' | '/diagnostics' | '/generator' | '/api/public/crash-report'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/generator'
-  id: '__root__' | '/' | '/generator'
+  to: '/' | '/diagnostics' | '/generator' | '/api/public/crash-report'
+  id:
+    | '__root__'
+    | '/'
+    | '/diagnostics'
+    | '/generator'
+    | '/api/public/crash-report'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DiagnosticsRoute: typeof DiagnosticsRoute
   GeneratorRoute: typeof GeneratorRoute
+  ApiPublicCrashReportRoute: typeof ApiPublicCrashReportRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +83,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/diagnostics': {
+      id: '/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/diagnostics'
+      preLoaderRoute: typeof DiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/generator': {
       id: '/generator'
       path: '/generator'
@@ -65,12 +97,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GeneratorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/crash-report': {
+      id: '/api/public/crash-report'
+      path: '/api/public/crash-report'
+      fullPath: '/api/public/crash-report'
+      preLoaderRoute: typeof ApiPublicCrashReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DiagnosticsRoute: DiagnosticsRoute,
   GeneratorRoute: GeneratorRoute,
+  ApiPublicCrashReportRoute: ApiPublicCrashReportRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

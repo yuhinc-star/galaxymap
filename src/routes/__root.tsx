@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -11,6 +12,11 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import {
+  initCrashReporter,
+  recordCrashEvent,
+  setCrashContext,
+} from "../lib/crash-reporter";
 
 function NotFoundComponent() {
   return (
@@ -39,6 +45,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    recordCrashEvent("react-error", {
+      message: error.message,
+      stack: error.stack?.slice(0, 1500),
+    });
   }, [error]);
 
   return (
@@ -134,6 +144,16 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Boot the flight recorder once; track route changes as they happen.
+  useEffect(() => {
+    initCrashReporter();
+  }, []);
+  useEffect(() => {
+    setCrashContext({ route: pathname });
+    recordCrashEvent("route", pathname);
+  }, [pathname]);
 
   return (
     <QueryClientProvider client={queryClient}>
