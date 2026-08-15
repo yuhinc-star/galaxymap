@@ -79,6 +79,9 @@ export function SolarSystem() {
   const bounceTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
+  /** Camera follow: keeps the navigator-picked body centered as it orbits. */
+  const followRef = useRef<{ id: string; scale: number; startAt: number } | null>(null);
+  const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
 
   useEffect(() => {
     let raf = 0;
@@ -106,7 +109,13 @@ export function SolarSystem() {
     });
   }, []);
 
+  /** Any manual camera move takes control back from the follow mode. */
+  const stopFollow = useCallback(() => {
+    followRef.current = null;
+  }, []);
+
   const handleTap = useCallback((id: string) => {
+    followRef.current = null;
     window.clearTimeout(hideTimer.current);
     window.clearTimeout(bounceTimer.current);
     setActiveId(id);
@@ -152,6 +161,34 @@ export function SolarSystem() {
     y: earth.y + MOON.orbitR * Math.sin(moonAngle),
   };
 
+  /** Current world position of any navigator-listed body. */
+  const bodyPos = (id: string) =>
+    id === SUN.id
+      ? { x: CENTER, y: CENTER }
+      : id === MOON.id
+        ? moonPos
+        : (positions.get(id) ?? null);
+
+  // Camera follow: once the navigator glide lands, re-center the picked
+  // body every frame so it stays pinned to the viewport center as it orbits.
+  useEffect(() => {
+    const f = followRef.current;
+    const apply = setTransformRef.current;
+    if (!f || !apply) return;
+    if (performance.now() - f.startAt < 470) return; // let the glide finish
+    const q = bodyPos(f.id);
+    if (!q) {
+      followRef.current = null;
+      return;
+    }
+    apply(
+      window.innerWidth / 2 - q.x * f.scale,
+      window.innerHeight / 2 - q.y * f.scale,
+      f.scale,
+      0,
+    );
+  }, [t]);
+
   /**
    * Navigator click: pan the camera to the body, pop its speech bubble,
    * make it hop once, and flash a dashed ring around it.
@@ -161,12 +198,7 @@ export function SolarSystem() {
     scale: number,
     setTransform: (x: number, y: number, s: number, ms: number) => void,
   ) => {
-    const q =
-      id === SUN.id
-        ? { x: CENTER, y: CENTER }
-        : id === MOON.id
-          ? moonPos
-          : positions.get(id);
+    const q = bodyPos(id);
     if (!q) return;
     window.clearTimeout(hideTimer.current);
     window.clearTimeout(jumpTimer.current);
@@ -178,6 +210,7 @@ export function SolarSystem() {
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
     const s = Math.min(Math.max(scale, 0.6), 1.05);
+    followRef.current = { id, scale: s, startAt: performance.now() };
     setTransform(
       window.innerWidth / 2 - q.x * s,
       window.innerHeight / 2 - q.y * s,
@@ -206,8 +239,13 @@ export function SolarSystem() {
         doubleClick={{ disabled: true }}
         wheel={{ step: 0.15 }}
         panning={{ velocityDisabled: true }}
+        onPanningStart={stopFollow}
+        onWheel={stopFollow}
+        onPinchingStart={stopFollow}
       >
-        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => (
+        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
+          setTransformRef.current = setTransform;
+          return (
           <>
             <TransformComponent
               wrapperStyle={{ width: "100%", height: "100%" }}
@@ -358,7 +396,10 @@ export function SolarSystem() {
               <button
                 type="button"
                 aria-label="Zoom in"
-                onClick={() => zoomIn()}
+                onClick={() => {
+                  stopFollow();
+                  zoomIn();
+                }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
                 <Plus className="h-5 w-5" />
@@ -366,7 +407,10 @@ export function SolarSystem() {
               <button
                 type="button"
                 aria-label="Zoom out"
-                onClick={() => zoomOut()}
+                onClick={() => {
+                  stopFollow();
+                  zoomOut();
+                }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
                 <Minus className="h-5 w-5" />
@@ -374,7 +418,10 @@ export function SolarSystem() {
               <button
                 type="button"
                 aria-label="Recenter"
-                onClick={() => resetTransform()}
+                onClick={() => {
+                  stopFollow();
+                  resetTransform();
+                }}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
                 <RotateCcw className="h-5 w-5" />
@@ -390,7 +437,8 @@ export function SolarSystem() {
               </p>
             </div>
           </>
-        )}
+          );
+        }}
       </TransformWrapper>
     </div>
   );
