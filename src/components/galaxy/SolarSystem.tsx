@@ -1,10 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { Link } from "@tanstack/react-router";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import { Dices, Minus, Palette, Plus, RotateCcw, Sparkle } from "lucide-react";
+import heroRocketImg from "@/assets/planets/hero-rocket.png";
 import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, DRIFTERS, MOON, PLANETS, SUN, WORLD } from "./planets";
+import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { Drifter } from "./Drifter";
+import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
 import { HintGuide } from "./HintGuide";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
@@ -15,10 +24,44 @@ const TAU = Math.PI * 2;
 /** The exploration tour, one hand-lettered tip at a time. */
 const CLASSIC_HINTS = [
   "Drag to wander the galaxy — pinch or scroll to zoom!",
-  "Tap a planet to make it bounce — the camera follows along!",
-  "The navigator finds anyone by name — tap to fly there!",
+  "Tap a planet to make it bounce — tap it again quickly for its storybook page!",
+  "Drag the little rocket onto any world — or tap its chip in the navigator!",
+  "The navigator finds anyone — double-tap a name for tales & tricks!",
   "Try the palette for new skies… or 'Make your own' galaxy!",
 ];
+
+/** Parked rocket stands on its host's upper-right shoulder. */
+const PARK_ANGLE = (-80 * Math.PI) / 180;
+const PARK_ROT = 10;
+/** ...except on the sun: there is no ground to land on, so the rocket
+    holds a slow orbit just above the surface, engine idling. */
+const SUN_ORBIT_PERIOD = 46;
+const SUN_ORBIT_STANDOFF = 1.05;
+const SUN_ORBIT_FLAME = 0.45;
+
+interface RocketFlight {
+  fx: number;
+  fy: number;
+  cx: number;
+  cy: number;
+  toId: string;
+  fromRot: number;
+  startAt: number;
+  dur: number;
+}
+
+const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3);
+const easeInOutCubicFn = (p: number) =>
+  p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+/** Shortest-path angle interpolation (degrees). */
+const lerpAngle = (a: number, b: number, t: number) => {
+  const d = ((b - a + 540) % 360) - 180;
+  return a + d * t;
+};
+
+/** "One year: ~12 min" — orbit periods read better as minutes. */
+const fmtPeriod = (s: number) =>
+  s >= 120 ? `~${Math.round(s / 60)} min` : `~${Math.round(s)} s`;
 
 /** Deterministic pseudo-random so SSR and hydration draw identical rings. */
 function seeded(seed: number) {
@@ -88,6 +131,31 @@ export function SolarSystem() {
   const hideTimer = useRef<number | undefined>(undefined);
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
+  const squashTimer = useRef<number | undefined>(undefined);
+  /** Body the hero rocket is parked on (starts on the sun, where it orbits). */
+  const [rocketHostId, setRocketHostId] = useState<string>(SUN.id);
+  /** Navigator move mode: the next entry pick is the rocket's destination. */
+  const [rocketArmed, setRocketArmed] = useState(false);
+  /** Live flight, or null while parked. */
+  const [flight, setFlight] = useState<RocketFlight | null>(null);
+  /** Destination wearing a steady golden ring while the rocket flies. */
+  const [rocketInboundId, setRocketInboundId] = useState<string | null>(null);
+  const [landingSquash, setLandingSquash] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  /** Body currently showing its information panel. */
+  const [infoId, setInfoId] = useState<string | null>(null);
+  /** Double-tap detection on the focused body (tap → focus, double-tap → panel). */
+  const lastTapRef = useRef<{ id: string; t: number } | null>(null);
+  /** Live drag data — read every frame by the render loop. */
+  const dragRef = useRef<{
+    cur: { x: number; y: number };
+    hover: string | null;
+    startClient: { x: number; y: number };
+    moved: boolean;
+    lastX: number;
+  } | null>(null);
+  /** Alternates the flight arc's bend side. */
+  const arcSideRef = useRef(1);
   /** Camera follow: keeps the navigator-picked body centered as it orbits. */
   const followRef = useRef<{
     id: string;
@@ -225,25 +293,10 @@ export function SolarSystem() {
     );
   }, [t]);
 
-  /**
-   * Navigator click or direct planet tap: zoom so the body and everything
-   * orbiting it fits (the sun with all planet rings, a planet with its
-   * moon rings), glide there, keep it centered, pop its speech bubble,
-   * hop once, flash a dashed ring, and mark it in the navigator.
-   */
-  const handleNavigate = (id: string) => {
+  /** Glide the camera so the body and everything orbiting it fits. */
+  const focusCamera = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
-    window.clearTimeout(hideTimer.current);
-    window.clearTimeout(jumpTimer.current);
-    window.clearTimeout(highlightTimer.current);
-    setActiveId(id);
-    setJumpId(id);
-    setHighlightId(id);
-    setFocusedId(id);
-    jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
-    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
-    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
     const fit =
       (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
       (2 * frameRadius(id));
@@ -261,7 +314,397 @@ export function SolarSystem() {
           },
       startAt: performance.now(),
     };
+    setFocusedId(id);
   };
+
+  /**
+   * Navigator click or direct planet tap: zoom so the body and everything
+   * orbiting it fits (the sun with all planet rings, a planet with its
+   * moon rings), glide there, keep it centered, pop its speech bubble,
+   * hop once, flash a dashed ring, and mark it in the navigator.
+   */
+  const handleNavigate = (id: string) => {
+    const q = bodyPos(id);
+    if (!q) return;
+    setInfoId(null);
+    window.clearTimeout(hideTimer.current);
+    window.clearTimeout(jumpTimer.current);
+    window.clearTimeout(highlightTimer.current);
+    setActiveId(id);
+    setJumpId(id);
+    setHighlightId(id);
+    jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
+    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+    focusCamera(id);
+  };
+
+  /** Double-tap on the focused body: open its information panel. */
+  const openInfo = (id: string) => {
+    window.clearTimeout(hideTimer.current);
+    setActiveId(null);
+    setInfoId(id);
+  };
+
+  /** Panel child-row click: fly to that body and open its own panel. */
+  const handleInfoSelect = (id: string) => {
+    handleNavigate(id);
+    setInfoId(id);
+  };
+
+  /**
+   * Body tap with double-tap detection: a quick second tap on the body
+   * that holds camera focus opens its information panel. The first tap
+   * still does its usual happy jump — the panel simply replaces it.
+   */
+  const handleBodyTap = (id: string) => {
+    const now = Date.now();
+    const last = lastTapRef.current;
+    lastTapRef.current = { id, t: now };
+    if (focusedId === id && last?.id === id && now - last.t < 450) {
+      lastTapRef.current = null;
+      openInfo(id);
+      return;
+    }
+    handleNavigate(id);
+  };
+
+  /** Display size of any landable body. */
+  const bodySize = (id: string): number | null => {
+    if (id === SUN.id) return SUN.size;
+    if (id === MOON.id) return MOON.size;
+    const p = PLANETS.find((pp) => pp.id === id);
+    return p ? p.size : null;
+  };
+
+  /** Where the parked rocket rests: for planets and the moon, the host's
+      upper-right shoulder; for the sun, a point on its slow orbit loop.
+      The standoff matches the rocket's world-space footprint — which
+      only counter-scales when zoomed IN (see rocketWorldScale). */
+  const parkPos = (id: string): { x: number; y: number } | null => {
+    const c = bodyPos(id);
+    const s = bodySize(id);
+    if (!c || !s) return null;
+    const k = rocketWorldScale(stateRef.current?.scale ?? 1);
+    if (id === SUN.id) {
+      const r = s / 2 + ROCKET_H * SUN_ORBIT_STANDOFF * k;
+      const a = PARK_ANGLE + (t * TAU) / SUN_ORBIT_PERIOD;
+      return { x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) };
+    }
+    const r = s / 2 + ROCKET_H * 0.4 * k;
+    return {
+      x: c.x + r * Math.cos(PARK_ANGLE),
+      y: c.y + r * Math.sin(PARK_ANGLE),
+    };
+  };
+
+  /** Nose heading (deg, 0 = up) along the sun-orbit tangent right now. */
+  const sunOrbitRot = () => {
+    const a = PARK_ANGLE + (t * TAU) / SUN_ORBIT_PERIOD;
+    return (Math.atan2(Math.cos(a), -Math.sin(a)) * 180) / Math.PI + 90;
+  };
+
+  // Flight completion: the rocket becomes parked on its destination,
+  // squashes on touchdown and flashes the golden finder ring. Sun
+  // arrivals don't squash — the rocket slides into its orbit loop.
+  useEffect(() => {
+    if (!flight) return;
+    if (performance.now() < flight.startAt + flight.dur) return;
+    const dest = flight.toId;
+    setFlight(null);
+    setRocketHostId(dest);
+    setRocketInboundId(null);
+    if (dest !== SUN.id) {
+      setLandingSquash(true);
+      window.clearTimeout(squashTimer.current);
+      squashTimer.current = window.setTimeout(() => setLandingSquash(false), 600);
+    }
+    window.clearTimeout(highlightTimer.current);
+    setHighlightId(dest);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+  }, [t, flight]);
+
+  /**
+   * Launch the rocket along a hand-drawn arc. The end point is the
+   * destination's park spot recomputed every frame, so the rocket homes
+   * in on its target even while that body keeps orbiting.
+   */
+  const launchRocket = (
+    from: { x: number; y: number },
+    fromRot: number,
+    toId: string,
+  ) => {
+    const end = parkPos(toId);
+    if (!end) return;
+    const dist = Math.hypot(end.x - from.x, end.y - from.y);
+    const dur = Math.min(3.4, Math.max(1.15, dist / 1500)) * 1000;
+    arcSideRef.current *= -1;
+    // Even a near-zero hop flies — dropping right on the moon's park
+    // spot must still land there. Guard the degenerate zero-length normal.
+    const nx = dist > 1 ? -(end.y - from.y) / dist : 0;
+    const ny = dist > 1 ? (end.x - from.x) / dist : -1;
+    const lift = Math.min(430, Math.max(120, dist * 0.26)) * arcSideRef.current;
+    setFlight({
+      fx: from.x,
+      fy: from.y,
+      cx: (from.x + end.x) / 2 + nx * lift,
+      cy: (from.y + end.y) / 2 + ny * lift,
+      toId,
+      fromRot,
+      startAt: performance.now(),
+      dur,
+    });
+    setRocketInboundId(toId);
+  };
+
+  /** Navigator move mode / panel summon: send the rocket to the picked
+      body — sun, planet or moon. */
+  const handleRocketDestination = (id: string) => {
+    setRocketArmed(false);
+    setInfoId(null);
+    if (flight || id === rocketHostId) return;
+    const from = parkPos(rocketHostId);
+    if (!from) return;
+    launchRocket(from, rocketHostId === SUN.id ? sunOrbitRot() : PARK_ROT, id);
+    focusCamera(id);
+  };
+
+  /** Client px → world px using the live pan/zoom transform. */
+  const toWorld = (clientX: number, clientY: number) => {
+    const st = stateRef.current;
+    if (!st) return { x: clientX, y: clientY };
+    return {
+      x: (clientX - st.positionX) / st.scale,
+      y: (clientY - st.positionY) / st.scale,
+    };
+  };
+
+  /** Nearest landable body under a dragged point, if any. The moon
+      counts too — the minimum grab radius is zoom-aware so it stays
+      grabbable when zoomed in. */
+  const pickHover = (w: { x: number; y: number }): string | null => {
+    const scale = stateRef.current?.scale ?? 1;
+    let best: string | null = null;
+    let bestD = Infinity;
+    const consider = (id: string) => {
+      const c = bodyPos(id);
+      const s = bodySize(id);
+      if (!c || !s) return;
+      const d = Math.hypot(w.x - c.x, w.y - c.y);
+      if (d < Math.max((s / 2) * 1.25, 70 / scale) && d < bestD) {
+        best = id;
+        bestD = d;
+      }
+    };
+    consider(SUN.id);
+    for (const p of PLANETS) consider(p.id);
+    consider(MOON.id);
+    return best;
+  };
+
+  /**
+   * Drag the rocket: a capture-phase pointerdown keeps the camera from
+   * panning, then window listeners track the drag. Dropping on a body
+   * flies the rocket there; dropping on empty sky flies it back home.
+   */
+  const onRocketDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    stopFollow();
+    const w = toWorld(e.clientX, e.clientY);
+    dragRef.current = {
+      cur: w,
+      hover: null,
+      startClient: { x: e.clientX, y: e.clientY },
+      moved: false,
+      lastX: w.x,
+    };
+    setDragActive(true);
+    const onMove = (ev: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      d.cur = toWorld(ev.clientX, ev.clientY);
+      if (
+        Math.hypot(ev.clientX - d.startClient.x, ev.clientY - d.startClient.y) >
+        8
+      ) {
+        d.moved = true;
+      }
+      d.hover = pickHover(d.cur);
+    };
+    const onUp = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      const d = dragRef.current;
+      dragRef.current = null;
+      setDragActive(false);
+      if (!d) return;
+      d.cur = toWorld(ev.clientX, ev.clientY);
+      const target = d.hover ?? pickHover(d.cur);
+      if (target && target !== rocketHostId) {
+        launchRocket(d.cur, 0, target);
+        focusCamera(target);
+      } else if (d.moved) {
+        launchRocket(d.cur, 0, rocketHostId);
+      } else if (rocketHostId !== SUN.id) {
+        // A gentle tap: a little squash hello (not while orbiting the
+        // sun — there is no ground to bounce on).
+        setLandingSquash(true);
+        window.clearTimeout(squashTimer.current);
+        squashTimer.current = window.setTimeout(
+          () => setLandingSquash(false),
+          600,
+        );
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  };
+
+  /** Everything the information panel shows about a body. The classic
+      family is hand-made and complete, so growing and goodbyes live in
+      the Generator — the panel says so instead of offering them. */
+  const getPanelInfo = (id: string): BodyPanelInfo | null => {
+    const add = {
+      canAdd: false,
+      fullNote: "This classic family is complete — the Generator grows new ones!",
+    };
+    if (id === SUN.id) {
+      return {
+        id,
+        name: SUN.name,
+        img: SUN.img,
+        kindLabel: "Sun",
+        line: SUN.line,
+        facts: [
+          { label: "Size", value: "Supergiant star" },
+          { label: "Planets in orbit", value: `${PLANETS.length}` },
+        ],
+        childrenLabel: "Planets",
+        childrenCap: PLANETS.length,
+        children: PLANETS.map((p) => ({ id: p.id, name: p.name, img: p.img })),
+        add,
+        remove: null,
+      };
+    }
+    if (id === MOON.id) {
+      return {
+        id,
+        name: MOON.name,
+        img: MOON.img,
+        kindLabel: "Moon",
+        line: MOON.line,
+        facts: [
+          { label: "Orbits", value: "Earth" },
+          { label: "One lap", value: fmtPeriod(MOON.period) },
+          { label: "Size", value: "Pebble moon" },
+        ],
+        childrenLabel: "Tiny moons",
+        childrenCap: 2,
+        children: [],
+        add,
+        remove: null,
+      };
+    }
+    const p = PLANETS.find((pp) => pp.id === id);
+    if (!p) return null;
+    const hasMoon = p.id === "earth";
+    return {
+      id,
+      name: p.name,
+      img: p.img,
+      kindLabel: "Planet",
+      line: p.line,
+      facts: [
+        {
+          label: "Size",
+          value:
+            p.size >= 250
+              ? "Gas giant"
+              : p.size >= 150
+                ? "Mid-sized world"
+                : "Pebble planet",
+        },
+        { label: "Orbit", value: `Ring #${PLANETS.indexOf(p) + 1} from the Sun` },
+        { label: "One year", value: fmtPeriod(p.period) },
+        { label: "Moons", value: hasMoon ? "1 of 2" : "0 of 2" },
+      ],
+      childrenLabel: "Moons",
+      childrenCap: 2,
+      children: hasMoon
+        ? [{ id: MOON.id, name: MOON.name, img: MOON.img }]
+        : [],
+      add,
+      remove: null,
+    };
+  };
+
+  // --- Hero rocket pose ---------------------------------------------------
+  const dragNow = dragActive ? dragRef.current : null;
+  const dragHoverId = dragNow?.hover ?? null;
+  const dragHoverPos = dragHoverId ? bodyPos(dragHoverId) : null;
+
+  // --- Info panel ---------------------------------------------------------
+  const panelInfo = infoId ? getPanelInfo(infoId) : null;
+
+  let rocketX = CENTER;
+  let rocketY = CENTER;
+  let rocketRot = PARK_ROT;
+  let rocketFlame = 0;
+  if (dragNow) {
+    const dx = dragNow.cur.x - dragNow.lastX;
+    dragNow.lastX = dragNow.cur.x;
+    rocketX = dragNow.cur.x;
+    rocketY = dragNow.cur.y;
+    rocketRot = Math.max(-24, Math.min(24, dx * 0.5));
+    rocketFlame = 0.85;
+  } else if (flight) {
+    const p = Math.min(1, (performance.now() - flight.startAt) / flight.dur);
+    const e = easeInOutCubicFn(p);
+    const end = parkPos(flight.toId) ?? { x: CENTER, y: CENTER };
+    const u = 1 - e;
+    rocketX = u * u * flight.fx + 2 * u * e * flight.cx + e * e * end.x;
+    rocketY = u * u * flight.fy + 2 * u * e * flight.cy + e * e * end.y;
+    const vx = 2 * u * (flight.cx - flight.fx) + 2 * e * (end.x - flight.cx);
+    const vy = 2 * u * (flight.cy - flight.fy) + 2 * e * (end.y - flight.cy);
+    const heading = (Math.atan2(vy, vx) * 180) / Math.PI + 90;
+    // Sun arrivals slide into the orbit tangent instead of standing tall.
+    const toSun = flight.toId === SUN.id;
+    const arriveRot = toSun ? sunOrbitRot() : PARK_ROT;
+    if (p < 0.16) {
+      rocketRot = lerpAngle(flight.fromRot, heading, easeOutCubic(p / 0.16));
+    } else if (p > 0.76) {
+      rocketRot = lerpAngle(
+        heading,
+        arriveRot,
+        easeInOutCubicFn((p - 0.76) / 0.24),
+      );
+    } else {
+      rocketRot = heading;
+    }
+    // Sun arrivals keep the engine idling — no touchdown flame-out.
+    const flameFloor = toSun ? SUN_ORBIT_FLAME : 0;
+    rocketFlame =
+      p < 0.12
+        ? p / 0.12
+        : p > 0.84
+          ? Math.max(flameFloor, (1 - p) / 0.16)
+          : 1;
+  } else {
+    const pp = parkPos(rocketHostId);
+    if (pp) {
+      rocketX = pp.x;
+      rocketY = pp.y;
+    }
+    if (rocketHostId === SUN.id) {
+      // Parked on the sun = slowly orbiting it, nose along the travel
+      // direction, engine idling — the sun's surface is no place to land.
+      rocketRot = sunOrbitRot();
+      rocketFlame = SUN_ORBIT_FLAME + 0.1 * Math.sin(t * 7);
+    }
+  }
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
@@ -363,8 +806,13 @@ export function SolarSystem() {
                   y={CENTER}
                   active={activeId === SUN.id}
                   jumping={jumpId === SUN.id}
-                  highlighted={highlightId === SUN.id}
-                  onTap={handleNavigate}
+                  highlighted={
+                    highlightId === SUN.id ||
+                    dragHoverId === SUN.id ||
+                    rocketInboundId === SUN.id
+                  }
+                  highlightMode={highlightId === SUN.id ? "flash" : "steady"}
+                  onTap={handleBodyTap}
                   spin
                 />
 
@@ -382,8 +830,15 @@ export function SolarSystem() {
                         y={q.y}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
-                        highlighted={highlightId === p.id}
-                        onTap={handleNavigate}
+                        highlighted={
+                          highlightId === p.id ||
+                          dragHoverId === p.id ||
+                          rocketInboundId === p.id
+                        }
+                        highlightMode={
+                          highlightId === p.id ? "flash" : "steady"
+                        }
+                        onTap={handleBodyTap}
                       />
                     );
                   })}
@@ -394,8 +849,48 @@ export function SolarSystem() {
                   y={moonPos.y}
                   active={activeId === MOON.id}
                   jumping={jumpId === MOON.id}
-                  highlighted={highlightId === MOON.id}
-                  onTap={handleNavigate}
+                  highlighted={
+                    highlightId === MOON.id ||
+                    dragHoverId === MOON.id ||
+                    rocketInboundId === MOON.id
+                  }
+                  highlightMode={highlightId === MOON.id ? "flash" : "steady"}
+                  onTap={handleBodyTap}
+                />
+
+                {/* Golden tether from the dragged rocket to its target */}
+                {dragNow?.hover && dragHoverPos && (
+                  <svg
+                    width={WORLD}
+                    height={WORLD}
+                    viewBox={`0 0 ${WORLD} ${WORLD}`}
+                    className="pointer-events-none absolute inset-0 z-[35]"
+                    aria-hidden
+                  >
+                    <line
+                      x1={dragNow.cur.x}
+                      y1={dragNow.cur.y}
+                      x2={dragHoverPos.x}
+                      y2={dragHoverPos.y}
+                      stroke="#ffd94d"
+                      strokeWidth={7}
+                      strokeDasharray="26 20"
+                      strokeLinecap="round"
+                      opacity={0.9}
+                      className="rocket-tether"
+                    />
+                  </svg>
+                )}
+
+                <HeroRocket
+                  x={rocketX}
+                  y={rocketY}
+                  rotation={rocketRot}
+                  flame={rocketFlame}
+                  squash={landingSquash}
+                  dragging={dragActive}
+                  interactive={!flight}
+                  onDown={onRocketDown}
                 />
               </div>
             </TransformComponent>
@@ -412,7 +907,32 @@ export function SolarSystem() {
               activeId={activeId}
               focusedId={focusedId}
               onSelect={handleNavigate}
+              onInfo={handleInfoSelect}
+              rocket={{
+                img: heroRocketImg,
+                hostId: flight ? flight.toId : rocketHostId,
+                flying: flight !== null,
+                armed: rocketArmed,
+                onChip: () => setRocketArmed((a) => !a),
+                onDestination: handleRocketDestination,
+              }}
             />
+
+            {/* Double-click info panel: details + summon the rocket */}
+            {panelInfo && (
+              <BodyInfoPanel
+                info={panelInfo}
+                onAdd={() => {}}
+                onRemove={() => {}}
+                onSelect={handleInfoSelect}
+                onClose={() => setInfoId(null)}
+                rocket={{
+                  here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
+                  flying: flight !== null,
+                  onSummon: () => handleRocketDestination(panelInfo.id),
+                }}
+              />
+            )}
 
             <div className="fixed right-4 top-4">
               <Link
