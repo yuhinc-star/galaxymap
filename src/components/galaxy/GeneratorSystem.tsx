@@ -14,6 +14,7 @@ import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, WORLD } from "./planets";
 import { generateSystem } from "./systemGenerator";
 import { Drifter } from "./Drifter";
+import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
 
@@ -31,12 +32,17 @@ const DEFAULT_COUNT = 6;
 export function GeneratorSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bounceId, setBounceId] = useState<string | null>(null);
+  /** Navigator "find me": dashed ring + single hop. */
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [jumpId, setJumpId] = useState<string | null>(null);
   const [bgIndex, setBgIndex] = useState(0);
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
   const bounceTimer = useRef<number | undefined>(undefined);
+  const highlightTimer = useRef<number | undefined>(undefined);
+  const jumpTimer = useRef<number | undefined>(undefined);
 
   const config = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
 
@@ -81,6 +87,7 @@ export function GeneratorSystem() {
     window.localStorage.setItem("galaxy-gen-seed", String(next));
     setSeed(next);
     setActiveId(null);
+    setHighlightId(null);
   }, []);
 
   const changeCount = useCallback((delta: number) => {
@@ -90,6 +97,7 @@ export function GeneratorSystem() {
       return next;
     });
     setActiveId(null);
+    setHighlightId(null);
   }, []);
 
   const handleTap = useCallback((id: string) => {
