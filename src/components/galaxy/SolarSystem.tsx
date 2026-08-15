@@ -14,11 +14,13 @@ import { CENTER, DRIFTERS, MOON, PLANETS, SUN, WORLD } from "./planets";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { ChatPanel, type ChatSubjectInfo } from "./ChatPanel";
 import {
-  chaseChatSlot,
+  chaseChatTarget,
+  chatEase,
   computeChatLayout,
-  fitChatCamera,
+  rideChatOrbit,
   type ChatChaseState,
   type ChatLayout,
+  type ChatRideState,
 } from "./chatLayout";
 import { Drifter } from "./Drifter";
 import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
@@ -187,8 +189,12 @@ export function SolarSystem() {
   const chatSubjectRef = useRef<{ info: ChatSubjectInfo; layout: ChatLayout } | null>(null);
   /** 0 = orbits, 1 = column — ramps while chat opens and closes. */
   const chatMixRef = useRef(0);
-  /** Per-body rendered pose while the column forms and dissolves. */
+  /** Per-body rendered pose while the fan forms and dissolves (subject). */
   const chatRenderRef = useRef(new Map<string, ChatChaseState>());
+  /** Polar chase state for chat children riding their morphing rings. */
+  const chatRideRef = useRef(new Map<string, ChatRideState>());
+  /** Per-body ring scale while the orbits rearrange into the fan. */
+  const ringScaleRef = useRef(new Map<string, number>());
   /** Camera state captured when chat opens, glided back to on close. */
   const preChatCamRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
   /** The body chat was opened for (focus itself clears when chat opens). */
@@ -284,6 +290,8 @@ export function SolarSystem() {
       : null;
     chatSubjectRef.current = null;
     chatRenderRef.current.clear();
+    chatRideRef.current.clear();
+    ringScaleRef.current.clear();
     setChatOpen(true);
     recordCrashEvent("chat-open", { focused: focusedId ?? SUN.id });
   };
