@@ -35,6 +35,8 @@ export interface GeneratedPlanet extends BodyDef {
 
 export interface GeneratedDrifter extends BodyDef {
   orbit: OrbitShape;
+  /** Base orbit radius (kept for DrifterDef compatibility). */
+  orbitR: number;
   period: number;
   startAngle: number;
   dir: 1 | -1;
