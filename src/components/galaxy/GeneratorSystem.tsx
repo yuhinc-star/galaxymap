@@ -596,15 +596,40 @@ export function GeneratorSystem() {
 
   /** Moon pose during chat: the subject moon glides to the fan base,
       chat children ride their rings, everyone else is live. */
-  const chatPoseMoon = (m: GeneratedMoon, px: number, py: number, a: number) => {
+  const chatPoseMoon = (
+    m: GeneratedMoon,
+    px: number,
+    py: number,
+    a: number,
+    parentId = "",
+  ) => {
     const subj = chatSubjectRef.current;
-    if (subj && chatMixRef.current > 0.004 && m.id === subj.layout.parentId) {
-      return chatAdjustSubject(
-        m.id,
-        px + m.orbitR * Math.cos(a),
-        py + m.orbitR * Math.sin(a),
-        m.size,
-      );
+    if (subj && chatMixRef.current > 0.004) {
+      if (m.id === subj.layout.parentId) {
+        return chatAdjustSubject(
+          m.id,
+          px + m.orbitR * Math.cos(a),
+          py + m.orbitR * Math.sin(a),
+          m.size,
+        );
+      }
+      // Grandchild of the chat subject: it keeps orbiting its parent,
+      // but the orbit tightens as the fan forms so the moon and its
+      // ring never swing under the chat panel.
+      if (
+        !subj.layout.slots.has(m.id) &&
+        parentId !== "" &&
+        parentId !== subj.layout.parentId &&
+        subj.layout.slots.has(parentId)
+      ) {
+        const k = 1 - 0.45 * chatEase(chatMixRef.current);
+        ringScaleRef.current.set(m.id, k);
+        return {
+          x: px + m.orbitR * k * Math.cos(a),
+          y: py + m.orbitR * k * Math.sin(a),
+          size: m.size,
+        };
+      }
     }
     return chatRide(
       m.id,
@@ -1482,10 +1507,11 @@ export function GeneratorSystem() {
     moons: GeneratedMoon[],
     px: number,
     py: number,
+    parentId = "",
   ): ReactNode =>
     moons.map((m) => {
       const a = m.startAngle + (t * TAU) / m.period;
-      const r = chatPoseMoon(m, px, py, a);
+      const r = chatPoseMoon(m, px, py, a, parentId);
       const chatSized = Math.abs(r.size - m.size) > 0.5;
       return (
         <Fragment key={m.id}>
