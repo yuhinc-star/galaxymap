@@ -25,6 +25,7 @@ import { CENTER, WORLD } from "./planets";
 import {
   addMoonToSystem,
   addPlanetToSystem,
+  collectSystemSpriteUrls,
   findMoonById,
   findMoonParent,
   generateSystem,
@@ -35,6 +36,7 @@ import {
   type GeneratedMoon,
   type SystemConfig,
 } from "./systemGenerator";
+import { ensureSpritesReady, warmSpritePool } from "./spritePool";
 import type { OrbitShapeKind } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { Drifter } from "./Drifter";
