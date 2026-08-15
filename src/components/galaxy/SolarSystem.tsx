@@ -358,7 +358,7 @@ export function SolarSystem() {
                   bouncing={bounceId === SUN.id}
                   jumping={jumpId === SUN.id}
                   highlighted={highlightId === SUN.id}
-                  onTap={handleTap}
+                  onTap={handleNavigate}
                   spin
                 />
 
@@ -378,7 +378,7 @@ export function SolarSystem() {
                         bouncing={bounceId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={highlightId === p.id}
-                        onTap={handleTap}
+                        onTap={handleNavigate}
                       />
                     );
                   })}
@@ -391,7 +391,7 @@ export function SolarSystem() {
                   bouncing={bounceId === MOON.id}
                   jumping={jumpId === MOON.id}
                   highlighted={highlightId === MOON.id}
-                  onTap={handleTap}
+                  onTap={handleNavigate}
                 />
               </div>
             </TransformComponent>

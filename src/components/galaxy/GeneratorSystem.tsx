@@ -365,7 +365,7 @@ export function GeneratorSystem() {
                   bouncing={bounceId === config.sun.id}
                   jumping={jumpId === config.sun.id}
                   highlighted={highlightId === config.sun.id}
-                  onTap={handleTap}
+                  onTap={handleNavigate}
                   spin
                 />
 
@@ -383,7 +383,7 @@ export function GeneratorSystem() {
                         bouncing={bounceId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={highlightId === p.id}
-                        onTap={handleTap}
+                        onTap={handleNavigate}
                       />
                     );
                   })}
@@ -402,7 +402,7 @@ export function GeneratorSystem() {
                         bouncing={bounceId === m.id}
                         jumping={jumpId === m.id}
                         highlighted={highlightId === m.id}
-                        onTap={handleTap}
+                        onTap={handleNavigate}
                       />
                     );
                   });
