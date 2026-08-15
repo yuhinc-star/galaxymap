@@ -815,6 +815,13 @@ export function GeneratorSystem() {
         childrenCap: MAX_MOONS_PER_BODY,
         children: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
         add,
+        remove: {
+          actionLabel: "Say goodbye to this planet",
+          note:
+            p.moons.length > 0
+              ? `Its ${p.moons.length} moon${p.moons.length > 1 ? "s" : ""} wave${p.moons.length > 1 ? "" : "s"} goodbye too!`
+              : undefined,
+        },
       };
     }
     const m = findMoonById(config.planets, id);
@@ -849,6 +856,15 @@ export function GeneratorSystem() {
         childrenCap: MAX_MOONS_PER_BODY,
         children: m.moons.map((c) => ({ id: c.id, name: c.name, img: c.img })),
         add,
+        remove: {
+          actionLabel: parentIsPlanet
+            ? "Say goodbye to this moon"
+            : "Say goodbye to this tiny moon",
+          note:
+            m.moons.length > 0
+              ? `Its ${m.moons.length} tiny moon${m.moons.length > 1 ? "s" : ""} wave${m.moons.length > 1 ? "" : "s"} goodbye too!`
+              : undefined,
+        },
       };
     }
     return null;
@@ -1180,6 +1196,7 @@ export function GeneratorSystem() {
               <BodyInfoPanel
                 info={panelInfo}
                 onAdd={handleAddBody}
+                onRemove={handleRemoveBody}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
               />
