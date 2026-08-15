@@ -112,3 +112,63 @@ export const DRIFTER_SPRITES: SpriteOption[] = [
   { id: "space-cat", name: "Space Cat", img: drifterCatImg },
   { id: "telescope", name: "Telescope", img: drifterTelescopeImg },
 ];
+
+/** Every sprite URL across all pools — used to warm the browser cache. */
+export const ALL_SPRITE_URLS: string[] = [
+  ...SUN_SPRITES,
+  ...PLANET_SPRITES,
+  ...MOON_SPRITES,
+  ...DRIFTER_SPRITES,
+].map((s) => s.img);
+
+const decodedUrls = new Set<string>();
+
+/**
+ * Fetch + decode one sprite into the browser image cache. Always resolves —
+ * a failed sprite must never hold up a system swap.
+ */
+const decodeOne = (url: string): Promise<void> => {
+  if (decodedUrls.has(url)) return Promise.resolve();
+  const img = new Image();
+  img.src = url;
+  const done = () => {
+    decodedUrls.add(url);
+  };
+  if (typeof img.decode === "function") {
+    return img.decode().then(done, done);
+  }
+  return new Promise<void>((resolve) => {
+    img.onload = img.onerror = () => {
+      done();
+      resolve();
+    };
+  });
+};
+
+let poolWarming = false;
+
+/**
+ * Warm the whole sprite pool (plus any extra art like sky backgrounds) in the
+ * background, a few at a time, so a later "New system" swap or palette switch
+ * never waits on image loads. Runs once per session.
+ */
+export const warmSpritePool = (extraUrls: string[] = []) => {
+  if (poolWarming) return;
+  poolWarming = true;
+  const queue = [...ALL_SPRITE_URLS, ...extraUrls];
+  const step = () => {
+    const batch = queue.splice(0, 6);
+    if (batch.length === 0) return;
+    void Promise.all(batch.map(decodeOne)).then(() => {
+      window.setTimeout(step, 90);
+    });
+  };
+  window.setTimeout(step, 350);
+};
+
+/**
+ * Resolve once every URL is fetched and decoded — the warp transition holds
+ * its exit beat on this so the new world never pops in half-painted.
+ */
+export const ensureSpritesReady = (urls: string[]): Promise<void> =>
+  Promise.all(urls.map(decodeOne)).then(() => undefined);
