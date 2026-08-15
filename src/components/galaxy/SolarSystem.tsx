@@ -409,6 +409,17 @@ export function SolarSystem() {
   }
   const chatSubj = chatSubjectRef.current;
 
+  // In chat mode the navigator lists only the family on screen: the
+  // subject at the top with its children nested below.
+  const chatNavItems: NavigatorEntry[] = (() => {
+    if (!chatSubj) return navItems;
+    const id = chatSubj.info.id;
+    if (id === SUN.id) return navItems; // the whole system is on screen
+    if (id === MOON.id) return [{ id: MOON.id, name: MOON.name, img: MOON.img }];
+    const entry = navItems.find((e) => e.id === id);
+    return entry ? [entry] : navItems;
+  })();
+
   // Chat-set planets render at their chased pose; the Moon rides Earth's
   // rendered pose, then takes its own slot if it is a chat child.
   if (chatSubj && chatActive) {
@@ -575,7 +586,7 @@ export function SolarSystem() {
   /** Panel child-row click: fly to that body and open its own panel. */
   const handleInfoSelect = (id: string) => {
     handleNavigate(id);
-    if (!chatOpen) setInfoId(id);
+    setInfoId(id);
   };
 
   /**
@@ -584,15 +595,12 @@ export function SolarSystem() {
    * still does its usual happy jump — the panel simply replaces it.
    */
   const handleBodyTap = (id: string) => {
-    // In chat mode every tap is just a hello — no camera, no panel.
-    if (chatOpen) {
-      handleNavigate(id);
-      return;
-    }
     const now = Date.now();
     const last = lastTapRef.current;
     lastTapRef.current = { id, t: now };
-    if (focusedId === id && last?.id === id && now - last.t < 450) {
+    // In chat mode there is no camera focus, so a quick second tap on any
+    // lined-up body opens its page. Outside chat the body must hold focus.
+    if (last?.id === id && now - last.t < 450 && (chatOpen || focusedId === id)) {
       lastTapRef.current = null;
       openInfo(id);
       return;
@@ -1135,36 +1143,45 @@ export function SolarSystem() {
               </span>
             </header>
 
-            {!chatActive && (
-              <Navigator
-                items={navItems}
-                activeId={activeId}
-                focusedId={focusedId}
-                onSelect={handleNavigate}
-                onInfo={handleInfoSelect}
-                rocket={{
-                  img: heroRocketImg,
-                  hostId: flight ? flight.toId : rocketHostId,
-                  flying: flight !== null,
-                  armed: rocketArmed,
-                  onChip: () => setRocketArmed((a) => !a),
-                  onDestination: handleRocketDestination,
-                }}
-              />
-            )}
+            <Navigator
+              key={chatActive ? "strip" : "all"}
+              items={chatActive ? chatNavItems : navItems}
+              activeId={activeId}
+              focusedId={focusedId}
+              onSelect={handleNavigate}
+              onInfo={handleInfoSelect}
+              chatMode={chatActive}
+              rocket={
+                chatActive
+                  ? undefined
+                  : {
+                      img: heroRocketImg,
+                      hostId: flight ? flight.toId : rocketHostId,
+                      flying: flight !== null,
+                      armed: rocketArmed,
+                      onChip: () => setRocketArmed((a) => !a),
+                      onDestination: handleRocketDestination,
+                    }
+              }
+            />
 
             {/* Double-click info panel: details + summon the rocket */}
             {panelInfo && (
               <BodyInfoPanel
                 info={panelInfo}
+                chatMode={chatActive}
                 onAdd={() => {}}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
-                rocket={{
-                  here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
-                  flying: flight !== null,
-                  onSummon: () => handleRocketDestination(panelInfo.id),
-                }}
+                rocket={
+                  chatActive
+                    ? undefined
+                    : {
+                        here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
+                        flying: flight !== null,
+                        onSummon: () => handleRocketDestination(panelInfo.id),
+                      }
+                }
               />
             )}
 
