@@ -522,13 +522,13 @@ export function SolarSystem() {
   /** Re-solve the fan for the current strip size (the strip animates to
       its chat width, and the window may move while chat is open). */
   const rebuildChatLayout = () => {
-    const subj = chatSubjectRef.current;
-    if (!subj) return;
-    const id = subj.info.id;
-    const anchor = subj.layout.anchor;
+    const fan = fanSubjectRef.current;
+    if (!fan) return;
+    const id = fan.id;
+    const anchor = fan.layout.anchor;
     const strip = stripSize();
     if (id === SUN.id) {
-      subj.layout = computeChatLayout(
+      fan.layout = computeChatLayout(
         SUN.id,
         anchor,
         SUN.size,
@@ -539,12 +539,12 @@ export function SolarSystem() {
       return;
     }
     if (id === MOON.id) {
-      subj.layout = computeChatLayout(MOON.id, anchor, MOON.size, [], strip.w, strip.h);
+      fan.layout = computeChatLayout(MOON.id, anchor, MOON.size, [], strip.w, strip.h);
       return;
     }
     const p = PLANETS.find((pp) => pp.id === id);
     if (p) {
-      subj.layout = computeChatLayout(
+      fan.layout = computeChatLayout(
         p.id,
         anchor,
         p.size,
@@ -553,6 +553,39 @@ export function SolarSystem() {
         strip.h,
       );
     }
+  };
+
+  /**
+   * Chat-mode zoom-in on a specific star: the fan re-forms around it —
+   * it anchors the bottom of the strip where it stands right now and its
+   * own children line up above, while the previous fan glides home.
+   */
+  const focusChatFan = (id: string) => {
+    const anchor = bodyPos(id);
+    if (!anchor) return;
+    const strip = stripSize();
+    let size: number;
+    let kids: ChatChildInput[];
+    if (id === SUN.id) {
+      size = SUN.size;
+      kids = PLANETS.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name }));
+    } else if (id === MOON.id) {
+      size = MOON.size;
+      kids = [];
+    } else {
+      const p = PLANETS.find((pp) => pp.id === id);
+      if (!p) return;
+      size = p.size;
+      kids =
+        p.id === "earth"
+          ? [{ id: MOON.id, size: MOON.size, name: MOON.name }]
+          : [];
+    }
+    fanSubjectRef.current = {
+      id,
+      layout: computeChatLayout(id, anchor, size, kids, strip.w, strip.h),
+    };
+    chatGlideRef.current = true;
   };
 
   // Build the subject once per opening: whatever held focus (the sun by
@@ -596,8 +629,10 @@ export function SolarSystem() {
       };
     }
     chatSubjectRef.current = subject;
+    fanSubjectRef.current = { id: subject.info.id, layout: subject.layout };
   }
   const chatSubj = chatSubjectRef.current;
+  const fanSubj = fanSubjectRef.current;
 
   // In chat mode the navigator lists only the family on screen: the
   // subject at the top with its children nested below.
@@ -611,22 +646,28 @@ export function SolarSystem() {
   })();
 
   // Chat-set planets render at their chased pose; the Moon rides Earth's
-  // rendered pose, then takes its own slot if it is a chat child.
-  if (chatSubj && chatActive) {
+  // rendered pose, then takes its own slot if it is a chat child. Bodies
+  // that just left the fan (it re-focused on another star) glide back to
+  // their live orbits instead of snapping.
+  if (fanSubj && chatActive) {
     for (const p of PLANETS) {
-      if (!chatSubj.layout.slots.has(p.id)) continue;
+      const inFan = fanSubj.layout.slots.has(p.id);
+      const wasSubject = chatRenderRef.current.has(p.id);
+      const wasRiding = chatRideRef.current.has(p.id);
+      if (!inFan && !wasSubject && !wasRiding) continue;
       const q = positions.get(p.id);
       if (!q) continue;
       const a = p.startAngle + (t * TAU) / p.period;
+      // chatRide covers fan slots, exit glides and former subjects.
       const r =
-        p.id === chatSubj.layout.parentId
+        p.id === fanSubj.layout.parentId
           ? chatAdjustSubject(p.id, q.x, q.y, p.size)
           : chatRide(p.id, CENTER, CENTER, a, p.orbitR, p.size);
       positions.set(p.id, { x: r.x, y: r.y });
     }
     earth = positions.get("earth") ?? earth;
     const rm =
-      MOON.id === chatSubj.layout.parentId
+      MOON.id === fanSubj.layout.parentId
         ? chatAdjustSubject(
             MOON.id,
             earth.x + MOON.orbitR * Math.cos(moonAngle),
@@ -691,15 +732,18 @@ export function SolarSystem() {
     );
   }, [t]);
 
-  // Chat-mode camera: while chat is open the camera chases the column
+  // Chat-mode camera: while chat is open the camera chases the fan
   // framing inside the sky strip; while it closes it glides back to the
-  // pre-chat view. Chase-cam style, like the navigator follow.
+  // pre-chat view. Once the fan has settled the user owns the zoom —
+  // wheel/pinch can zoom IN freely, but zooming out stops at the fan
+  // framing (the family stays on screen; no drifting off to other
+  // stars), where the camera re-locks onto the fan.
   useEffect(() => {
     if (!chatActive) return;
-    const subj = chatSubjectRef.current;
+    const fan = fanSubjectRef.current;
     const apply = setTransformRef.current;
     const st = stateRef.current;
-    if (!subj || !apply || !st) return;
+    if (!fan || !apply || !st) return;
     let target: { posX: number; posY: number; scale: number } | null = null;
     if (chatOpen) {
       const rect = stripRef.current?.getBoundingClientRect();
@@ -707,12 +751,21 @@ export function SolarSystem() {
       // The strip is still animating to its chat width (or the window
       // moved): re-solve the fan so slots and camera track it.
       if (
-        Math.abs(subj.layout.stripW - rect.width) > 2 ||
-        Math.abs(subj.layout.stripH - rect.height) > 2
+        Math.abs(fan.layout.stripW - rect.width) > 2 ||
+        Math.abs(fan.layout.stripH - rect.height) > 2
       ) {
         rebuildChatLayout();
+        chatGlideRef.current = true;
       }
-      target = subj.layout.camera;
+      const lay = fan.layout;
+      const settled = chatMixRef.current > 0.9;
+      if (!chatGlideRef.current && settled) {
+        // The user is exploring zoomed-in — the camera is theirs until
+        // they come all the way back out to the fan framing.
+        if (st.scale > lay.camera.scale * 1.03) return;
+        chatGlideRef.current = true;
+      }
+      target = lay.camera;
     } else if (preChatCamRef.current) {
       const pre = preChatCamRef.current;
       target = { posX: pre.positionX, posY: pre.positionY, scale: pre.scale };
@@ -728,6 +781,9 @@ export function SolarSystem() {
         st.scale + ds * 0.14,
         0,
       );
+    } else if (chatOpen) {
+      // Arrived — from here the user may zoom in; the fan waits below.
+      chatGlideRef.current = false;
     }
   });
 
@@ -775,9 +831,15 @@ export function SolarSystem() {
     jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
-    // In chat mode the camera stays on the column — the hop, ring and
-    // bubble still play, but nobody leaves their slot.
-    if (!chatOpen) focusCamera(id);
+    // In chat mode the picked star becomes the fan's focus: the camera
+    // glides over and its own children line up above it. The hop, ring
+    // and bubble still play along the way.
+    if (chatOpen) {
+      setFocusedId(id);
+      focusChatFan(id);
+    } else {
+      focusCamera(id);
+    }
   };
 
   /** Double-tap on the focused body: open its information panel. */
