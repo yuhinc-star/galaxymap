@@ -10,11 +10,30 @@ interface Star {
   color: string;
 }
 
+interface SolidStar {
+  x: number;
+  y: number;
+  r: number;
+  rot: number;
+  speed: number;
+  phase: number;
+  color: string;
+}
+
 interface Sparkle {
   x: number;
   y: number;
   size: number;
   speed: number;
+  phase: number;
+  color: string;
+}
+
+interface Spiral {
+  x: number;
+  y: number;
+  maxR: number;
+  rotSpeed: number;
   phase: number;
   color: string;
 }
@@ -26,14 +45,25 @@ interface Comet {
   vy: number;
   life: number;
   maxLife: number;
+  rgb: string;
 }
 
-const STAR_COLORS = ["#ffffff", "#ffffff", "#ffffff", "#ffe066", "#7de2d1", "#ff9de2", "#ffd6a5"];
+const DOT_COLORS = [
+  "#ffffff", "#ffffff", "#ffffff", "#ffe066", "#7de2d1",
+  "#ff9de2", "#ffd6a5", "#ffb3c8", "#9fd8ff",
+];
+const SOLID_STAR_COLORS = [
+  "#ffd93d", "#ffb347", "#ff8a5c", "#ff6b9d",
+  "#7de2d1", "#4dd0e1", "#b388eb", "#fff3b0",
+];
 const SPARKLE_COLORS = ["#ffffff", "#ffe066", "#7de2d1", "#ff9de2"];
+const SPIRAL_COLORS = ["#b388eb", "#7de2d1", "#ff9de2", "#8e7cc3"];
+const COMET_COLORS = ["255, 240, 180", "255, 180, 110", "255, 150, 210"];
 
 /**
- * Dense twinkling starfield with 4-point sparkle crosses and occasional
- * shooting comets, drawn on canvas — like the packed sky of the reference.
+ * Dense storybook sky: confetti dots, solid 5-point candy stars, pulsing
+ * sparkle crosses, slow-turning spiral swirls, and colorful comets —
+ * matching the packed backgrounds of the user's reference posters.
  */
 export function Starfield({
   size,
@@ -59,26 +89,62 @@ export function Starfield({
     if (!ctx) return;
     ctx.scale(dpr, dpr);
 
-    // Dense field of small dots packed across the whole sky.
-    const stars: Star[] = Array.from({ length: 1250 }, () => ({
+    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)] as T;
+
+    // Dense field of tiny confetti dots packed across the whole sky.
+    const stars: Star[] = Array.from({ length: 950 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: 1 + Math.random() * 3,
       base: 0.35 + Math.random() * 0.65,
       speed: 0.6 + Math.random() * 1.8,
       phase: Math.random() * Math.PI * 2,
-      color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)] ?? "#ffffff",
+      color: pick(DOT_COLORS),
     }));
 
-    // Bigger plus-shaped sparkles scattered between the dots.
-    const sparkles: Sparkle[] = Array.from({ length: 90 }, () => ({
+    // Solid 5-point candy stars, the signature doodle of the references.
+    const solidStars: SolidStar[] = Array.from({ length: 85 }, () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: 6 + Math.random() * 10,
+      rot: Math.random() * Math.PI * 2,
+      speed: 0.5 + Math.random() * 1.2,
+      phase: Math.random() * Math.PI * 2,
+      color: pick(SOLID_STAR_COLORS),
+    }));
+
+    // Plus-shaped sparkles scattered between the dots.
+    const sparkles: Sparkle[] = Array.from({ length: 45 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       size: 7 + Math.random() * 9,
       speed: 0.8 + Math.random() * 1.6,
       phase: Math.random() * Math.PI * 2,
-      color: SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)] ?? "#ffffff",
+      color: pick(SPARKLE_COLORS),
     }));
+
+    // Hand-drawn spiral swirls, slowly turning.
+    const spirals: Spiral[] = Array.from({ length: 14 }, () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      maxR: 16 + Math.random() * 18,
+      rotSpeed: (Math.random() < 0.5 ? -1 : 1) * (0.08 + Math.random() * 0.15),
+      phase: Math.random() * Math.PI * 2,
+      color: pick(SPIRAL_COLORS),
+    }));
+
+    const starPath = (cx: number, cy: number, r: number, rot: number) => {
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const rad = i % 2 === 0 ? r : r * 0.45;
+        const a = rot + (i * Math.PI) / 5 - Math.PI / 2;
+        const px = cx + rad * Math.cos(a);
+        const py = cy + rad * Math.sin(a);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    };
 
     const comets: Comet[] = [];
     let nextCometIn = 2000 + Math.random() * 2500;
@@ -91,6 +157,7 @@ export function Starfield({
       const t = now / 1000;
       ctx.clearRect(0, 0, w, h);
 
+      // Confetti dots
       for (const s of stars) {
         ctx.globalAlpha = s.base * (0.55 + 0.45 * Math.sin(t * s.speed + s.phase));
         ctx.fillStyle = s.color;
@@ -99,8 +166,39 @@ export function Starfield({
         ctx.fill();
       }
 
-      // Plus-shaped sparkle crosses that pulse in and out.
+      // Solid candy stars with a gentle pulse
+      for (const s of solidStars) {
+        const pulse = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
+        ctx.globalAlpha = 0.55 + 0.45 * pulse;
+        ctx.fillStyle = s.color;
+        starPath(s.x, s.y, s.r * (0.85 + 0.2 * pulse), s.rot);
+        ctx.fill();
+      }
+
+      // Spiral swirls, slowly rotating
       ctx.lineCap = "round";
+      ctx.lineWidth = 4.5;
+      for (const sp of spirals) {
+        ctx.save();
+        ctx.translate(sp.x, sp.y);
+        ctx.rotate(sp.phase + t * sp.rotSpeed);
+        ctx.globalAlpha = 0.5 + 0.2 * Math.sin(t * 0.7 + sp.phase);
+        ctx.strokeStyle = sp.color;
+        ctx.beginPath();
+        const steps = 56;
+        for (let i = 0; i <= steps; i++) {
+          const a = (i / steps) * 2.6 * Math.PI * 2;
+          const r = (i / steps) * sp.maxR;
+          const px = r * Math.cos(a);
+          const py = r * Math.sin(a);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Plus-shaped sparkle crosses that pulse in and out
       ctx.lineWidth = 3.5;
       for (const sp of sparkles) {
         const pulse = 0.5 + 0.5 * Math.sin(t * sp.speed + sp.phase);
@@ -119,6 +217,7 @@ export function Starfield({
         ctx.fill();
       }
 
+      // Colorful comets
       nextCometIn -= dt;
       if (nextCometIn <= 0) {
         nextCometIn = 3500 + Math.random() * 4500;
@@ -131,6 +230,7 @@ export function Starfield({
           vy: Math.abs(Math.sin(angle)) * speed * 0.6 + 0.2,
           life: 0,
           maxLife: 1100 + Math.random() * 500,
+          rgb: pick(COMET_COLORS),
         });
       }
 
@@ -148,8 +248,8 @@ export function Starfield({
         const tailX = c.x - c.vx * 130;
         const tailY = c.y - c.vy * 130;
         const grad = ctx.createLinearGradient(c.x, c.y, tailX, tailY);
-        grad.addColorStop(0, `rgba(255, 240, 180, ${0.9 * fade})`);
-        grad.addColorStop(1, "rgba(255, 240, 180, 0)");
+        grad.addColorStop(0, `rgba(${c.rgb}, ${0.9 * fade})`);
+        grad.addColorStop(1, `rgba(${c.rgb}, 0)`);
         ctx.globalAlpha = 1;
         ctx.strokeStyle = grad;
         ctx.lineWidth = 4;
@@ -158,7 +258,7 @@ export function Starfield({
         ctx.moveTo(c.x, c.y);
         ctx.lineTo(tailX, tailY);
         ctx.stroke();
-        ctx.fillStyle = `rgba(255, 250, 220, ${fade})`;
+        ctx.fillStyle = `rgba(${c.rgb}, ${fade})`;
         ctx.beginPath();
         ctx.arc(c.x, c.y, 4.5, 0, Math.PI * 2);
         ctx.fill();
