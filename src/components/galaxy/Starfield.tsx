@@ -165,9 +165,13 @@ export function Starfield({
       const dt = Math.min(now - last, 50);
       last = now;
       const t = now / 1000;
+      // In chat mode the larger background stars quiet down so the family
+      // lineup in the strip stays readable. Small dots remain as twinkle.
+      const mix = chatMixRef.current;
+      const dim = 1 - 0.85 * mix;
       ctx.clearRect(0, 0, w, h);
 
-      // Confetti dots
+      // Confetti dots — keep the tiny background texture visible.
       for (const s of stars) {
         ctx.globalAlpha = s.base * (0.55 + 0.45 * Math.sin(t * s.speed + s.phase));
         ctx.fillStyle = s.color;
@@ -176,10 +180,10 @@ export function Starfield({
         ctx.fill();
       }
 
-      // Solid candy stars with a gentle pulse
+      // Solid candy stars with a gentle pulse — dimmed in chat mode.
       for (const s of solidStars) {
         const pulse = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
-        ctx.globalAlpha = 0.55 + 0.45 * pulse;
+        ctx.globalAlpha = dim * (0.55 + 0.45 * pulse);
         ctx.fillStyle = s.color;
         starPath(s.x, s.y, s.r * (0.85 + 0.2 * pulse), s.rot);
         ctx.fill();
