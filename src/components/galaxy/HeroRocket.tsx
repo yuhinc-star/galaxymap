@@ -43,8 +43,9 @@ interface HeroRocketProps {
  * The hero rocket: a classic red-and-cream toy rocket the user flies
  * between bodies. Parked, it stands on its host's shoulder with a gentle
  * sway; in flight a brushy flame flickers underneath. Drag it onto any
- * body — sun, planet or moon — or send it via the navigator. It renders
- * at a fixed on-screen size no matter the zoom.
+ * body — sun, planet or moon — or send it via the navigator. It holds a
+ * fixed on-screen size when zoomed in, and shrinks with the world when
+ * zoomed out (see rocketWorldScale).
  */
 export function HeroRocket({
   x,

@@ -508,3 +508,44 @@ export function addMoonToSystem(
   if (!changedAny) return null;
   return { next: { ...system, planets }, newId: child.id };
 }
+
+/**
+ * Remove a body from the system (the info panel's "say goodbye"). A
+ * planet leaves with its whole moon tree; a moon leaves with its own
+ * mini-moons. The sun can never be removed. Null when the id isn't found.
+ */
+export function removeBodyFromSystem(
+  system: SystemConfig,
+  id: string,
+): SystemConfig | null {
+  // A planet goes with everything orbiting it.
+  if (system.planets.some((p) => p.id === id)) {
+    return { ...system, planets: system.planets.filter((p) => p.id !== id) };
+  }
+  // A moon goes with its own mini-moons, wherever it sits in the tree.
+  const strip = (moons: GeneratedMoon[]): GeneratedMoon[] | null => {
+    if (moons.some((m) => m.id === id)) {
+      return moons.filter((m) => m.id !== id);
+    }
+    let changed = false;
+    const next = moons.map((m) => {
+      const sub = strip(m.moons);
+      if (sub) {
+        changed = true;
+        return { ...m, moons: sub };
+      }
+      return m;
+    });
+    return changed ? next : null;
+  };
+  let changedAny = false;
+  const planets = system.planets.map((p) => {
+    const sub = strip(p.moons);
+    if (sub) {
+      changedAny = true;
+      return { ...p, moons: sub };
+    }
+    return p;
+  });
+  return changedAny ? { ...system, planets } : null;
+}
