@@ -195,22 +195,32 @@ export function SolarSystem() {
       : own;
   };
 
-  // Camera follow: once the navigator glide lands, re-center the picked
-  // body every frame so it stays pinned to the viewport center as it orbits.
+  // Camera follow, chase-cam style: every frame we ease from the camera
+  // state captured at click time toward the body's *current* position, so
+  // the glide bends with the moving body and lands exactly on it — no
+  // end-of-glide snap. After the glide the body stays pinned to center.
   useEffect(() => {
     const f = followRef.current;
     const apply = setTransformRef.current;
     if (!f || !apply) return;
-    if (performance.now() - f.startAt < 470) return; // let the glide finish
     const q = bodyPos(f.id);
     if (!q) {
       followRef.current = null;
       return;
     }
+    const tx = window.innerWidth / 2 - q.x * f.scale;
+    const ty = window.innerHeight / 2 - q.y * f.scale;
+    const p = Math.min(1, (performance.now() - f.startAt) / 650);
+    if (p >= 1) {
+      apply(tx, ty, f.scale, 0);
+      return;
+    }
+    // easeInOutCubic
+    const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
     apply(
-      window.innerWidth / 2 - q.x * f.scale,
-      window.innerHeight / 2 - q.y * f.scale,
-      f.scale,
+      f.from.x + (tx - f.from.x) * e,
+      f.from.y + (ty - f.from.y) * e,
+      f.from.scale + (f.scale - f.from.scale) * e,
       0,
     );
   }, [t]);
