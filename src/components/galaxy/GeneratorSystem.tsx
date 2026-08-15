@@ -204,7 +204,7 @@ export function GeneratorSystem() {
   const jumpTimer = useRef<number | undefined>(undefined);
   const squashTimer = useRef<number | undefined>(undefined);
   /** Auto-hide for the post-landing chat invite. */
-  const suggestionTimer = useRef<number | undefined>(undefined);
+  
   /** The rocket's live render pose — mid-flight re-targets launch from
       exactly here, never a teleport back to the old host. */
   const rocketPoseRef = useRef({ x: 0, y: 0, rot: 0 });
@@ -409,7 +409,6 @@ export function GeneratorSystem() {
     setRocketInboundId(null);
     setDragActive(false);
     dragRef.current = null;
-    window.clearTimeout(suggestionTimer.current);
     setChatSuggestionId(null);
   };
 
@@ -482,7 +481,6 @@ export function GeneratorSystem() {
     // The fan's focus marker starts on the chat subject.
     setFocusedId(subjectId);
     setRocketArmed(false);
-    window.clearTimeout(suggestionTimer.current);
     setChatSuggestionId(null);
     // The conversation opens with the subject the rocket flies to.
     setChatTalkId(subjectId);
@@ -1083,13 +1081,10 @@ export function GeneratorSystem() {
     setHighlightId(dest);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
     // Every touchdown follows the same handshake: only after the rocket has
-    // arrived does it offer a chat with its new host, in either view.
-    window.clearTimeout(suggestionTimer.current);
+    // arrived does it offer a chat with its new host, in either view — and
+    // the offer stands until it is answered (accepted or dismissed) or the
+    // rocket lands somewhere else. Arriving and re-arriving both ask.
     setChatSuggestionId(dest);
-    suggestionTimer.current = window.setTimeout(
-      () => setChatSuggestionId(null),
-      9000,
-    );
   }, [t, flight, chatOpen]);
 
   // If the rocket's host vanishes (regenerate / planet count changed),
@@ -1680,7 +1675,8 @@ export function GeneratorSystem() {
     : (chatSubj?.info ?? null);
 
   // Post-landing invite: shared by galaxy and chat mode. It is created by
-  // the touchdown effect, so it can never appear while the rocket is flying.
+  // the touchdown effect, so it can never appear while the rocket is flying,
+  // and it never expires on its own — the offer stands until answered.
   // Never suggest chatting with the star we're already chatting with — in
   // chat mode the conversation stays put when the rocket lands on a new
   // star, and this pill is the offer to switch the chat over to it.
