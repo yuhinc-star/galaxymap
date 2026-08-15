@@ -484,6 +484,38 @@ export function SolarSystem() {
     );
   }, [t]);
 
+  // Chat-mode camera: while chat is open the camera chases the column
+  // framing inside the sky strip; while it closes it glides back to the
+  // pre-chat view. Chase-cam style, like the navigator follow.
+  useEffect(() => {
+    if (!chatActive) return;
+    const subj = chatSubjectRef.current;
+    const apply = setTransformRef.current;
+    const st = stateRef.current;
+    if (!subj || !apply || !st) return;
+    let target: { posX: number; posY: number; scale: number } | null = null;
+    if (chatOpen) {
+      const rect = stripRef.current?.getBoundingClientRect();
+      if (!rect || rect.width < 20 || rect.height < 20) return;
+      target = fitChatCamera(subj.layout, rect.width, rect.height);
+    } else if (preChatCamRef.current) {
+      const pre = preChatCamRef.current;
+      target = { posX: pre.positionX, posY: pre.positionY, scale: pre.scale };
+    }
+    if (!target) return;
+    const dx = target.posX - st.positionX;
+    const dy = target.posY - st.positionY;
+    const ds = target.scale - st.scale;
+    if (Math.abs(dx) + Math.abs(dy) > 0.5 || Math.abs(ds) > 0.001) {
+      apply(
+        st.positionX + dx * 0.14,
+        st.positionY + dy * 0.14,
+        st.scale + ds * 0.14,
+        0,
+      );
+    }
+  });
+
   /** Glide the camera so the body and everything orbiting it fits. */
   const focusCamera = (id: string) => {
     const q = bodyPos(id);
@@ -528,7 +560,9 @@ export function SolarSystem() {
     jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
-    focusCamera(id);
+    // In chat mode the camera stays on the column — the hop, ring and
+    // bubble still play, but nobody leaves their slot.
+    if (!chatOpen) focusCamera(id);
   };
 
   /** Double-tap on the focused body: open its information panel. */
@@ -541,7 +575,7 @@ export function SolarSystem() {
   /** Panel child-row click: fly to that body and open its own panel. */
   const handleInfoSelect = (id: string) => {
     handleNavigate(id);
-    setInfoId(id);
+    if (!chatOpen) setInfoId(id);
   };
 
   /**
@@ -550,6 +584,11 @@ export function SolarSystem() {
    * still does its usual happy jump — the panel simply replaces it.
    */
   const handleBodyTap = (id: string) => {
+    // In chat mode every tap is just a hello — no camera, no panel.
+    if (chatOpen) {
+      handleNavigate(id);
+      return;
+    }
     const now = Date.now();
     const last = lastTapRef.current;
     lastTapRef.current = { id, t: now };
@@ -563,6 +602,9 @@ export function SolarSystem() {
 
   /** Display size of any landable body. */
   const bodySize = (id: string): number | null => {
+    // While the chat column forms, chat-set bodies render at slot size.
+    const cr = chatRenderRef.current.get(id);
+    if (cr && chatMixRef.current > 0.004) return cr.size;
     if (id === SUN.id) return SUN.size;
     if (id === MOON.id) return MOON.size;
     const p = PLANETS.find((pp) => pp.id === id);
@@ -662,7 +704,7 @@ export function SolarSystem() {
     const from = parkPos(rocketHostId);
     if (!from) return;
     launchRocket(from, rocketHostId === SUN.id ? sunOrbitRot() : PARK_ROT, id);
-    focusCamera(id);
+    if (!chatOpen) focusCamera(id);
   };
 
   /** Client px → world px using the live pan/zoom transform. */
@@ -704,6 +746,8 @@ export function SolarSystem() {
    * flies the rocket there; dropping on empty sky flies it back home.
    */
   const onRocketDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    // No rocket games while the family is lined up for chat.
+    if (chatMixRef.current > 0.004) return;
     e.stopPropagation();
     e.preventDefault();
     stopFollow();
@@ -878,6 +922,14 @@ export function SolarSystem() {
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
+      <div className="flex h-full w-full">
+      {/* Sky strip: the whole galaxy squeezes here when chat opens */}
+      <div
+        ref={stripRef}
+        className={`relative h-full min-w-0 flex-none overflow-hidden transition-[width] duration-500 ease-in-out ${
+          chatOpen ? "w-full sm:w-[clamp(290px,33vw,460px)]" : "w-full"
+        }`}
+      >
       {/* Hand-painted gouache sky, fixed to the viewport so it stays
           full-bleed and crisp at every zoom level */}
       <img
@@ -896,8 +948,9 @@ export function SolarSystem() {
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
-        wheel={{ step: 0.15 }}
-        panning={{ velocityDisabled: true }}
+        wheel={{ step: 0.15, disabled: chatActive }}
+        panning={{ velocityDisabled: true, disabled: chatActive }}
+        pinch={{ disabled: chatActive }}
         onPanningStart={stopFollow}
         onWheel={stopFollow}
         onPinchStart={stopFollow}
@@ -994,12 +1047,15 @@ export function SolarSystem() {
                   .sort((a, b) => b.size - a.size)
                   .map((p) => {
                     const q = positions.get(p.id)!;
+                    const cr = chatRenderRef.current.get(p.id);
+                    const chatSized = cr != null && Math.abs(cr.size - p.size) > 0.5;
                     return (
                       <Planet
                         key={p.id}
-                        def={p}
+                        def={chatSized && cr ? { ...p, size: cr.size } : p}
                         x={q.x}
                         y={q.y}
+                        labelBoost={chatSubj?.layout.slots.has(p.id) ? chatLabelBoost : 1}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={
@@ -1016,9 +1072,14 @@ export function SolarSystem() {
                   })}
 
                 <Planet
-                  def={MOON}
+                  def={
+                    Math.abs(moonChatSize - MOON.size) > 0.5
+                      ? { ...MOON, size: moonChatSize }
+                      : MOON
+                  }
                   x={moonPos.x}
                   y={moonPos.y}
+                  labelBoost={chatSubj?.layout.slots.has(MOON.id) ? chatLabelBoost : 1}
                   active={activeId === MOON.id}
                   jumping={jumpId === MOON.id}
                   highlighted={
@@ -1061,7 +1122,7 @@ export function SolarSystem() {
                   flame={rocketFlame}
                   squash={landingSquash}
                   dragging={dragActive}
-                  interactive={!flight}
+                  interactive={!flight && !chatActive}
                   onDown={onRocketDown}
                 />
               </div>
@@ -1105,7 +1166,20 @@ export function SolarSystem() {
               />
             )}
 
-            <div className="fixed right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))]">
+            <div
+              className={`fixed right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2 transition-opacity duration-300 ${
+                chatActive ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
+            >
+              <button
+                type="button"
+                aria-label="Chat with this world"
+                title="Chat mode — the family lines up to talk"
+                onClick={openChat}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <MessagesSquare className="h-5 w-5" />
+              </button>
               <Link
                 to="/generator"
                 aria-label="Open the Galaxy Generator"
@@ -1117,7 +1191,11 @@ export function SolarSystem() {
               </Link>
             </div>
 
-            <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] flex flex-col gap-2">
+            <div
+              className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] flex flex-col gap-2 transition-opacity duration-300 ${
+                chatActive ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
+            >
               <button
                 type="button"
                 aria-label={`Change background (now: ${BACKGROUNDS[bgIndex]!.name})`}
@@ -1167,6 +1245,15 @@ export function SolarSystem() {
           );
         }}
       </TransformWrapper>
+      </div>
+      {chatSubj && (chatOpen || chatActive) && (
+        <ChatPanel
+          key={chatSubj.info.id}
+          subject={chatSubj.info}
+          onClose={closeChat}
+        />
+      )}
+      </div>
     </div>
   );
 }
