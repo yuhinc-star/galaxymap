@@ -169,6 +169,24 @@ export function SolarSystem() {
         ? moonPos
         : (positions.get(id) ?? null);
 
+  /**
+   * World-pixel radius the camera should frame for a navigator pick:
+   * the sun gets every planet ring, a planet gets its moon's ring
+   * (or just its own disc when it has no moons), a moon its own disc.
+   */
+  const frameRadius = (id: string): number => {
+    if (id === SUN.id) {
+      return Math.max(...PLANETS.map((p) => p.orbitR + p.size / 2)) + 80;
+    }
+    if (id === MOON.id) return MOON.size * 1.6;
+    const p = PLANETS.find((pp) => pp.id === id);
+    if (!p) return 200;
+    const own = p.size * 1.15;
+    return p.id === "earth"
+      ? Math.max(own, MOON.orbitR + MOON.size / 2 + 60)
+      : own;
+  };
+
   // Camera follow: once the navigator glide lands, re-center the picked
   // body every frame so it stays pinned to the viewport center as it orbits.
   useEffect(() => {

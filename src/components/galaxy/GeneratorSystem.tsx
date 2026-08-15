@@ -163,6 +163,33 @@ export function GeneratorSystem() {
     return null;
   };
 
+  /**
+   * World-pixel radius the camera should frame for a navigator pick:
+   * the sun gets every planet ring (asymmetric — use the shape's maxR),
+   * a planet gets its outermost moon ring (or just its own disc when
+   * it has no moons), a moon its own disc.
+   */
+  const frameRadius = (id: string): number => {
+    if (id === config.sun.id) {
+      return (
+        Math.max(...config.planets.map((p) => p.orbit.maxR + p.size / 2)) + 80
+      );
+    }
+    const p = config.planets.find((pp) => pp.id === id);
+    if (p) {
+      const own = p.size * 1.15;
+      if (p.moons.length === 0) return own;
+      const moonEdge =
+        Math.max(...p.moons.map((m) => m.orbitR + m.size / 2)) + 60;
+      return Math.max(own, moonEdge);
+    }
+    for (const pp of config.planets) {
+      const m = pp.moons.find((mm) => mm.id === id);
+      if (m) return m.size * 1.6;
+    }
+    return 200;
+  };
+
   // Camera follow: once the navigator glide lands, re-center the picked
   // body every frame so it stays pinned to the viewport center as it orbits.
   useEffect(() => {
