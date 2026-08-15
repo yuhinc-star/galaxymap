@@ -31,6 +31,9 @@ interface NavigatorProps {
   /** Bodies mid-goodbye animation — their entries dim and go inert. */
   departingIds?: string[] | undefined;
   rocket?: NavigatorRocket;
+  /** Chat mode: slimmer panel listing only the bodies on screen; hidden on
+      phones where the chat sheet already covers the whole display. */
+  chatMode?: boolean;
 }
 
 /**
@@ -46,7 +49,7 @@ interface NavigatorProps {
  * the rocket's destination instead of a camera target. The rocket can
  * land on anything — sun, planet or moon — so every entry stays live.
  */
-export function Navigator({ items, activeId, focusedId, onSelect, onInfo, departingIds, rocket }: NavigatorProps) {
+export function Navigator({ items, activeId, focusedId, onSelect, onInfo, departingIds, rocket, chatMode = false }: NavigatorProps) {
   // null = not yet decided. Phones start collapsed so the world stays
   // visible; desktop starts open. Decided after mount so SSR and
   // hydration render identical markup (no window reads during render).
@@ -102,9 +105,17 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
       onSelect(entry.id);
     };
     const avatarSize =
-      depth === 0 ? "h-9 w-9" : depth === 1 ? "h-7 w-7" : "h-6 w-6";
+      depth === 0
+        ? chatMode ? "h-7 w-7" : "h-9 w-9"
+        : depth === 1
+          ? chatMode ? "h-6 w-6" : "h-7 w-7"
+          : chatMode ? "h-5 w-5" : "h-6 w-6";
     const nameSize =
-      depth === 0 ? "text-2xl" : depth === 1 ? "text-lg" : "text-base";
+      depth === 0
+        ? chatMode ? "text-xl" : "text-2xl"
+        : depth === 1
+          ? chatMode ? "text-base" : "text-lg"
+          : chatMode ? "text-sm" : "text-base";
     return (
       <div className="relative">
         <button
@@ -206,11 +217,11 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
   return (
     <nav
       aria-label="System navigator"
-      className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 flex max-h-[62vh] w-[min(15rem,calc(100vw-5rem))] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm`}
+      className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 ${chatMode ? "hidden sm:flex" : "flex"} max-h-[62vh] ${chatMode ? "w-[min(11.5rem,calc(100vw-5rem))]" : "w-[min(15rem,calc(100vw-5rem))]"} flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm`}
     >
       <div className="flex items-center justify-between px-4 pb-1 pt-3">
-        <span className="font-hand text-2xl font-bold uppercase tracking-[0.2em] text-white">
-          {armed ? "Fly the rocket to…" : "Navigator"}
+        <span className={`font-hand font-bold uppercase tracking-[0.2em] text-white ${chatMode ? "text-xl" : "text-2xl"}`}>
+          {armed ? "Fly the rocket to…" : chatMode ? "On screen" : "Navigator"}
         </span>
         <div className="flex items-center gap-1">
           {armed && (

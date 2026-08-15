@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Rocket, X } from "lucide-react";
+import { Plus, Rocket, Trash2, X } from "lucide-react";
 
 export interface BodyPanelChild {
   id: string;
@@ -42,6 +42,10 @@ interface BodyInfoPanelProps {
   onClose: () => void;
   /** Summon the hero rocket to this body. */
   rocket?: BodyPanelRocket | undefined;
+  /** Chat mode: the panel floats over the chat sheet instead of the galaxy. */
+  chatMode?: boolean;
+  /** "Say goodbye" — omitted for the sun and for the chat subject. */
+  onDelete?: () => void;
 }
 
 /**
@@ -57,6 +61,8 @@ export function BodyInfoPanel({
   onSelect,
   onClose,
   rocket,
+  chatMode = false,
+  onDelete,
 }: BodyInfoPanelProps) {
   return (
     <aside
@@ -173,6 +179,17 @@ export function BodyInfoPanel({
             </p>
           )}
         </section>
+
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/20 px-3 py-1.5 font-hand text-xl font-bold uppercase tracking-wider text-white/50 transition-colors hover:border-red-300/60 hover:bg-red-400/10 hover:text-red-200 active:scale-95"
+          >
+            <Trash2 className="h-4 w-4" />
+            Say goodbye
+          </button>
+        )}
       </div>
     </aside>
   );
