@@ -169,6 +169,24 @@ export function SolarSystem() {
         ? moonPos
         : (positions.get(id) ?? null);
 
+  /**
+   * World-pixel radius the camera should frame for a navigator pick:
+   * the sun gets every planet ring, a planet gets its moon's ring
+   * (or just its own disc when it has no moons), a moon its own disc.
+   */
+  const frameRadius = (id: string): number => {
+    if (id === SUN.id) {
+      return Math.max(...PLANETS.map((p) => p.orbitR + p.size / 2)) + 80;
+    }
+    if (id === MOON.id) return MOON.size * 1.6;
+    const p = PLANETS.find((pp) => pp.id === id);
+    if (!p) return 200;
+    const own = p.size * 1.15;
+    return p.id === "earth"
+      ? Math.max(own, MOON.orbitR + MOON.size / 2 + 60)
+      : own;
+  };
+
   // Camera follow: once the navigator glide lands, re-center the picked
   // body every frame so it stays pinned to the viewport center as it orbits.
   useEffect(() => {
@@ -190,12 +208,12 @@ export function SolarSystem() {
   }, [t]);
 
   /**
-   * Navigator click: pan the camera to the body, pop its speech bubble,
-   * make it hop once, and flash a dashed ring around it.
+   * Navigator click: zoom so the body and everything orbiting it fits
+   * (the sun with all planet rings, a planet with its moon rings),
+   * glide there, pop its speech bubble, hop once, flash a dashed ring.
    */
   const handleNavigate = (
     id: string,
-    scale: number,
     setTransform: (x: number, y: number, s: number, ms: number) => void,
   ) => {
     const q = bodyPos(id);
@@ -209,7 +227,10 @@ export function SolarSystem() {
     jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
-    const s = Math.min(Math.max(scale, 0.6), 1.05);
+    const fit =
+      (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
+      (2 * frameRadius(id));
+    const s = Math.min(Math.max(fit, 0.16), 1.35);
     followRef.current = { id, scale: s, startAt: performance.now() };
     setTransform(
       window.innerWidth / 2 - q.x * s,
@@ -243,7 +264,7 @@ export function SolarSystem() {
         onWheel={stopFollow}
         onPinchStart={stopFollow}
       >
-        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
+        {({ zoomIn, zoomOut, resetTransform, setTransform }) => {
           setTransformRef.current = setTransform;
           return (
           <>
@@ -368,7 +389,7 @@ export function SolarSystem() {
             <Navigator
               items={navItems}
               activeId={activeId}
-              onSelect={(id) => handleNavigate(id, state.scale, setTransform)}
+              onSelect={(id) => handleNavigate(id, setTransform)}
             />
 
             <div className="fixed right-4 top-4">
