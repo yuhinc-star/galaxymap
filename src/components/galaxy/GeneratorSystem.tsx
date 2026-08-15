@@ -781,8 +781,10 @@ export function GeneratorSystem() {
   // In chat mode the navigator lists only the family on screen: the
   // subject at the top with its children (and their moons) nested below.
   const chatNavItems: NavigatorEntry[] = (() => {
-    if (!chatSubj) return navItems;
-    const id = chatSubj.info.id;
+    // The navigator lists the family currently on screen — the fanned
+    // star (which may differ from the chat subject after a re-focus).
+    const id = fanSubj?.id ?? chatSubj?.info.id;
+    if (!id) return navItems;
     if (id === config.sun.id) {
       return [
         {
