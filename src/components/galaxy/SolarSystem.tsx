@@ -219,9 +219,10 @@ export function SolarSystem() {
   }, [t]);
 
   /**
-   * Navigator click: zoom so the body and everything orbiting it fits
-   * (the sun with all planet rings, a planet with its moon rings),
-   * glide there, pop its speech bubble, hop once, flash a dashed ring.
+   * Navigator click or direct planet tap: zoom so the body and everything
+   * orbiting it fits (the sun with all planet rings, a planet with its
+   * moon rings), glide there, keep it centered, pop its speech bubble,
+   * hop once, flash a dashed ring, and mark it in the navigator.
    */
   const handleNavigate = (id: string) => {
     const q = bodyPos(id);
@@ -232,6 +233,7 @@ export function SolarSystem() {
     setActiveId(id);
     setJumpId(id);
     setHighlightId(id);
+    setFocusedId(id);
     jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
