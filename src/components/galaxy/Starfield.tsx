@@ -10,6 +10,15 @@ interface Star {
   color: string;
 }
 
+interface Sparkle {
+  x: number;
+  y: number;
+  size: number;
+  speed: number;
+  phase: number;
+  color: string;
+}
+
 interface Comet {
   x: number;
   y: number;
@@ -19,9 +28,13 @@ interface Comet {
   maxLife: number;
 }
 
-const STAR_COLORS = ["#ffffff", "#ffe066", "#7de2d1", "#ff9de2", "#ffd6a5"];
+const STAR_COLORS = ["#ffffff", "#ffffff", "#ffffff", "#ffe066", "#7de2d1", "#ff9de2", "#ffd6a5"];
+const SPARKLE_COLORS = ["#ffffff", "#ffe066", "#7de2d1", "#ff9de2"];
 
-/** Twinkling starfield with occasional shooting comets, drawn on canvas. */
+/**
+ * Dense twinkling starfield with 4-point sparkle crosses and occasional
+ * shooting comets, drawn on canvas — like the packed sky of the reference.
+ */
 export function Starfield({
   size,
   width,
@@ -46,18 +59,29 @@ export function Starfield({
     if (!ctx) return;
     ctx.scale(dpr, dpr);
 
-    const stars: Star[] = Array.from({ length: 460 }, () => ({
+    // Dense field of small dots packed across the whole sky.
+    const stars: Star[] = Array.from({ length: 1250 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
-      r: 1 + Math.random() * 2.6,
+      r: 1 + Math.random() * 3,
       base: 0.35 + Math.random() * 0.65,
       speed: 0.6 + Math.random() * 1.8,
       phase: Math.random() * Math.PI * 2,
       color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)] ?? "#ffffff",
     }));
 
+    // Bigger plus-shaped sparkles scattered between the dots.
+    const sparkles: Sparkle[] = Array.from({ length: 90 }, () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      size: 7 + Math.random() * 9,
+      speed: 0.8 + Math.random() * 1.6,
+      phase: Math.random() * Math.PI * 2,
+      color: SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)] ?? "#ffffff",
+    }));
+
     const comets: Comet[] = [];
-    let nextCometIn = 2500 + Math.random() * 3000;
+    let nextCometIn = 2000 + Math.random() * 2500;
     let last = performance.now();
     let raf = 0;
 
@@ -75,9 +99,29 @@ export function Starfield({
         ctx.fill();
       }
 
+      // Plus-shaped sparkle crosses that pulse in and out.
+      ctx.lineCap = "round";
+      ctx.lineWidth = 3.5;
+      for (const sp of sparkles) {
+        const pulse = 0.5 + 0.5 * Math.sin(t * sp.speed + sp.phase);
+        const len = sp.size * (0.55 + 0.45 * pulse);
+        ctx.globalAlpha = 0.25 + 0.75 * pulse;
+        ctx.strokeStyle = sp.color;
+        ctx.beginPath();
+        ctx.moveTo(sp.x - len, sp.y);
+        ctx.lineTo(sp.x + len, sp.y);
+        ctx.moveTo(sp.x, sp.y - len);
+        ctx.lineTo(sp.x, sp.y + len);
+        ctx.stroke();
+        ctx.fillStyle = sp.color;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       nextCometIn -= dt;
       if (nextCometIn <= 0) {
-        nextCometIn = 4000 + Math.random() * 5000;
+        nextCometIn = 3500 + Math.random() * 4500;
         const angle = Math.random() * Math.PI * 2;
         const speed = 0.7 + Math.random() * 0.6; // px per ms
         comets.push({

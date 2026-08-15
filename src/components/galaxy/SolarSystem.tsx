@@ -100,9 +100,9 @@ export function SolarSystem() {
                       r={p.orbitR}
                       fill="none"
                       stroke="white"
-                      strokeOpacity={0.3}
-                      strokeWidth={3}
-                      strokeDasharray="0.1 20"
+                      strokeOpacity={0.55}
+                      strokeWidth={8}
+                      strokeDasharray="0.1 26"
                       strokeLinecap="round"
                     />
                   ))}
@@ -112,9 +112,9 @@ export function SolarSystem() {
                     r={MOON.orbitR}
                     fill="none"
                     stroke="white"
-                    strokeOpacity={0.22}
-                    strokeWidth={2.5}
-                    strokeDasharray="0.1 14"
+                    strokeOpacity={0.5}
+                    strokeWidth={5.5}
+                    strokeDasharray="0.1 20"
                     strokeLinecap="round"
                   />
                 </svg>
