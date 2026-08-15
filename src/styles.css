@@ -258,26 +258,53 @@
   animation: planet-jump 0.8s cubic-bezier(0.36, 0, 0.66, 1) 1;
 }
 
-/* Hand-drawn dashed ring that spins around a body found via the navigator. */
+/* Golden hand-drawn ring that spins and pulses around a body found via
+   the navigator — golden (not orbit-white) so it can't be confused with
+   an orbit line. */
 @keyframes navigator-ring {
   0% {
     opacity: 0;
-    transform: rotate(0deg) scale(0.75);
+    transform: rotate(0deg) scale(0.7);
   }
-  14% {
-    opacity: 0.95;
-    transform: rotate(24deg) scale(1);
+  12% {
+    opacity: 1;
+    transform: rotate(20deg) scale(1.07);
+  }
+  26% {
+    transform: rotate(42deg) scale(0.97);
+  }
+  40% {
+    transform: rotate(64deg) scale(1.05);
+  }
+  54% {
+    transform: rotate(86deg) scale(1);
   }
   78% {
-    opacity: 0.95;
+    opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: rotate(140deg) scale(1.05);
+    transform: rotate(150deg) scale(1.08);
   }
 }
 
 .navigator-ring {
   animation: navigator-ring 2.8s ease-out both;
   transform-origin: center;
+  filter: drop-shadow(0 0 6px rgba(255, 217, 77, 0.55));
+}
+
+/* Twinkle of the little finder sparkles riding the highlight ring. */
+@keyframes navigator-sparkle {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.navigator-sparkle {
+  animation: navigator-sparkle 0.7s ease-in-out infinite;
 }
