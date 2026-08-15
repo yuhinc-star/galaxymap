@@ -531,23 +531,29 @@ export function SolarSystem() {
       if (!chatSubj.layout.slots.has(p.id)) continue;
       const q = positions.get(p.id);
       if (!q) continue;
-      const r = chatAdjust(p.id, q.x, q.y, p.size);
+      const a = p.startAngle + (t * TAU) / p.period;
+      const r =
+        p.id === chatSubj.layout.parentId
+          ? chatAdjustSubject(p.id, q.x, q.y, p.size)
+          : chatRide(p.id, CENTER, CENTER, a, p.orbitR, p.size);
       positions.set(p.id, { x: r.x, y: r.y });
     }
     earth = positions.get("earth") ?? earth;
-    const rm = chatAdjust(
-      MOON.id,
-      earth.x + MOON.orbitR * Math.cos(moonAngle),
-      earth.y + MOON.orbitR * Math.sin(moonAngle),
-      MOON.size,
-    );
+    const rm =
+      MOON.id === chatSubj.layout.parentId
+        ? chatAdjustSubject(
+            MOON.id,
+            earth.x + MOON.orbitR * Math.cos(moonAngle),
+            earth.y + MOON.orbitR * Math.sin(moonAngle),
+            MOON.size,
+          )
+        : chatRide(MOON.id, earth.x, earth.y, moonAngle, MOON.orbitR, MOON.size);
     moonPos = { x: rm.x, y: rm.y };
   }
-  // Names stay readable while the camera zooms the column out.
-  const chatLabelBoost = chatActive
-    ? Math.min(2.0, Math.max(1, 1 / (stateRef.current?.scale ?? 1)))
-    : 1;
-  const moonChatSize = chatRenderRef.current.get(MOON.id)?.size ?? MOON.size;
+  const moonChatSize =
+    chatRenderRef.current.get(MOON.id)?.size ??
+    chatRideRef.current.get(MOON.id)?.size ??
+    MOON.size;
 
   /**
    * World-pixel radius the camera should frame for a navigator pick:
@@ -612,7 +618,15 @@ export function SolarSystem() {
     if (chatOpen) {
       const rect = stripRef.current?.getBoundingClientRect();
       if (!rect || rect.width < 20 || rect.height < 20) return;
-      target = fitChatCamera(subj.layout, rect.width, rect.height);
+      // The strip is still animating to its chat width (or the window
+      // moved): re-solve the fan so slots and camera track it.
+      if (
+        Math.abs(subj.layout.stripW - rect.width) > 2 ||
+        Math.abs(subj.layout.stripH - rect.height) > 2
+      ) {
+        rebuildChatLayout();
+      }
+      target = subj.layout.camera;
     } else if (preChatCamRef.current) {
       const pre = preChatCamRef.current;
       target = { posX: pre.positionX, posY: pre.positionY, scale: pre.scale };
