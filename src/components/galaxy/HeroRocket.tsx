@@ -1,13 +1,19 @@
+import { useRef } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { useTransformEffect } from "react-zoom-pan-pinch";
 import heroRocketImg from "@/assets/planets/hero-rocket.png";
 import heroFlameImg from "@/assets/planets/hero-flame.png";
 
-/** Display height in world px — a slim classic tin-toy rocket. */
-export const ROCKET_H = 132;
+/**
+ * Display height in SCREEN px — the rocket keeps a fixed on-screen size at
+ * every zoom level (counter-scaled against the camera), so it can be seen,
+ * grabbed and parked even on tiny moons.
+ */
+export const ROCKET_H = 96;
 /** Sprite aspect is 407x1067 after alpha-trimming. */
 export const ROCKET_W = Math.round((ROCKET_H * 407) / 1067);
-const FLAME_H = 84;
-const FLAME_W = 46;
+const FLAME_H = 61;
+const FLAME_W = 33;
 
 interface HeroRocketProps {
   /** Center position in world px. */
@@ -28,8 +34,9 @@ interface HeroRocketProps {
 /**
  * The hero rocket: a classic red-and-cream toy rocket the user flies
  * between bodies. Parked, it stands on its host's shoulder with a gentle
- * sway; in flight a brushy flame flickers underneath. Drag it onto a
- * planet or the sun — or send it via the navigator — to move it.
+ * sway; in flight a brushy flame flickers underneath. Drag it onto any
+ * body — sun, planet or moon — or send it via the navigator. It renders
+ * at a fixed on-screen size no matter the zoom.
  */
 export function HeroRocket({
   x,
@@ -41,60 +48,70 @@ export function HeroRocket({
   interactive,
   onDown,
 }: HeroRocketProps) {
+  // Counter-scale against the camera zoom: the rocket's footprint in world
+  // px shrinks as you zoom in, keeping its on-screen size constant.
+  const scaleRef = useRef<HTMLDivElement>(null);
+  useTransformEffect(({ state }) => {
+    const el = scaleRef.current;
+    if (el) el.style.transform = `scale(${1 / state.scale})`;
+  });
+
   return (
     <div
       className="pointer-events-none absolute z-40"
       style={{ left: x, top: y, transform: "translate(-50%, -50%)" }}
     >
-      <div
-        role="button"
-        aria-label="Rocket — drag me onto a planet or the sun"
-        className={`relative touch-none select-none ${
-          interactive || dragging ? "pointer-events-auto" : "pointer-events-none"
-        } ${dragging ? "cursor-grabbing" : interactive ? "cursor-grab" : ""}`}
-        style={{
-          width: ROCKET_W,
-          height: ROCKET_H,
-          transform: `rotate(${rotation}deg)`,
-        }}
-        onPointerDownCapture={interactive ? onDown : undefined}
-      >
-        <img
-          src={heroRocketImg}
-          alt=""
-          width={ROCKET_W}
-          height={ROCKET_H}
-          draggable={false}
-          className={`h-full w-full object-contain ${
-            squash
-              ? "rocket-land"
-              : flame > 0.02 || dragging
-                ? ""
-                : "rocket-parked"
-          }`}
-        />
-        {flame > 0.02 && (
-          <div
-            className="pointer-events-none absolute left-1/2"
-            aria-hidden
-            style={{
-              top: ROCKET_H - 8,
-              width: FLAME_W,
-              height: FLAME_H,
-              transform: `translateX(-50%) scale(${flame})`,
-              transformOrigin: "top center",
-            }}
-          >
-            <img
-              src={heroFlameImg}
-              alt=""
-              width={FLAME_W}
-              height={FLAME_H}
-              draggable={false}
-              className="rocket-flame h-full w-full object-contain"
-            />
-          </div>
-        )}
+      <div ref={scaleRef} style={{ transformOrigin: "center center" }}>
+        <div
+          role="button"
+          aria-label="Rocket — drag me onto any star, planet or moon"
+          className={`relative touch-none select-none ${
+            interactive || dragging ? "pointer-events-auto" : "pointer-events-none"
+          } ${dragging ? "cursor-grabbing" : interactive ? "cursor-grab" : ""}`}
+          style={{
+            width: ROCKET_W,
+            height: ROCKET_H,
+            transform: `rotate(${rotation}deg)`,
+          }}
+          onPointerDownCapture={interactive ? onDown : undefined}
+        >
+          <img
+            src={heroRocketImg}
+            alt=""
+            width={ROCKET_W}
+            height={ROCKET_H}
+            draggable={false}
+            className={`h-full w-full object-contain ${
+              squash
+                ? "rocket-land"
+                : flame > 0.02 || dragging
+                  ? ""
+                  : "rocket-parked"
+            }`}
+          />
+          {flame > 0.02 && (
+            <div
+              className="pointer-events-none absolute left-1/2"
+              aria-hidden
+              style={{
+                top: ROCKET_H - 6,
+                width: FLAME_W,
+                height: FLAME_H,
+                transform: `translateX(-50%) scale(${flame})`,
+                transformOrigin: "top center",
+              }}
+            >
+              <img
+                src={heroFlameImg}
+                alt=""
+                width={FLAME_W}
+                height={FLAME_H}
+                draggable={false}
+                className="rocket-flame h-full w-full object-contain"
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
