@@ -904,7 +904,6 @@ export function SolarSystem() {
               <BodyInfoPanel
                 info={panelInfo}
                 onAdd={() => {}}
-                onRemove={() => {}}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
                 rocket={{
