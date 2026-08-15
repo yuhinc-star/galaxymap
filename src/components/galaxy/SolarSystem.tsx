@@ -17,6 +17,7 @@ import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
 import { HintGuide } from "./HintGuide";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
+import { warmSpritePool } from "./spritePool";
 import { Starfield } from "./Starfield";
 
 const TAU = Math.PI * 2;
@@ -184,6 +185,12 @@ export function SolarSystem() {
     if (Number.isInteger(saved) && saved >= 0 && saved < BACKGROUNDS.length) {
       setBgIndex(saved);
     }
+  }, []);
+
+  // Warm the generator's sprite pool + all skies in the background, so
+  // palette switches and hopping to "Make your own" never wait on loads.
+  useEffect(() => {
+    warmSpritePool(BACKGROUNDS.map((b) => b.src));
   }, []);
 
   const cycleBg = useCallback(() => {

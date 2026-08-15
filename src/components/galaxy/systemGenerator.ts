@@ -103,6 +103,26 @@ const LONG_SUFFIXES = [
 ];
 
 /**
+ * Every sprite URL a generated system will paint — sun, planets, the whole
+ * moon trees and the drifters. Used to pre-decode art before a warp swap.
+ */
+export function collectSystemSpriteUrls(config: SystemConfig): string[] {
+  const urls: string[] = [config.sun.img];
+  const walkMoons = (moons: GeneratedMoon[]) => {
+    for (const m of moons) {
+      urls.push(m.img);
+      walkMoons(m.moons);
+    }
+  };
+  for (const p of config.planets) {
+    urls.push(p.img);
+    walkMoons(p.moons);
+  }
+  for (const d of config.drifters) urls.push(d.img);
+  return urls;
+}
+
+/**
  * Build a whole random solar-system-like world from a seed. Deterministic:
  * the same seed and planet count always produce the same system, so SSR
  * and hydration render identical frames.

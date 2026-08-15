@@ -25,6 +25,7 @@ import { CENTER, WORLD } from "./planets";
 import {
   addMoonToSystem,
   addPlanetToSystem,
+  collectSystemSpriteUrls,
   findMoonById,
   findMoonParent,
   generateSystem,
@@ -35,6 +36,7 @@ import {
   type GeneratedMoon,
   type SystemConfig,
 } from "./systemGenerator";
+import { ensureSpritesReady, warmSpritePool } from "./spritePool";
 import type { OrbitShapeKind } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { Drifter } from "./Drifter";
@@ -184,6 +186,12 @@ export function GeneratorSystem() {
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
 
   const baseConfig = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
+
+  // Warm every sprite and sky in the background right after mount, so a later
+  // "New system" warp or palette switch never waits on image loads.
+  useEffect(() => {
+    warmSpritePool(BACKGROUNDS.map((b) => b.src));
+  }, []);
   const config = extras ?? baseConfig;
 
   useEffect(() => {
@@ -235,18 +243,23 @@ export function GeneratorSystem() {
   /**
    * Regenerate / count-change transition: the old world warps out first,
    * then the swap happens and the seed-keyed world remounts and warps in.
-   * Extra clicks during the warp are ignored so the two beats never overlap.
+   * The swap waits for BOTH the exit beat and the next system's sprites to
+   * be fully decoded, so the new world never pops in half-painted. Extra
+   * clicks during the warp are ignored so the two beats never overlap.
    */
-  const warpTo = (apply: () => void) => {
+  const warpTo = (apply: () => void, ready: Promise<unknown> = Promise.resolve()) => {
     if (warpingRef.current) return;
     warpingRef.current = true;
     setWarping(true);
     window.clearTimeout(warpTimer.current);
-    warpTimer.current = window.setTimeout(() => {
+    const exitDone = new Promise<void>((resolve) => {
+      warpTimer.current = window.setTimeout(resolve, 370);
+    });
+    void Promise.all([exitDone, ready]).then(() => {
       apply();
       warpingRef.current = false;
       setWarping(false);
-    }, 370);
+    });
   };
 
   /** Shared reset for a brand-new system (regenerate or count change). */
@@ -275,23 +288,30 @@ export function GeneratorSystem() {
     setDiceRolling(true);
     window.clearTimeout(diceTimer.current);
     diceTimer.current = window.setTimeout(() => setDiceRolling(false), 650);
+    const next = Math.floor(Math.random() * 1_000_000_000) + 1;
+    // Pre-decode the next system's art while the old one warps out.
+    const ready = ensureSpritesReady(
+      collectSystemSpriteUrls(generateSystem(next, planetCount)),
+    );
     warpTo(() => {
-      const next = Math.floor(Math.random() * 1_000_000_000) + 1;
       window.localStorage.setItem("galaxy-gen-seed", String(next));
       setSeed(next);
       resetForNewSystem();
-    });
+    }, ready);
   };
 
   const changeCount = (delta: number) => {
+    const next = Math.min(MAX_PLANETS, Math.max(MIN_PLANETS, planetCount + delta));
+    // At the bounds nothing changes — don't play a pointless warp.
+    if (next === planetCount) return;
+    const ready = ensureSpritesReady(
+      collectSystemSpriteUrls(generateSystem(seed, next)),
+    );
     warpTo(() => {
-      setPlanetCount((c) => {
-        const next = Math.min(MAX_PLANETS, Math.max(MIN_PLANETS, c + delta));
-        window.localStorage.setItem("galaxy-gen-count", String(next));
-        return next;
-      });
+      window.localStorage.setItem("galaxy-gen-count", String(next));
+      setPlanetCount(next);
       resetForNewSystem();
-    });
+    }, ready);
   };
 
   /** Any manual camera move takes control back from the follow mode. */
