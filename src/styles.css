@@ -175,6 +175,16 @@
   animation: planet-bounce 0.65s cubic-bezier(0.36, 0, 0.66, 1);
 }
 
+@keyframes planet-breathe {
+  0%,
+  100% {
+    transform: scale(1) rotate(-1.2deg);
+  }
+  50% {
+    transform: scale(1.035) rotate(1.4deg);
+  }
+}
+
 @keyframes bubble-pop {
   from {
     opacity: 0;
