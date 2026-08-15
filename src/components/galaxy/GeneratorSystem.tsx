@@ -1035,16 +1035,26 @@ export function GeneratorSystem() {
       const my = py + m.orbitR * Math.sin(a);
       return (
         <Fragment key={m.id}>
-          <path
-            d={m.ringD}
-            transform={`translate(${px} ${py})`}
-            fill="none"
-            stroke="white"
-            strokeOpacity={0.72}
-            strokeWidth={depth === 0 ? 6.5 : 5}
-            strokeDasharray={depth === 0 ? "22 17" : "16 13"}
-            strokeLinecap="round"
-          />
+          {/* Position lives on the <g> so the path's own CSS transform
+              stays free for the appear/disappear animation */}
+          <g transform={`translate(${px} ${py})`}>
+            <path
+              d={m.ringD}
+              fill="none"
+              stroke="white"
+              strokeOpacity={0.72}
+              strokeWidth={depth === 0 ? 6.5 : 5}
+              strokeDasharray={depth === 0 ? "22 17" : "16 13"}
+              strokeLinecap="round"
+              className={
+                departingIds.includes(m.id)
+                  ? "orbit-ring-out"
+                  : m.id === newbornId
+                    ? "orbit-ring-in"
+                    : undefined
+              }
+            />
+          </g>
           {renderMoonRings(m.moons, mx, my, depth + 1)}
         </Fragment>
       );
@@ -1138,6 +1148,13 @@ export function GeneratorSystem() {
                         strokeWidth={p.ringWidth}
                         strokeDasharray={p.dash}
                         strokeLinecap="round"
+                        className={
+                          departingIds.includes(p.id)
+                            ? "orbit-ring-out"
+                            : p.id === newbornId
+                              ? "orbit-ring-in"
+                              : undefined
+                        }
                       />
                     ))}
                   </g>
