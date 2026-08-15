@@ -1521,23 +1521,25 @@ export function GeneratorSystem() {
               </span>
             </header>
 
-            <Navigator
-              key={`${seed}-${planetCount}`}
-              items={navItems}
-              activeId={activeId}
-              focusedId={focusedId}
-              onSelect={handleNavigate}
-              onInfo={handleInfoSelect}
-              departingIds={departingIds}
-              rocket={{
-                img: heroRocketImg,
-                hostId: flight ? flight.toId : rocketHostId,
-                flying: flight !== null,
-                armed: rocketArmed,
-                onChip: () => setRocketArmed((a) => !a),
-                onDestination: handleRocketDestination,
-              }}
-            />
+            {!chatActive && (
+              <Navigator
+                key={`${seed}-${planetCount}`}
+                items={navItems}
+                activeId={activeId}
+                focusedId={focusedId}
+                onSelect={handleNavigate}
+                onInfo={handleInfoSelect}
+                departingIds={departingIds}
+                rocket={{
+                  img: heroRocketImg,
+                  hostId: flight ? flight.toId : rocketHostId,
+                  flying: flight !== null,
+                  armed: rocketArmed,
+                  onChip: () => setRocketArmed((a) => !a),
+                  onDestination: handleRocketDestination,
+                }}
+              />
+            )}
 
             {/* Double-click info panel: details + grow-this-family */}
             {panelInfo && (
@@ -1579,7 +1581,11 @@ export function GeneratorSystem() {
             </div>
 
             {/* Generator controls */}
-            <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] flex flex-col gap-2">
+            <div
+              className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] flex flex-col gap-2 transition-opacity duration-300 ${
+                chatActive ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
+            >
               <div className="flex items-center gap-2 rounded-full border border-border bg-card/90 px-2 py-1.5 shadow-lg">
                 <button
                   type="button"
@@ -1672,7 +1678,7 @@ export function GeneratorSystem() {
               </button>
             </div>
 
-            <HintGuide pageId="generator" hints={GENERATOR_HINTS} />
+            {!chatActive && <HintGuide pageId="generator" hints={GENERATOR_HINTS} />}
           </>
           );
         }}
