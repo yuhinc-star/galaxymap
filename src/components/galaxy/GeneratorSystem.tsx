@@ -39,6 +39,7 @@ import type { OrbitShapeKind } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { Drifter } from "./Drifter";
 import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
+import { HintGuide } from "./HintGuide";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
@@ -48,6 +49,16 @@ const MIN_PLANETS = 2;
 const MAX_PLANETS = 8;
 const DEFAULT_SEED = 20260214;
 const DEFAULT_COUNT = 6;
+
+/** The exploration tour, one hand-lettered tip at a time. */
+const GENERATOR_HINTS = [
+  "Drag to wander the galaxy — pinch or scroll to zoom!",
+  "Tap a star to say hello… tap it again quickly for its storybook page!",
+  "The navigator lists everyone — double-tap a name for tales & tricks!",
+  "Drag the little rocket onto any star — or tap its chip in the navigator!",
+  "A star's page grows its family, summons the rocket… or says goodbye!",
+  "Roll 'New system' for a fresh galaxy — the palette paints new skies!",
+];
 
 /** Parked rocket stands on its host's upper-right shoulder. */
 const PARK_ANGLE = (-80 * Math.PI) / 180;
@@ -1307,6 +1318,8 @@ export function GeneratorSystem() {
                 <RotateCcw className="h-5 w-5" />
               </button>
             </div>
+
+            <HintGuide pageId="generator" hints={GENERATOR_HINTS} />
           </>
           );
         }}

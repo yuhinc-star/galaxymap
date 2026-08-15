@@ -5,11 +5,20 @@ import { Dices, Minus, Palette, Plus, RotateCcw, Sparkle } from "lucide-react";
 import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, DRIFTERS, MOON, PLANETS, SUN, WORLD } from "./planets";
 import { Drifter } from "./Drifter";
+import { HintGuide } from "./HintGuide";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
 
 const TAU = Math.PI * 2;
+
+/** The exploration tour, one hand-lettered tip at a time. */
+const CLASSIC_HINTS = [
+  "Drag to wander the galaxy — pinch or scroll to zoom!",
+  "Tap a planet to make it bounce — the camera follows along!",
+  "The navigator finds anyone by name — tap to fly there!",
+  "Try the palette for new skies… or 'Make your own' galaxy!",
+];
 
 /** Deterministic pseudo-random so SSR and hydration draw identical rings. */
 function seeded(seed: number) {
@@ -462,14 +471,7 @@ export function SolarSystem() {
               </button>
             </div>
 
-            <div className="pointer-events-none fixed bottom-5 left-1/2 -translate-x-1/2">
-              <p
-                className="animate-fade-out whitespace-nowrap rounded-full bg-card/90 px-4 py-2 font-display text-sm font-medium text-card-foreground shadow-lg"
-                style={{ animationDelay: "4.5s", animationFillMode: "both" }}
-              >
-                Drag to explore · pinch to zoom · tap a planet
-              </p>
-            </div>
+            <HintGuide pageId="classic" hints={CLASSIC_HINTS} />
           </>
           );
         }}
