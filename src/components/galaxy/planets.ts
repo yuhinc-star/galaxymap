@@ -19,7 +19,7 @@ import capsuleImg from "@/assets/planets/capsule.png";
 import probeImg from "@/assets/planets/probe.png";
 
 /** Square world size in px; the Sun sits at the center. */
-export const WORLD = 4650;
+export const WORLD = 3800;
 export const CENTER = WORLD / 2;
 
 export interface BodyDef {
@@ -48,7 +48,7 @@ export const SUN: BodyDef = {
   id: "sun",
   name: "Sun",
   img: sunImg,
-  size: 700,
+  size: 750,
   line: "I'm the star of the show. Literally.",
   breathe: 6,
   delay: 0,
@@ -56,21 +56,23 @@ export const SUN: BodyDef = {
 
 /**
  * Proportions measured from the original reference poster, anchored on
- * Jupiter = 280: Sun 2.5x Jupiter (the dominant central mass), Earth 0.84x,
+ * Jupiter = 300: Sun 2.5x Jupiter (the dominant central mass), Earth 0.84x,
  * Saturn 0.72x ring-span, Uranus 0.64x, Venus 0.55x, Neptune 0.53x,
- * Mars 0.47x, Mercury 0.36x, Pluto 0.24x. Ring gaps stay ~one planet
- * diameter so bodies overlap their own dashes — cozy, never astronomical.
+ * Mars 0.47x, Mercury 0.36x, Pluto 0.24x. Rings are packed the way the
+ * poster packs them — every planet spans more than one ring-gap and
+ * overlaps the neighboring dashes; at conjunction a planet briefly
+ * passes behind a bigger neighbor, like layered paper stickers.
  */
 export const PLANETS: PlanetDef[] = [
-  { id: "mercury", name: "Mercury", img: mercuryImg, size: 100, orbitR: 445, period: 14, startAngle: 0.6, line: "Fastest planet in the club!", breathe: 3.4, delay: 0.6 },
-  { id: "venus", name: "Venus", img: venusImg, size: 155, orbitR: 600, period: 22, startAngle: 2.4, line: "Hottest around — and it's not close.", breathe: 4.1, delay: 1.3 },
-  { id: "earth", name: "Earth", img: earthImg, size: 235, orbitR: 820, period: 32, startAngle: 4.1, line: "You are here. Hi!", breathe: 4.6, delay: 0.2 },
-  { id: "mars", name: "Mars", img: marsImg, size: 130, orbitR: 1030, period: 44, startAngle: 5.3, line: "One day I'll have wifi.", breathe: 3.8, delay: 1.7 },
-  { id: "jupiter", name: "Jupiter", img: jupiterImg, size: 280, orbitR: 1260, period: 70, startAngle: 1.2, line: "Biggest planet. Humble too.", breathe: 5.6, delay: 0.4 },
-  { id: "saturn", name: "Saturn", img: saturnImg, size: 200, orbitR: 1525, period: 95, startAngle: 3.3, line: "These rings? All natural.", breathe: 4.9, delay: 1.1 },
-  { id: "uranus", name: "Uranus", img: uranusImg, size: 180, orbitR: 1740, period: 125, startAngle: 5.9, line: "I roll sideways through life.", breathe: 4.4, delay: 0.8 },
-  { id: "neptune", name: "Neptune", img: neptuneImg, size: 150, orbitR: 1930, period: 155, startAngle: 2.0, line: "Brrr… it's windy out here.", breathe: 4.2, delay: 1.5 },
-  { id: "pluto", name: "Pluto", img: plutoImg, size: 68, orbitR: 2065, period: 190, startAngle: 4.6, line: "Still a planet in my heart.", breathe: 3.0, delay: 0.3 },
+  { id: "mercury", name: "Mercury", img: mercuryImg, size: 105, orbitR: 445, period: 14, startAngle: 0.6, line: "Fastest planet in the club!", breathe: 3.4, delay: 0.6 },
+  { id: "venus", name: "Venus", img: venusImg, size: 165, orbitR: 560, period: 22, startAngle: 2.4, line: "Hottest around — and it's not close.", breathe: 4.1, delay: 1.3 },
+  { id: "earth", name: "Earth", img: earthImg, size: 250, orbitR: 725, period: 32, startAngle: 4.1, line: "You are here. Hi!", breathe: 4.6, delay: 0.2 },
+  { id: "mars", name: "Mars", img: marsImg, size: 140, orbitR: 880, period: 44, startAngle: 5.3, line: "One day I'll have wifi.", breathe: 3.8, delay: 1.7 },
+  { id: "jupiter", name: "Jupiter", img: jupiterImg, size: 300, orbitR: 1055, period: 70, startAngle: 1.2, line: "Biggest planet. Humble too.", breathe: 5.6, delay: 0.4 },
+  { id: "saturn", name: "Saturn", img: saturnImg, size: 215, orbitR: 1255, period: 95, startAngle: 3.3, line: "These rings? All natural.", breathe: 4.9, delay: 1.1 },
+  { id: "uranus", name: "Uranus", img: uranusImg, size: 190, orbitR: 1415, period: 125, startAngle: 5.9, line: "I roll sideways through life.", breathe: 4.4, delay: 0.8 },
+  { id: "neptune", name: "Neptune", img: neptuneImg, size: 160, orbitR: 1560, period: 155, startAngle: 2.0, line: "Brrr… it's windy out here.", breathe: 4.2, delay: 1.5 },
+  { id: "pluto", name: "Pluto", img: plutoImg, size: 70, orbitR: 1660, period: 190, startAngle: 4.6, line: "Still a planet in my heart.", breathe: 3.0, delay: 0.3 },
 ];
 
 /** The Moon circles Earth instead of the Sun. */
@@ -104,12 +106,12 @@ export interface DrifterDef extends BodyDef {
  * Non-interactive.
  */
 export const DRIFTERS: DrifterDef[] = [
-  { id: "rocket", name: "Rocket", img: rocketImg, size: 110, orbitR: 1395, period: 170, startAngle: 2.9, dir: -1, line: "", breathe: 4.4, delay: 0.5 },
-  { id: "astronaut", name: "Astronaut", img: astronautImg, size: 100, orbitR: 1635, period: 220, startAngle: 5.6, dir: 1, line: "", breathe: 5.2, delay: 1.2 },
-  { id: "satellite", name: "Satellite", img: satelliteImg, size: 95, orbitR: 2000, period: 250, startAngle: 1.0, dir: 1, line: "", breathe: 4.8, delay: 0.9 },
-  { id: "ufo", name: "UFO", img: ufoImg, size: 115, orbitR: 1835, period: 200, startAngle: 3.9, dir: -1, line: "", breathe: 5.0, delay: 0.3 },
-  { id: "alien", name: "Alien", img: alienImg, size: 78, orbitR: 925, period: 240, startAngle: 0.4, dir: 1, line: "", breathe: 3.6, delay: 1.6 },
-  { id: "shooting-star", name: "Shooting Star", img: shootingStarImg, size: 105, orbitR: 1145, period: 150, startAngle: 4.8, dir: -1, line: "", breathe: 4.0, delay: 0.7 },
-  { id: "capsule", name: "Capsule", img: capsuleImg, size: 90, orbitR: 710, period: 195, startAngle: 1.9, dir: 1, line: "", breathe: 4.7, delay: 1.0 },
-  { id: "probe", name: "Probe", img: probeImg, size: 90, orbitR: 2175, period: 275, startAngle: 5.1, dir: -1, line: "", breathe: 5.4, delay: 0.4 },
+  { id: "rocket", name: "Rocket", img: rocketImg, size: 110, orbitR: 1155, period: 170, startAngle: 2.9, dir: -1, line: "", breathe: 4.4, delay: 0.5 },
+  { id: "astronaut", name: "Astronaut", img: astronautImg, size: 100, orbitR: 1335, period: 220, startAngle: 5.6, dir: 1, line: "", breathe: 5.2, delay: 1.2 },
+  { id: "satellite", name: "Satellite", img: satelliteImg, size: 95, orbitR: 1610, period: 250, startAngle: 1.0, dir: 1, line: "", breathe: 4.8, delay: 0.9 },
+  { id: "ufo", name: "UFO", img: ufoImg, size: 115, orbitR: 1487, period: 200, startAngle: 3.9, dir: -1, line: "", breathe: 5.0, delay: 0.3 },
+  { id: "alien", name: "Alien", img: alienImg, size: 78, orbitR: 800, period: 240, startAngle: 0.4, dir: 1, line: "", breathe: 3.6, delay: 1.6 },
+  { id: "shooting-star", name: "Shooting Star", img: shootingStarImg, size: 105, orbitR: 967, period: 150, startAngle: 4.8, dir: -1, line: "", breathe: 4.0, delay: 0.7 },
+  { id: "capsule", name: "Capsule", img: capsuleImg, size: 90, orbitR: 640, period: 195, startAngle: 1.9, dir: 1, line: "", breathe: 4.7, delay: 1.0 },
+  { id: "probe", name: "Probe", img: probeImg, size: 90, orbitR: 1770, period: 275, startAngle: 5.1, dir: -1, line: "", breathe: 5.4, delay: 0.4 },
 ];
