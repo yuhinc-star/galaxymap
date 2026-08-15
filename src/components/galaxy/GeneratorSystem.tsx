@@ -2034,6 +2034,18 @@ export function GeneratorSystem() {
                   interactive={!flight && !chatActive}
                   onDown={onRocketDown}
                 />
+
+                {/* Post-landing invite: the rocket offers to introduce its
+                    new host (galaxy view only — chat mode already knows). */}
+                {suggestionInfo && (
+                  <RocketChatInvite
+                    x={rocketX}
+                    y={rocketY}
+                    name={suggestionInfo.name}
+                    onChat={() => openChat(suggestionInfo.id)}
+                    onDismiss={() => setChatSuggestionId(null)}
+                  />
+                )}
               </div>
             </TransformComponent>
 
@@ -2074,6 +2086,10 @@ export function GeneratorSystem() {
                 onDelete={
                   panelInfo.id === config.sun.id ||
                   departingIds.length > 0 ||
+                  // The rocket needs somewhere to stand — its host (or
+                  // inbound destination) can't leave mid-conversation.
+                  panelInfo.id === rocketHostId ||
+                  flight?.toId === panelInfo.id ||
                   (chatActive &&
                     (panelInfo.id === chatSubj?.info.id ||
                       panelInfo.id === fanSubj?.id))
@@ -2267,10 +2283,10 @@ export function GeneratorSystem() {
         }}
       </TransformWrapper>
       </div>
-      {chatSubj && (chatOpen || chatActive) && (
+      {chatSubj && (chatOpen || chatActive) && talkInfo && (
         <ChatPanel
-          key={chatSubj.info.id}
-          subject={chatSubj.info}
+          key={talkInfo.id}
+          subject={talkInfo}
           onClose={closeChat}
         />
       )}
