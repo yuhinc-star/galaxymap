@@ -1469,7 +1469,7 @@ export function GeneratorSystem() {
       // bodies) so nested rings center on where it actually is — and
       // the ring breathes toward its fan-arc radius while the moon
       // rides it into the lineup.
-      const pose = chatPoseMoon(m, px, py, a);
+      const pose = chatPoseMoon(m, px, py, a, parentId);
       const s = ringScaleRef.current.get(m.id) ?? 1;
       return (
         <Fragment key={m.id}>
@@ -1497,7 +1497,7 @@ export function GeneratorSystem() {
               }
             />
           </g>
-          {renderMoonRings(m.moons, pose.x, pose.y, depth + 1)}
+          {renderMoonRings(m.moons, pose.x, pose.y, m.id, depth + 1)}
         </Fragment>
       );
     });
@@ -1532,7 +1532,7 @@ export function GeneratorSystem() {
             departing={departingIds.includes(m.id)}
             onTap={handleBodyTap}
           />
-          {renderMoonTree(m.moons, r.x, r.y)}
+          {renderMoonTree(m.moons, r.x, r.y, m.id)}
         </Fragment>
       );
     });
@@ -1709,7 +1709,7 @@ export function GeneratorSystem() {
                   const q = planetPos.get(p.id)!;
                   return (
                     <Fragment key={p.id}>
-                      {renderMoonTree(p.moons, q.x, q.y)}
+                      {renderMoonTree(p.moons, q.x, q.y, p.id)}
                     </Fragment>
                   );
                 })}
