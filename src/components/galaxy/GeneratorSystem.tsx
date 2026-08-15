@@ -32,6 +32,8 @@ const DEFAULT_COUNT = 6;
 export function GeneratorSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bounceId, setBounceId] = useState<string | null>(null);
+  /** Body the camera is currently locked onto (navigator "you are here"). */
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   /** Navigator "find me": dashed ring + single hop. */
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [jumpId, setJumpId] = useState<string | null>(null);
@@ -116,16 +118,7 @@ export function GeneratorSystem() {
   /** Any manual camera move takes control back from the follow mode. */
   const stopFollow = useCallback(() => {
     followRef.current = null;
-  }, []);
-
-  const handleTap = useCallback((id: string) => {
-    followRef.current = null;
-    window.clearTimeout(hideTimer.current);
-    window.clearTimeout(bounceTimer.current);
-    setActiveId(id);
-    setBounceId(id);
-    bounceTimer.current = window.setTimeout(() => setBounceId(null), 700);
-    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    setFocusedId(null);
   }, []);
 
   // Orbit math: bodies advance along their own wobbly closed curves.
