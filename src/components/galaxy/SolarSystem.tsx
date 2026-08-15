@@ -133,6 +133,15 @@ export function SolarSystem() {
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
+      {/* Hand-painted gouache sky, fixed to the viewport so it stays
+          full-bleed and crisp at every zoom level */}
+      <img
+        key={BACKGROUNDS[bgIndex]!.src}
+        src={BACKGROUNDS[bgIndex]!.src}
+        alt=""
+        draggable={false}
+        className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+      />
       <TransformWrapper
         initialScale={0.34}
         minScale={0.12}
@@ -152,15 +161,6 @@ export function SolarSystem() {
                 className="relative"
                 style={{ width: WORLD, height: WORLD }}
               >
-                {/* Hand-painted gouache sky, straight from the reference style */}
-                <img
-                  key={BACKGROUNDS[bgIndex]!.src}
-                  src={BACKGROUNDS[bgIndex]!.src}
-                  alt=""
-                  draggable={false}
-                  className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
-                />
-
                 {/* Twinkling stars and comets */}
                 <Starfield size={WORLD} />
 
