@@ -143,7 +143,7 @@ export function SolarSystem() {
         className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
       />
       <TransformWrapper
-        initialScale={0.32}
+        initialScale={0.36}
         minScale={0.12}
         maxScale={2.5}
         centerOnInit
