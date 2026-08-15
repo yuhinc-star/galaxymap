@@ -103,9 +103,14 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
       if (departing) return;
       if (armed) {
         rocket!.onDestination(entry.id);
-        return;
+      } else {
+        onSelect(entry.id);
       }
-      onSelect(entry.id);
+      // Chat mode and phones: the pick is done — fold back to the round
+      // button so the fan (and the zoom-out pill) get the sky back.
+      if (chatMode || !window.matchMedia("(min-width: 640px)").matches) {
+        collapse();
+      }
     };
     // Same storybook art style in every mode — chat mode only changes
     // WHICH bodies are listed, never how the entries look.

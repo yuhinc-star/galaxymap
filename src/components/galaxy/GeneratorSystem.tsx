@@ -59,6 +59,7 @@ import { HintGuide } from "./HintGuide";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
+import { ZoomOutPill, type ZoomOutTarget } from "./ZoomOutPill";
 
 const TAU = Math.PI * 2;
 const MIN_PLANETS = 2;
@@ -72,6 +73,7 @@ const GENERATOR_HINTS = [
   "Tap a star to say hello… tap it again quickly for its storybook page!",
   "The navigator lists everyone — double-tap a name for tales & tricks!",
   "Drag the little rocket onto any star — or tap its chip in the navigator!",
+  "The pill up top flies you back to the parent star — from the sun, to the whole sky!",
   "A star's page grows its family, summons the rocket… or says goodbye!",
   "Roll 'New system' for a fresh galaxy — the palette paints new skies!",
   "The chat button lines the whole family up in the sky — say hi!",
@@ -1412,6 +1414,9 @@ export function GeneratorSystem() {
     if (fan && gone(fan.id)) {
       fanSubjectRef.current = null;
       focusChatFan(id);
+      // Keep the focus marker (navigator "you are here", zoom-out pill)
+      // on the star the fan re-forms around.
+      setFocusedId(id);
       return;
     }
     rebuildChatLayout(config);
@@ -1562,6 +1567,29 @@ export function GeneratorSystem() {
 
   // --- Info panel -----------------------------------------------------------
   const panelInfo = infoId ? getPanelInfo(infoId) : null;
+
+  // --- Zoom-out pill --------------------------------------------------------
+  // The body's parent is the zoom-out landing spot: a planet's parent is
+  // the sun, a moon's parent is whatever it orbits. At the root sun the
+  // pill offers the whole-sky view instead — except in chat mode, where
+  // the family boundary hides it once the fan sits on the chat subject.
+  const zoomOutTarget: ZoomOutTarget | null = (() => {
+    if (!focusedId) return null;
+    if (chatOpen && (!chatSubj || focusedId === chatSubj.info.id)) return null;
+    if (focusedId === config.sun.id) {
+      return chatOpen ? null : { id: "", name: "Whole sky", img: null };
+    }
+    if (config.planets.some((pp) => pp.id === focusedId)) {
+      return { id: config.sun.id, name: config.sun.name, img: config.sun.img };
+    }
+    const parent = findMoonParent(config.planets, focusedId);
+    if (!parent) return null;
+    const parentPlanet = config.planets.find((pp) => pp.id === parent.id);
+    const img = parentPlanet
+      ? parentPlanet.img
+      : (findMoonById(config.planets, parent.id)?.img ?? null);
+    return { id: parent.id, name: parent.name, img };
+  })();
 
   let rocketX = CENTER;
   let rocketY = CENTER;
@@ -2040,6 +2068,24 @@ export function GeneratorSystem() {
                 seed #{seed}
               </p>
             </div>
+
+            {/* Zoom-out pill: hop up to the parent star (or the whole sky). */}
+            <ZoomOutPill
+              key={zoomOutTarget ? `${zoomOutTarget.id}:${zoomOutTarget.name}` : "none"}
+              target={zoomOutTarget}
+              chatMode={chatActive}
+              onZoomOut={(id) => {
+                if (!id) {
+                  // "Whole sky": glide all the way back out to the full system.
+                  setInfoId(null);
+                  followRef.current = null;
+                  setFocusedId(null);
+                  resetTransform();
+                  return;
+                }
+                handleNavigate(id);
+              }}
+            />
 
             <div
               className={`fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] flex-col gap-2 transition-opacity duration-300 ${
