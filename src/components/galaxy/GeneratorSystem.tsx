@@ -234,6 +234,7 @@ export function GeneratorSystem() {
     startAt: number;
   } | null>(null);
   const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
+  const resetTransformRef = useRef<(() => void) | null>(null);
   /** Latest camera state, so a glide eases from exactly where the camera
       is now — even mid-flight from a previous pick. */
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
@@ -1722,14 +1723,14 @@ export function GeneratorSystem() {
 
   // --- Zoom-out pill --------------------------------------------------------
   // The body's parent is the zoom-out landing spot: a planet's parent is
-  // the sun, a moon's parent is whatever it orbits. At the root sun the
-  // pill offers the whole-sky view instead — except in chat mode, where
-  // the family boundary hides it once the fan sits on the chat subject.
+  // the sun, a moon's parent is whatever it orbits. Chat mode plays by
+  // the same rule — the fan can step up past the chat's root star,
+  // generation by generation, all the way to the sun, where the last
+  // zoom-out is the whole sky (which also closes the conversation).
   const zoomOutTarget: ZoomOutTarget | null = (() => {
     if (!focusedId) return null;
-    if (chatOpen && (!chatSubj || focusedId === chatSubj.info.id)) return null;
     if (focusedId === config.sun.id) {
-      return chatOpen ? null : { id: "", name: "Whole sky", img: null };
+      return { id: "", name: "Whole sky", img: null };
     }
     if (config.planets.some((pp) => pp.id === focusedId)) {
       return { id: config.sun.id, name: config.sun.name, img: config.sun.img };
@@ -1742,6 +1743,29 @@ export function GeneratorSystem() {
       : (findMoonById(config.planets, parent.id)?.img ?? null);
     return { id: parent.id, name: parent.name, img };
   })();
+
+  /** Zoom out one generation — the shared move behind the "visit the
+      parent" pill and the chat-mode zoom-out button. From the sun the
+      last step is the whole sky; in chat mode that final zoom-out also
+      closes the conversation (you stepped out of the whole family). */
+  const handleZoomOut = (id: string) => {
+    chatUserZoom();
+    if (!id) {
+      // "Whole sky": glide all the way back out to the full system.
+      setInfoId(null);
+      followRef.current = null;
+      setFocusedId(null);
+      if (chatOpen) {
+        // Skip the pre-chat camera restore — the whole-sky reset owns
+        // the camera on the way out.
+        preChatCamRef.current = null;
+        closeChat();
+      }
+      resetTransformRef.current?.();
+      return;
+    }
+    handleNavigate(id);
+  };
 
   let rocketX = CENTER;
   let rocketY = CENTER;
@@ -1920,6 +1944,7 @@ export function GeneratorSystem() {
       >
         {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;
+          resetTransformRef.current = resetTransform;
           stateRef.current = state;
           return (
           <>
@@ -2221,18 +2246,7 @@ export function GeneratorSystem() {
               <ZoomOutPill
                 key={zoomOutTarget ? `${zoomOutTarget.id}:${zoomOutTarget.name}` : "none"}
                 target={zoomOutTarget}
-                onZoomOut={(id) => {
-                  chatUserZoom();
-                  if (!id) {
-                    // "Whole sky": glide all the way back out to the full system.
-                    setInfoId(null);
-                    followRef.current = null;
-                    setFocusedId(null);
-                    resetTransform();
-                    return;
-                  }
-                  handleNavigate(id);
-                }}
+                onZoomOut={handleZoomOut}
               />
               {summonInfo && (
                 <RocketSummonInvite
@@ -2287,10 +2301,20 @@ export function GeneratorSystem() {
               {chatActive ? (
                 <button
                   type="button"
-                  aria-label="Reverse last step"
-                  title="Reverse last step"
-                  disabled={!undoState}
-                  onClick={restoreUndo}
+                  aria-label={
+                    zoomOutTarget
+                      ? `Zoom out to ${zoomOutTarget.name}`
+                      : "Zoom out"
+                  }
+                  title={
+                    zoomOutTarget
+                      ? `Zoom out to ${zoomOutTarget.name}`
+                      : "Zoom out"
+                  }
+                  disabled={!zoomOutTarget}
+                  onClick={() =>
+                    zoomOutTarget && handleZoomOut(zoomOutTarget.id)
+                  }
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
                 >
                   <Undo className="h-5 w-5" />
@@ -2329,6 +2353,16 @@ export function GeneratorSystem() {
                     className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
                   >
                     <RotateCcw className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Reverse last step"
+                    title="Reverse last step"
+                    disabled={!undoState}
+                    onClick={restoreUndo}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
+                  >
+                    <Undo className="h-5 w-5" />
                   </button>
                 </>
               )}
