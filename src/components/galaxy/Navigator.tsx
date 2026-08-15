@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronDown, List, Sparkle, X } from "lucide-react";
 
 export interface NavigatorEntry {
   id: string;
   name: string;
   img: string;
-  moons?: { id: string; name: string; img: string }[] | undefined;
+  /** Nested moons — and moons can have their own smaller moons. */
+  moons?: NavigatorEntry[] | undefined;
 }
 
 export interface NavigatorRocket {
@@ -33,6 +34,8 @@ interface NavigatorProps {
  * "profile picture" plus its hand-lettered name in quote marks (Amatic SC,
  * the reference poster's lettering). Clicking an entry pans the camera to
  * the body, which hops once and flashes a dashed ring so you can spot it.
+ * Moons nest under planets, and mini-moons nest under their moons, each
+ * generation smaller, along a dashed connector line.
  *
  * The hero rocket appears as a small chip on the entry it's parked at.
  * Clicking the chip arms "move mode": the next sun or planet picked here
@@ -58,20 +61,22 @@ export function Navigator({ items, activeId, focusedId, onSelect, rocket }: Navi
 
   const armed = rocket?.armed ?? false;
 
-  const renderEntry = (
-    entry: { id: string; name: string; img: string },
-    moon: boolean,
-  ) => {
+  const renderEntry = (entry: NavigatorEntry, depth: number) => {
     const focused = focusedId === entry.id;
-    const rocketHere = !moon && rocket?.hostId === entry.id;
-    const dimmed = armed && moon;
+    // The rocket only ever parks on suns and planets (depth 0).
+    const rocketHere = depth === 0 && rocket?.hostId === entry.id;
+    const dimmed = armed && depth > 0;
     const handleClick = () => {
       if (armed) {
-        if (!moon) rocket!.onDestination(entry.id);
+        if (depth === 0) rocket!.onDestination(entry.id);
         return;
       }
       onSelect(entry.id);
     };
+    const avatarSize =
+      depth === 0 ? "h-9 w-9" : depth === 1 ? "h-7 w-7" : "h-6 w-6";
+    const nameSize =
+      depth === 0 ? "text-2xl" : depth === 1 ? "text-lg" : "text-base";
     return (
       <div className="relative">
         <button
@@ -91,20 +96,20 @@ export function Navigator({ items, activeId, focusedId, onSelect, rocket }: Navi
               : activeId === entry.id
                 ? "bg-white/20"
                 : ""
-          } ${moon ? "py-1" : "py-1.5"} ${rocketHere ? "pr-10" : ""}`}
+          } ${depth === 0 ? "py-1.5" : "py-1"} ${rocketHere ? "pr-10" : ""}`}
         >
           <img
             src={entry.img}
             alt=""
             draggable={false}
-            className={`shrink-0 select-none rounded-full bg-space/60 object-contain p-0.5 ${
-              moon ? "h-7 w-7" : "h-9 w-9"
-            } ${focused ? "ring-2 ring-star" : ""}`}
+            className={`shrink-0 select-none rounded-full bg-space/60 object-contain p-0.5 ${avatarSize} ${
+              focused ? "ring-2 ring-star" : ""
+            }`}
           />
           <span
             className={`font-hand font-bold uppercase leading-none tracking-wider ${
               focused ? "text-star" : "text-white"
-            } ${moon ? "text-lg" : "text-2xl"}`}
+            } ${nameSize}`}
           >
             &ldquo;{entry.name}&rdquo;
           </span>
@@ -141,6 +146,22 @@ export function Navigator({ items, activeId, focusedId, onSelect, rocket }: Navi
     );
   };
 
+  /** One entry plus its nested moon tree, indented along a dashed line. */
+  const renderItem = (item: NavigatorEntry, depth: number): ReactNode => (
+    <li key={item.id} className="flex flex-col gap-0.5">
+      {renderEntry(item, depth)}
+      {item.moons && item.moons.length > 0 && (
+        <ul
+          className={`flex flex-col gap-0.5 border-l-2 border-dashed border-white/40 pl-2 ${
+            depth === 0 ? "ml-6" : "ml-5"
+          }`}
+        >
+          {item.moons.map((m) => renderItem(m, depth + 1))}
+        </ul>
+      )}
+    </li>
+  );
+
   return (
     <nav
       aria-label="System navigator"
@@ -172,18 +193,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, rocket }: Navi
         </div>
       </div>
       <ul className="flex flex-col gap-0.5 overflow-y-auto px-2 pb-3">
-        {items.map((item) => (
-          <li key={item.id} className="flex flex-col gap-0.5">
-            {renderEntry(item, false)}
-            {item.moons && item.moons.length > 0 && (
-              <ul className="ml-6 flex flex-col gap-0.5 border-l-2 border-dashed border-white/40 pl-2">
-                {item.moons.map((m) => (
-                  <li key={m.id}>{renderEntry(m, true)}</li>
-                ))}
-              </ul>
-            )}
-          </li>
-        ))}
+        {items.map((item) => renderItem(item, 0))}
       </ul>
     </nav>
   );
