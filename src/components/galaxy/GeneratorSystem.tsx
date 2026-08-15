@@ -44,8 +44,16 @@ export function GeneratorSystem() {
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
   /** Camera follow: keeps the navigator-picked body centered as it orbits. */
-  const followRef = useRef<{ id: string; scale: number; startAt: number } | null>(null);
+  const followRef = useRef<{
+    id: string;
+    scale: number;
+    from: { x: number; y: number; scale: number };
+    startAt: number;
+  } | null>(null);
   const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
+  /** Latest camera state, so a glide eases from exactly where the camera
+      is now — even mid-flight from a previous pick. */
+  const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
 
   const config = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
 
