@@ -419,14 +419,9 @@ export function SolarSystem() {
     if (!subj || mix <= 0.004) return live;
     const slot = subj.layout.slots.get(id);
     if (!slot || id === subj.layout.parentId) {
-      // A moon whose parent rides the fan keeps orbiting it, tightened
-      // so it never swings under the chat panel.
-      if (
-        id !== subj.layout.parentId &&
-        parentId !== undefined &&
-        parentId !== subj.layout.parentId &&
-        subj.layout.slots.has(parentId)
-      ) {
+      // A moon not in the fan keeps orbiting its parent, tightened so
+      // it never swings under the chat panel.
+      if (id !== subj.layout.parentId && parentId !== undefined) {
         const k = 1 - 0.45 * chatEase(mix);
         ringScaleRef.current.set(id, k);
         return {

@@ -613,15 +613,10 @@ export function GeneratorSystem() {
           m.size,
         );
       }
-      // Grandchild of the chat subject: it keeps orbiting its parent,
-      // but the orbit tightens as the fan forms so the moon and its
-      // ring never swing under the chat panel.
-      if (
-        !subj.layout.slots.has(m.id) &&
-        parentId !== "" &&
-        parentId !== subj.layout.parentId &&
-        subj.layout.slots.has(parentId)
-      ) {
+      // Any moon not in the fan (a grandchild at any depth, or a moon
+      // of an off-screen planet) keeps orbiting its parent, tightened
+      // as the fan forms so it never swings under the chat panel.
+      if (!subj.layout.slots.has(m.id)) {
         const k = 1 - 0.45 * chatEase(chatMixRef.current);
         ringScaleRef.current.set(m.id, k);
         return {
