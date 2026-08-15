@@ -56,7 +56,7 @@ import {
 } from "./chatLayout";
 import { Drifter } from "./Drifter";
 import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
-import { HintGuide } from "./HintGuide";
+import { HintGuide, type ContextualHint } from "./HintGuide";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { RocketChatInvite } from "./RocketChatInvite";
@@ -72,15 +72,19 @@ const DEFAULT_SEED = 20260214;
 const DEFAULT_COUNT = 6;
 
 /** The exploration tour, one hand-lettered tip at a time. */
-const GENERATOR_HINTS = [
-  "Drag to wander the galaxy — pinch or scroll to zoom!",
-  "Tap a star to say hello… tap it again quickly for its storybook page!",
-  "The navigator lists everyone — double-tap a name for tales & tricks!",
-  "Drag the little rocket onto any star — or tap its chip in the navigator!",
-  "The pill up top flies you back to the parent star — from the sun, to the whole sky!",
-  "A star's page grows its family, summons the rocket… or says goodbye!",
-  "Roll 'New system' for a fresh galaxy — the palette paints new skies!",
-  "Wherever the little rocket lands, that's who answers the chat — land it & say hi!",
+const GENERATOR_HINTS: ContextualHint[] = [
+  { id: "wander", context: "explore", text: "Drag to wander the galaxy — pinch or scroll to zoom!" },
+  { id: "navigator", context: "explore", text: "The navigator lists everyone — double-tap a name for tales & tricks!" },
+  { id: "new-system", context: "explore", text: "Roll 'New system' for a fresh galaxy — the palette paints new skies!" },
+  { id: "hello", context: "focused", text: "Tap a star to say hello… tap it again quickly for its storybook page!" },
+  { id: "zoom-out", context: "focused", text: "The pill up top flies you back to the parent star — from the sun, to the whole sky!" },
+  { id: "summon", context: "summon", text: "One tap sends the little rocket flying over — or drag it there yourself!" },
+  { id: "rocket-home", context: "at-host", text: "The little rocket lives here — drag it onto another star, or tap its chip in the navigator!" },
+  { id: "chat-link", context: "at-host", text: "Wherever the little rocket lands, that's who answers the chat!" },
+  { id: "storybook", context: "storybook", text: "A star's page grows its family, summons the rocket… or says goodbye!" },
+  { id: "armed", context: "rocket-armed", text: "Move mode! Tap any star — the rocket will fly straight to it!" },
+  { id: "flight", context: "rocket-flight", text: "Wherever the little rocket lands, that's who answers the chat!" },
+  { id: "chat", context: "chat", text: "The family lines up to listen in — wander the strip, the chat stays with the rocket's host!" },
 ];
 
 /** Parked rocket stands on its host's upper-right shoulder. */
@@ -1674,6 +1678,25 @@ export function GeneratorSystem() {
       ? talkPanel
       : null;
 
+  // --- Contextual hints ---------------------------------------------------
+  // The current situation, told to the hint guide so tips surface when they
+  // matter. Priority: the mode you're in beats what you're looking at.
+  const hintContext = chatActive
+    ? "chat"
+    : rocketArmed
+      ? "rocket-armed"
+      : flight
+        ? "rocket-flight"
+        : infoId
+          ? "storybook"
+          : focusedId
+            ? summonInfo
+              ? "summon"
+              : focusedId === talkId
+                ? "at-host"
+                : "focused"
+            : "explore";
+
   // --- Zoom-out pill --------------------------------------------------------
   // The body's parent is the zoom-out landing spot: a planet's parent is
   // the sun, a moon's parent is whatever it orbits. At the root sun the
@@ -2288,7 +2311,12 @@ export function GeneratorSystem() {
               )}
             </div>
 
-            {!chatActive && <HintGuide pageId="generator" hints={GENERATOR_HINTS} />}
+            <HintGuide
+              pageId="generator"
+              hints={GENERATOR_HINTS}
+              context={hintContext}
+              docked={chatActive}
+            />
           </>
           );
         }}
