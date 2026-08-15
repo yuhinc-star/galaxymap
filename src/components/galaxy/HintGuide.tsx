@@ -71,6 +71,7 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
       return () => window.clearTimeout(t);
     }
     setQueue(fresh);
+    return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context]);
 

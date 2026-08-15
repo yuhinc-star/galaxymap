@@ -40,14 +40,17 @@ import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 const TAU = Math.PI * 2;
 
 /** The exploration tour, one hand-lettered tip at a time. */
-const CLASSIC_HINTS = [
-  "Drag to wander the galaxy — pinch or scroll to zoom!",
-  "Tap a planet to make it bounce — tap it again quickly for its storybook page!",
-  "Drag the little rocket onto any world — or tap its chip in the navigator!",
-  "The navigator finds anyone — double-tap a name for tales & tricks!",
-  "Visiting a world? The pill up top flies you back to its parent star!",
-  "Try the palette for new skies… or 'Make your own' galaxy!",
-  "Wherever the little rocket lands, that's who answers the chat — land it & say hi!",
+const CLASSIC_HINTS: ContextualHint[] = [
+  { id: "wander", context: "explore", text: "Drag to wander the galaxy — pinch or scroll to zoom!" },
+  { id: "navigator", context: "explore", text: "The navigator finds anyone — double-tap a name for tales & tricks!" },
+  { id: "palette", context: "explore", text: "Try the palette for new skies… or 'Make your own' galaxy!" },
+  { id: "hello", context: "focused", text: "Tap a planet to make it bounce — tap it again quickly for its storybook page!" },
+  { id: "zoom-out", context: "focused", text: "Visiting a world? The pill up top flies you back to its parent star!" },
+  { id: "summon", context: "summon", text: "One tap sends the little rocket flying over — or drag it there yourself!" },
+  { id: "storybook", context: "storybook", text: "A world's page tells its tales — and can call the rocket over!" },
+  { id: "armed", context: "rocket-armed", text: "Move mode! Tap any world — the rocket will fly straight to it!" },
+  { id: "flight", context: "rocket-flight", text: "Wherever the little rocket lands, that's who answers the chat!" },
+  { id: "chat", context: "chat", text: "The family lines up to listen in — wander the strip, the chat stays with the rocket's host!" },
 ];
 
 /** Parked rocket stands on its host's upper-right shoulder. */
