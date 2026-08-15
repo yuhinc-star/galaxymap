@@ -206,7 +206,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
 
     return {
       id: `planet-${i}-${sprite.id}`,
-      name: names[i % names.length]!,
+      name: planetName(),
       img: sprite.img,
       size,
       orbit,
