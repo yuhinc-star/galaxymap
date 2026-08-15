@@ -1440,20 +1440,28 @@ export function GeneratorSystem() {
   ): ReactNode =>
     moons.map((m) => {
       const a = m.startAngle + (t * TAU) / m.period;
-      const mx = px + m.orbitR * Math.cos(a);
-      const my = py + m.orbitR * Math.sin(a);
+      // The moon's rendered pose (frame-guarded, agrees with the moon
+      // bodies) so nested rings center on where it actually is — and
+      // the ring breathes toward its fan-arc radius while the moon
+      // rides it into the lineup.
+      const pose = chatPoseMoon(m, px, py, a);
+      const s = ringScaleRef.current.get(m.id) ?? 1;
       return (
         <Fragment key={m.id}>
           {/* Position lives on the <g> so the path's own CSS transform
               stays free for the appear/disappear animation */}
-          <g transform={`translate(${px} ${py})`}>
+          <g transform={`translate(${px} ${py}) scale(${s})`}>
             <path
               d={m.ringD}
               fill="none"
               stroke="white"
               strokeOpacity={0.72}
-              strokeWidth={depth === 0 ? 6.5 : 5}
-              strokeDasharray={depth === 0 ? "22 17" : "16 13"}
+              strokeWidth={(depth === 0 ? 6.5 : 5) / s}
+              strokeDasharray={
+                depth === 0
+                  ? `${(22 / s).toFixed(1)} ${(17 / s).toFixed(1)}`
+                  : `${(16 / s).toFixed(1)} ${(13 / s).toFixed(1)}`
+              }
               strokeLinecap="round"
               className={
                 departingIds.includes(m.id)
@@ -1464,7 +1472,7 @@ export function GeneratorSystem() {
               }
             />
           </g>
-          {renderMoonRings(m.moons, mx, my, depth + 1)}
+          {renderMoonRings(m.moons, pose.x, pose.y, depth + 1)}
         </Fragment>
       );
     });
