@@ -4,24 +4,19 @@ import { MessageCircleHeart, X } from "lucide-react";
  * The rocket's post-landing handshake: after the rocket touches down on a
  * star it offers to start a conversation with its new host — the same
  * notification-pill style as the "visit the parent" pill, stacked below it.
- * With the chat already open on another star, the pill offers to SWITCH
- * the conversation over to the rocket's new host.
  */
 export function RocketChatInvite({
   name,
   img,
-  switching = false,
   onChat,
   onDismiss,
 }: {
   name: string;
   img: string;
-  /** Chat is already open with someone else — offer to switch over. */
-  switching?: boolean;
   onChat: () => void;
   onDismiss: () => void;
 }) {
-  const label = switching ? `Switch chat to ${name}` : `Chat with ${name}`;
+  const label = `Chat with ${name}`;
   return (
     <div
       role="status"
@@ -42,15 +37,9 @@ export function RocketChatInvite({
           onClick={onChat}
           className="flex min-w-0 items-center gap-1 font-ui text-[13px] font-semibold text-[hsl(200,80%,88%)] transition-colors hover:text-[hsl(48,100%,72%)]"
         >
-          {switching ? (
-            <>
-              Switch to <span className="text-star">{name}</span>?
-            </>
-          ) : (
-            <>
-              Chat with <span className="text-star">{name}</span>?
-            </>
-          )}
+          <>
+            Chat with <span className="text-star">{name}</span>?
+          </>
           <MessageCircleHeart
             className="h-3.5 w-3.5 shrink-0 text-[hsl(48,100%,72%)]"
             strokeWidth={2.4}

@@ -2251,7 +2251,6 @@ export function GeneratorSystem() {
                   key={suggestionInfo.id}
                   name={suggestionInfo.name}
                   img={suggestionInfo.img}
-                  switching={chatActive}
                   onChat={() => {
                     setChatSuggestionId(null);
                     if (chatActive) {
