@@ -69,14 +69,21 @@ export function Starfield({
   size,
   width,
   height,
+  chatMix = 0,
 }: {
   size: number;
   width?: number;
   height?: number;
+  chatMix?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chatMixRef = useRef(chatMix);
   const w = width ?? size;
   const h = height ?? size;
+
+  // Keep the draw loop reading the latest chat mix without re-running the
+  // canvas effect (which would reset star positions).
+  chatMixRef.current = chatMix;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -158,9 +165,13 @@ export function Starfield({
       const dt = Math.min(now - last, 50);
       last = now;
       const t = now / 1000;
+      // In chat mode the larger background stars quiet down so the family
+      // lineup in the strip stays readable. Small dots remain as twinkle.
+      const mix = chatMixRef.current;
+      const dim = 1 - 0.85 * mix;
       ctx.clearRect(0, 0, w, h);
 
-      // Confetti dots
+      // Confetti dots — keep the tiny background texture visible.
       for (const s of stars) {
         ctx.globalAlpha = s.base * (0.55 + 0.45 * Math.sin(t * s.speed + s.phase));
         ctx.fillStyle = s.color;
@@ -169,23 +180,23 @@ export function Starfield({
         ctx.fill();
       }
 
-      // Solid candy stars with a gentle pulse
+      // Solid candy stars with a gentle pulse — dimmed in chat mode.
       for (const s of solidStars) {
         const pulse = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
-        ctx.globalAlpha = 0.55 + 0.45 * pulse;
+        ctx.globalAlpha = dim * (0.55 + 0.45 * pulse);
         ctx.fillStyle = s.color;
         starPath(s.x, s.y, s.r * (0.85 + 0.2 * pulse), s.rot);
         ctx.fill();
       }
 
-      // Spiral swirls, slowly rotating
+      // Spiral swirls, slowly rotating — dimmed in chat mode.
       ctx.lineCap = "round";
       ctx.lineWidth = 4.5;
       for (const sp of spirals) {
         ctx.save();
         ctx.translate(sp.x, sp.y);
         ctx.rotate(sp.phase + t * sp.rotSpeed);
-        ctx.globalAlpha = 0.45 + 0.2 * Math.sin(t * 0.7 + sp.phase);
+        ctx.globalAlpha = dim * (0.45 + 0.2 * Math.sin(t * 0.7 + sp.phase));
         ctx.strokeStyle = sp.color;
         ctx.beginPath();
         const steps = 56;
@@ -201,12 +212,12 @@ export function Starfield({
         ctx.restore();
       }
 
-      // Plus-shaped sparkle crosses that pulse in and out
+      // Plus-shaped sparkle crosses that pulse in and out — dimmed in chat mode.
       ctx.lineWidth = 3.5;
       for (const sp of sparkles) {
         const pulse = 0.5 + 0.5 * Math.sin(t * sp.speed + sp.phase);
         const len = sp.size * (0.55 + 0.45 * pulse);
-        ctx.globalAlpha = 0.3 + 0.7 * pulse;
+        ctx.globalAlpha = dim * (0.3 + 0.7 * pulse);
         ctx.strokeStyle = sp.color;
         ctx.beginPath();
         ctx.moveTo(sp.x - len, sp.y);
@@ -250,7 +261,7 @@ export function Starfield({
         const tailX = c.x - c.vx * 130;
         const tailY = c.y - c.vy * 130;
         const grad = ctx.createLinearGradient(c.x, c.y, tailX, tailY);
-        grad.addColorStop(0, `rgba(${c.rgb}, ${0.9 * fade})`);
+        grad.addColorStop(0, `rgba(${c.rgb}, ${dim * 0.9 * fade})`);
         grad.addColorStop(1, `rgba(${c.rgb}, 0)`);
         ctx.globalAlpha = 1;
         ctx.strokeStyle = grad;
@@ -260,7 +271,7 @@ export function Starfield({
         ctx.moveTo(c.x, c.y);
         ctx.lineTo(tailX, tailY);
         ctx.stroke();
-        ctx.fillStyle = `rgba(${c.rgb}, ${fade})`;
+        ctx.fillStyle = `rgba(${c.rgb}, ${dim * fade})`;
         ctx.beginPath();
         ctx.arc(c.x, c.y, 4.5, 0, Math.PI * 2);
         ctx.fill();

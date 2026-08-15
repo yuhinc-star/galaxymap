@@ -1339,8 +1339,9 @@ export function SolarSystem() {
                 className="relative"
                 style={{ width: WORLD, height: WORLD }}
               >
-                {/* Twinkling stars and comets */}
-                <Starfield size={WORLD} />
+                {/* Twinkling stars and comets — dimmed in chat mode so the
+                    family strip stays the star of the show. */}
+                <Starfield size={WORLD} chatMix={chatMix} />
 
                 {/* Dashed orbit rings, like the reference drawing */}
                 <svg
