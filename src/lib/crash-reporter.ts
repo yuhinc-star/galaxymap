@@ -37,7 +37,7 @@ interface Heartbeat {
   url: string;
   context: Record<string, unknown>;
   lastEvents: CrashEvent[];
-  mem?: { usedMB: number; limitMB: number };
+  mem?: { usedMB: number; limitMB: number } | undefined;
 }
 
 const isBrowser = () => typeof window !== "undefined";

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GeneratorRouteImport } from './routes/generator'
+import { Route as ApiPublicCrashReportRouteImport } from './routes/api/public/crash-report'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const GeneratorRoute = GeneratorRouteImport.update({
   path: '/generator',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCrashReportRoute = ApiPublicCrashReportRouteImport.update({
+  id: '/api/public/crash-report',
+  path: '/api/public/crash-report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/generator': typeof GeneratorRoute
+  '/api/public/crash-report': typeof ApiPublicCrashReportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/generator': typeof GeneratorRoute
+  '/api/public/crash-report': typeof ApiPublicCrashReportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/generator': typeof GeneratorRoute
+  '/api/public/crash-report': typeof ApiPublicCrashReportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/generator'
+  fullPaths: '/' | '/generator' | '/api/public/crash-report'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/generator'
-  id: '__root__' | '/' | '/generator'
+  to: '/' | '/generator' | '/api/public/crash-report'
+  id: '__root__' | '/' | '/generator' | '/api/public/crash-report'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GeneratorRoute: typeof GeneratorRoute
+  ApiPublicCrashReportRoute: typeof ApiPublicCrashReportRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GeneratorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/crash-report': {
+      id: '/api/public/crash-report'
+      path: '/api/public/crash-report'
+      fullPath: '/api/public/crash-report'
+      preLoaderRoute: typeof ApiPublicCrashReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GeneratorRoute: GeneratorRoute,
+  ApiPublicCrashReportRoute: ApiPublicCrashReportRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
