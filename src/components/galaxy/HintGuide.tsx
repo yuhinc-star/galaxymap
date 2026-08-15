@@ -62,7 +62,7 @@ export function HintGuide({ pageId, hints }: HintGuideProps) {
         <div
           key={step}
           role="status"
-          className="animate-panel-in fixed left-1/2 top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] z-30 w-[26rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 sm:bottom-5 sm:top-auto"
+          className="animate-panel-in fixed left-1/2 top-[max(7rem,calc(env(safe-area-inset-top)+6rem))] z-30 w-[26rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 sm:bottom-5 sm:top-auto"
         >
           <div className="flex items-center gap-3 rounded-3xl border-2 border-dashed border-star/70 bg-space-deep/90 px-4 py-2.5 shadow-xl backdrop-blur-sm">
             <Sparkle
