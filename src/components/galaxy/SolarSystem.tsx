@@ -1715,10 +1715,20 @@ export function SolarSystem() {
               {chatActive ? (
                 <button
                   type="button"
-                  aria-label="Reverse last step"
-                  title="Reverse last step (not available in this sky)"
-                  disabled
-                  onClick={() => {}}
+                  aria-label={
+                    zoomOutTarget
+                      ? `Zoom out to ${zoomOutTarget.name}`
+                      : "Zoom out"
+                  }
+                  title={
+                    zoomOutTarget
+                      ? `Zoom out to ${zoomOutTarget.name}`
+                      : "Zoom out"
+                  }
+                  disabled={!zoomOutTarget}
+                  onClick={() =>
+                    zoomOutTarget && handleZoomOut(zoomOutTarget.id)
+                  }
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
                 >
                   <Undo className="h-5 w-5" />

@@ -19,9 +19,10 @@ interface ZoomOutPillProps {
  * shows the parent's face and hand-lettered name so the landing spot is
  * never a surprise — one tap glides up one generation with the usual
  * navigation ceremony (hop, golden ring, speech bubble). At the root sun
- * (outside chat) it offers the whole-sky view instead; in chat mode it
- * disappears once the fan sits on the chat's root star, since the family
- * is the boundary there. Positioning is the stack's job.
+ * it offers the whole-sky view instead — in chat mode that final step
+ * also closes the conversation, so the pill is always available there,
+ * stepping the fan up past the chat's root star one generation at a
+ * time. Positioning is the stack's job.
  */
 export function ZoomOutPill({ target, onZoomOut }: ZoomOutPillProps) {
   if (!target) return null;
