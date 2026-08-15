@@ -207,7 +207,7 @@ export function SolarSystem() {
         wheel={{ step: 0.15 }}
         panning={{ velocityDisabled: true }}
       >
-        {({ zoomIn, zoomOut, resetTransform }) => (
+        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => (
           <>
             <TransformComponent
               wrapperStyle={{ width: "100%", height: "100%" }}
@@ -280,6 +280,8 @@ export function SolarSystem() {
                   y={CENTER}
                   active={activeId === SUN.id}
                   bouncing={bounceId === SUN.id}
+                  jumping={jumpId === SUN.id}
+                  highlighted={highlightId === SUN.id}
                   onTap={handleTap}
                   spin
                 />
@@ -298,6 +300,8 @@ export function SolarSystem() {
                         y={q.y}
                         active={activeId === p.id}
                         bouncing={bounceId === p.id}
+                        jumping={jumpId === p.id}
+                        highlighted={highlightId === p.id}
                         onTap={handleTap}
                       />
                     );
@@ -309,6 +313,8 @@ export function SolarSystem() {
                   y={moonPos.y}
                   active={activeId === MOON.id}
                   bouncing={bounceId === MOON.id}
+                  jumping={jumpId === MOON.id}
+                  highlighted={highlightId === MOON.id}
                   onTap={handleTap}
                 />
               </div>
@@ -320,6 +326,12 @@ export function SolarSystem() {
                 Pocket Galaxy
               </span>
             </header>
+
+            <Navigator
+              items={navItems}
+              activeId={activeId}
+              onSelect={(id) => handleNavigate(id, state.scale, setTransform)}
+            />
 
             <div className="fixed right-4 top-4">
               <Link
