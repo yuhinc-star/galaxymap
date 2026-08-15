@@ -241,7 +241,7 @@ export function SolarSystem() {
         panning={{ velocityDisabled: true }}
         onPanningStart={stopFollow}
         onWheel={stopFollow}
-        onPinchingStart={stopFollow}
+        onPinchStart={stopFollow}
       >
         {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;
