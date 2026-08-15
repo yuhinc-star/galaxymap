@@ -67,7 +67,7 @@ export function Planet({ def, x, y, active, bouncing, onTap, spin }: PlanetProps
       <span
         className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap font-hand font-bold uppercase tracking-[0.2em] text-orbit-label"
         style={{
-          fontSize: Math.max(36, def.size * 0.4),
+          fontSize: Math.max(34, Math.min(def.size * 0.34, 84)),
           textShadow: "0 2px 10px rgba(10, 6, 30, 0.9)",
         }}
       >

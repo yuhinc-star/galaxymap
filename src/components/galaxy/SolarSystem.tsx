@@ -154,29 +154,28 @@ export function SolarSystem() {
                   className="pointer-events-none absolute inset-0"
                   aria-hidden
                 >
-                  {PLANETS.map((p) => (
-                    <circle
-                      key={p.id}
-                      cx={CENTER}
-                      cy={CENTER}
-                      r={p.orbitR}
-                      fill="none"
-                      stroke="white"
-                      strokeOpacity={0.85}
-                      strokeWidth={10}
-                      strokeDasharray="36 26"
-                      strokeLinecap="round"
-                    />
-                  ))}
-                  <circle
-                    cx={earth.x}
-                    cy={earth.y}
-                    r={MOON.orbitR}
+                  {PLANETS.map((p, i) => {
+                    const ring = RING_STYLES[i]!;
+                    return (
+                      <path
+                        key={p.id}
+                        d={ring.d}
+                        fill="none"
+                        stroke="white"
+                        strokeOpacity={ring.opacity}
+                        strokeWidth={ring.width}
+                        strokeDasharray={ring.dash}
+                        strokeLinecap="round"
+                      />
+                    );
+                  })}
+                  <path
+                    d={wobblyRing(earth.x, earth.y, MOON.orbitR, 99)}
                     fill="none"
                     stroke="white"
-                    strokeOpacity={0.75}
-                    strokeWidth={6}
-                    strokeDasharray="22 16"
+                    strokeOpacity={0.72}
+                    strokeWidth={5.5}
+                    strokeDasharray="19 15"
                     strokeLinecap="round"
                   />
                 </svg>
