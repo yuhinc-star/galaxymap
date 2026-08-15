@@ -1,36 +1,52 @@
-Final polish: mobile responsive + touch interaction pass
+# Mobile compatibility for Pocket Galaxy / Galaxy Generator
 
-## Goal
-Make the Galaxy Generator feel native and usable on phones and tablets without changing the desktop layout the user is happy with.
+Make both pages fully usable at phone sizes (~390px wide) with touch gestures, while keeping the desktop layout pixel-identical. No feature changes — this is layout, sizing, and touch polish only.
 
-## What to do
+## What's already touch-ready (verified, no work needed)
 
-1. Responsive Navigator
-   - On narrow viewports (< 768 CSS px), collapse the navigator into a bottom sheet or a horizontally scrollable bar at the bottom.
-   - Keep the quoted avatar + name pattern, but shrink avatars and use shorter preview text.
+- Viewport meta tag, pinch zoom, and pan all work via react-zoom-pan-pinch
+- Rocket drag uses pointer events (touch-ready); bodies have custom double-tap detection
+- Hint copy already says "double-tap"
 
-2. Responsive BodyInfoPanel
-   - Make the panel bottom-anchored on mobile, full-width up to a max height, with a drag handle to dismiss.
-   - Reduce padding and child-list tile size so it does not obscure the world.
+## What breaks at 390px (verified in code)
 
-3. Generator controls
-   - Move the bottom-left "planets" and "New system" buttons onto a floating bottom-center toolbar on mobile.
-   - Keep the bottom-right zoom buttons as a compact vertical stack, but increase tap targets to at least 44×44px.
+1. **Navigator** starts open at `w-60` (62% of screen width); with the info panel open (`w-72`, 74%), the screen becomes all panels.
+2. **BodyInfoPanel** docks right — on a phone it covers the world you're inspecting.
+3. **Hint bubble** (`bottom-5 left-1/2`, 26rem wide) collides with the generator's bottom-left controls.
+4. **Tap targets** are desktop-sized: 28px close buttons and rocket chip, tight nav rows.
+5. **No safe-area padding** — corner chrome sits under phone notches/rounded corners.
+6. **Initial framing** (`initialScale 0.36`) shows only a fraction of the world on a narrow screen.
 
-4. Touch interactions
-   - Ensure the rocket drag and body double-tap behave correctly on touch: prevent accidental panning, use touch-action none on the rocket, and make the double-tap window slightly longer for touch.
-   - Add a subtle haptic/vibration cue on landing if supported.
+## Changes
 
-5. Safe areas + viewport
-   - Respect `env(safe-area-inset-*)` for iOS notches and home indicators.
-   - Set the viewport meta tag to prevent browser zoom on double-tap.
+**Navigator (`Navigator.tsx`)**
+- Auto-collapse to the round list button on small screens, decided after mount via `matchMedia` in an effect (hydration-safe — no server/client mismatch).
+- Cap open width on phones: `w-[min(15rem,calc(100vw-5rem))]`.
 
-## What to avoid
-- No new features (no new bodies, no new generator options).
-- No visual redesign of the desktop UI.
-- No changes to the art style or sprites.
+**Info panel as bottom sheet (`BodyInfoPanel.tsx`)**
+- Below `sm:`: full-width sheet docked bottom (`inset-x-3 bottom-3`, `max-h-[52vh]`), slide-up entrance; `sm:` and up keeps today's right-side card exactly as-is.
+- Scroll region gets `touch-action: pan-y` + `overscroll-behavior: contain` so panel scrolling never fights canvas panning.
 
-## Definition of done
-- The generator is usable on a 375px-wide phone in portrait: all controls reachable, panel readable, rocket draggable, navigator accessible.
-- Desktop layout remains unchanged.
-- No console errors or TypeScript failures.
+**Touch targets (Navigator, BodyInfoPanel, HintGuide)**
+- Close buttons, rocket chip, and nav rows bump to 40–44px on coarse pointers; `sm:` restores the compact desktop sizing.
+
+**Hint bubble (`HintGuide.tsx`)**
+- On phones, float it above the bottom chrome (`bottom-24`) instead of overlapping it.
+
+**Corner chrome + safe areas (`SolarSystem.tsx`, `GeneratorSystem.tsx`, `styles.css`)**
+- Add `env(safe-area-inset-*)` offsets to the four corner clusters via a small CSS utility; shrink the header title on phones.
+
+**Rocket size cap (`HeroRocket.tsx`)**
+- The zoom-compensated rocket (~96px on desktop) caps at ~72px on small screens so it doesn't dominate a 390px viewport.
+
+**Initial framing (both system components)**
+- After mount on narrow screens, fit the world width to the viewport with one `setTransform` call (post-mount effect, so SSR stays clean).
+
+## Verification
+
+Playwright at 390×844 on both routes: navigator collapse/open, info sheet open/scroll/close, rocket touch-drag onto a moon, pinch zoom, add/delete flows, and no horizontal page scroll. Desktop screenshot spot-check to confirm zero visual change.
+
+## Non-goals
+
+- No desktop layout or visual changes
+- No new features, no behavior changes beyond what's listed
