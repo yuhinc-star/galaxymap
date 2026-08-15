@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Plus, Rocket, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Pencil, Plus, Rocket, Trash2, X } from "lucide-react";
+import { MAX_BODY_NAME } from "./systemGenerator";
 
 export interface BodyPanelChild {
   id: string;
@@ -46,6 +47,8 @@ interface BodyInfoPanelProps {
   chatMode?: boolean;
   /** "Say goodbye" — omitted for the sun and for the chat subject. */
   onDelete?: (() => void) | undefined;
+  /** Pencil by the name: hand the body a new one (capped, never empty). */
+  onRename?: ((name: string) => void) | undefined;
 }
 
 /**
@@ -63,7 +66,30 @@ export function BodyInfoPanel({
   rocket,
   chatMode = false,
   onDelete,
+  onRename,
 }: BodyInfoPanelProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Another body (or a rename landing) closes the editor.
+  useEffect(() => setEditing(false), [info.id, info.name]);
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  const startEdit = () => {
+    setDraft(info.name);
+    setEditing(true);
+  };
+  const commitEdit = () => {
+    // Tidy the input: no empty names, no double spaces, no head/tail
+    // padding — the cap itself is enforced by the input's maxLength.
+    const name = draft.trim().replace(/\s+/g, " ");
+    setEditing(false);
+    if (name && name !== info.name) onRename?.(name);
+  };
+
   return (
     <aside
       aria-label={`About ${info.name}`}
@@ -84,9 +110,70 @@ export function BodyInfoPanel({
           <span className="font-hand text-sm font-bold uppercase tracking-[0.28em] text-white/60">
             {info.kindLabel}
           </span>
-          <h2 className="font-hand text-3xl font-bold uppercase leading-tight tracking-wider text-star">
-            &ldquo;{info.name}&rdquo;
-          </h2>
+          {editing ? (
+            <div className="mt-0.5 flex flex-col gap-1.5">
+              <input
+                ref={inputRef}
+                value={draft}
+                maxLength={MAX_BODY_NAME}
+                aria-label={`Rename this ${info.kindLabel.toLowerCase()}`}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitEdit();
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                className="w-full min-w-0 rounded-xl border-2 border-dashed border-star/70 bg-space/70 px-2 py-0.5 font-hand text-2xl font-bold uppercase leading-tight tracking-wider text-star outline-none placeholder:text-white/30 focus:border-star"
+                placeholder="Name it…"
+              />
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`font-hand text-base font-bold uppercase tracking-widest ${
+                    draft.length >= MAX_BODY_NAME ? "text-star" : "text-white/45"
+                  }`}
+                >
+                  {draft.length}/{MAX_BODY_NAME}
+                </span>
+                <span className="flex-1" />
+                <button
+                  type="button"
+                  aria-label="Save the new name"
+                  title="Save name"
+                  onClick={commitEdit}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-star text-space shadow transition-transform hover:scale-110 active:scale-95"
+                >
+                  <Check className="h-4 w-4" strokeWidth={3} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Keep the old name"
+                  title="Cancel"
+                  onClick={() => setEditing(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/20 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-1">
+              {/* Long names wrap whole words; an unbroken string still
+                  breaks anywhere instead of flooding the panel. */}
+              <h2 className="min-w-0 font-hand text-3xl font-bold uppercase leading-tight tracking-wider text-star [overflow-wrap:anywhere]">
+                &ldquo;{info.name}&rdquo;
+              </h2>
+              {onRename && (
+                <button
+                  type="button"
+                  aria-label={`Rename ${info.name}`}
+                  title="Give it a new name"
+                  onClick={startEdit}
+                  className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-star/20 hover:text-star"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <button
           type="button"
@@ -127,7 +214,10 @@ export function BodyInfoPanel({
                       draggable={false}
                       className="h-7 w-7 shrink-0 select-none rounded-full bg-space/60 object-contain p-0.5"
                     />
-                    <span className="font-hand text-lg font-bold uppercase leading-none tracking-wider text-white">
+                    <span
+                      title={c.name}
+                      className="min-w-0 flex-1 truncate font-hand text-lg font-bold uppercase leading-none tracking-wider text-white"
+                    >
                       &ldquo;{c.name}&rdquo;
                     </span>
                   </button>

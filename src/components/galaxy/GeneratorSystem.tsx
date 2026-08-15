@@ -32,6 +32,7 @@ import {
   findMoonParent,
   generateSystem,
   removeBodyFromSystem,
+  renameBodyInSystem,
   MAX_MOONS_PER_BODY,
   MAX_SYSTEM_PLANETS,
   MIN_MOON_PARENT_SIZE,
@@ -81,7 +82,7 @@ const GENERATOR_HINTS: ContextualHint[] = [
   { id: "summon", context: "summon", text: "One tap sends the little rocket flying over — or drag it there yourself!" },
   { id: "rocket-home", context: "at-host", text: "The little rocket lives here — drag it onto another star, or tap its chip in the navigator!" },
   { id: "chat-link", context: "at-host", text: "Wherever the little rocket lands, that's who answers the chat!" },
-  { id: "storybook", context: "storybook", text: "A star's page grows its family, summons the rocket… or says goodbye!" },
+  { id: "storybook", context: "storybook", text: "A star's page gives it a new name, grows its family, summons the rocket… or says goodbye!" },
   { id: "armed", context: "rocket-armed", text: "Move mode! Tap any star — the rocket will fly straight to it!" },
   { id: "flight", context: "rocket-flight", text: "Wherever the little rocket lands, that's who answers the chat!" },
   { id: "chat", context: "chat", text: "The family lines up to listen in — wander the strip, the chat stays with the rocket's host!" },
@@ -1572,6 +1573,19 @@ export function GeneratorSystem() {
     }, 700);
   };
 
+  /**
+   * The panel's pencil: give the body a new name. Ids stay put, so the
+   * rocket, the camera and the chat fan never notice — every surface
+   * (sky label, navigator, pills, chat header) reads the name live from
+   * the config. Undoable like any other family change.
+   */
+  const handleRenameBody = (id: string, name: string) => {
+    if (name === getPanelInfo(id)?.name) return;
+    recordCrashEvent("body-rename", { id });
+    captureUndo();
+    setExtras(renameBodyInSystem(config, id, name));
+  };
+
   /** Everything the information panel shows about a body. */
   const getPanelInfo = (id: string): BodyPanelInfo | null => {
     const add = getAddMenuInfo(id);
@@ -2119,6 +2133,7 @@ export function GeneratorSystem() {
                 onAdd={handleAddBody}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
+                onRename={(name) => handleRenameBody(panelInfo.id, name)}
                 onDelete={
                   panelInfo.id === config.sun.id ||
                   departingIds.length > 0 ||

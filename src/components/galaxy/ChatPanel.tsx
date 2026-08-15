@@ -134,7 +134,7 @@ export function ChatPanel({ subject, onClose, waiting = false }: ChatPanelProps)
           <p className="font-hand text-4xl font-bold uppercase tracking-[0.12em] text-orbit-label">
             The little rocket is flying over…
           </p>
-          <p className="max-w-xs font-display text-sm text-white/60">
+          <p className="max-w-xs font-display text-sm text-white/60 [overflow-wrap:anywhere]">
             {subject.name} answers as soon as the rocket lands.
           </p>
         </div>
@@ -147,7 +147,7 @@ export function ChatPanel({ subject, onClose, waiting = false }: ChatPanelProps)
             draggable={false}
             className="h-28 w-28 select-none rounded-full bg-space/60 object-contain p-2 ring-2 ring-star/50"
           />
-          <p className="font-hand text-4xl font-bold uppercase tracking-[0.12em] text-orbit-label">
+          <p className="max-w-md font-hand text-4xl font-bold uppercase tracking-[0.12em] text-orbit-label [overflow-wrap:anywhere]">
             Say hi to {subject.name}!
           </p>
           <p className="max-w-xs font-display text-sm text-white/60">
