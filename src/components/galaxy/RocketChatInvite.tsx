@@ -42,15 +42,9 @@ export function RocketChatInvite({
           onClick={onChat}
           className="flex min-w-0 items-center gap-1 font-ui text-[13px] font-semibold text-[hsl(200,80%,88%)] transition-colors hover:text-[hsl(48,100%,72%)]"
         >
-          {switching ? (
-            <>
-              Switch to <span className="text-star">{name}</span>?
-            </>
-          ) : (
-            <>
-              Chat with <span className="text-star">{name}</span>?
-            </>
-          )}
+          <>
+            Chat with <span className="text-star">{name}</span>?
+          </>
           <MessageCircleHeart
             className="h-3.5 w-3.5 shrink-0 text-[hsl(48,100%,72%)]"
             strokeWidth={2.4}
