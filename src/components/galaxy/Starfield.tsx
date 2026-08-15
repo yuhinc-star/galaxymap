@@ -91,13 +91,13 @@ export function Starfield({
 
     const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)] as T;
 
-    // Twinkling confetti dots — a light animated layer over the painted sky.
+    // Twinkling confetti dots — a very slow animated layer over the painted sky.
     const stars: Star[] = Array.from({ length: 420 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: 1 + Math.random() * 3,
       base: 0.35 + Math.random() * 0.65,
-      speed: 0.6 + Math.random() * 1.8,
+      speed: 0.2 + Math.random() * 0.5,
       phase: Math.random() * Math.PI * 2,
       color: pick(DOT_COLORS),
     }));
@@ -108,7 +108,7 @@ export function Starfield({
       y: Math.random() * h,
       r: 6 + Math.random() * 8,
       rot: Math.random() * Math.PI * 2,
-      speed: 0.5 + Math.random() * 1.2,
+      speed: 0.15 + Math.random() * 0.4,
       phase: Math.random() * Math.PI * 2,
       color: pick(SOLID_STAR_COLORS),
     }));
@@ -118,17 +118,17 @@ export function Starfield({
       x: Math.random() * w,
       y: Math.random() * h,
       size: 7 + Math.random() * 8,
-      speed: 0.8 + Math.random() * 1.6,
+      speed: 0.25 + Math.random() * 0.55,
       phase: Math.random() * Math.PI * 2,
       color: pick(SPARKLE_COLORS),
     }));
 
-    // Hand-drawn spiral swirls, slowly turning.
+    // Hand-drawn spiral swirls, very slowly turning.
     const spirals: Spiral[] = Array.from({ length: 8 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       maxR: 16 + Math.random() * 18,
-      rotSpeed: (Math.random() < 0.5 ? -1 : 1) * (0.08 + Math.random() * 0.15),
+      rotSpeed: (Math.random() < 0.5 ? -1 : 1) * (0.03 + Math.random() * 0.05),
       phase: Math.random() * Math.PI * 2,
       color: pick(SPIRAL_COLORS),
     }));
