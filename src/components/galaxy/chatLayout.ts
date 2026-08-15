@@ -108,9 +108,19 @@ export function computeChatLayout(
       const kid: KidPlan = { id: c.id, name: c.name, dia, font, gap, rho, angle: -Math.PI / 2 };
       rho += dia / 2;
       // Staggered tilt, alternating sides like the poster's cascade —
-      // clamped so the disc (and its name) never leaves the strip.
+      // clamped so the disc AND its hanging name never leave the strip.
+      // The name is centered under the disc, so its half-width counts:
+      // short names are one nowrap line (~0.68em per glyph with the
+      // hand-lettered tracking); long names wrap at the 380px world cap.
+      const nameHalfW = longName
+        ? Math.min(190 * scale, c.name.length * font * 0.34)
+        : (c.name.length * font * 0.68) / 2;
       const deg = 12 + ((i * 37) % 10);
-      const maxSin = clamp((stripW * 0.5 - 10 - dia / 2) / rho, 0, 0.45);
+      const maxSin = clamp(
+        (stripW * 0.5 - 10 - Math.max(dia / 2, nameHalfW)) / rho,
+        0,
+        0.45,
+      );
       const tilt = Math.min((deg * Math.PI) / 180, Math.asin(maxSin));
       kid.angle = -Math.PI / 2 + (i % 2 === 0 ? -tilt : tilt);
       return kid;
