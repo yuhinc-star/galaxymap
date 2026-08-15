@@ -9,15 +9,20 @@ import heroFlameImg from "@/assets/planets/hero-flame.png";
  */
 export const ROCKET_H = 96;
 
+/** Phones shrink the fixed on-screen size — 96px looms on a 390px screen. */
+const mobileShrink = () =>
+  typeof window !== "undefined" && window.innerWidth < 640 ? 0.72 : 1;
+
 /**
  * World-space scale of the rocket at a camera zoom. Zoomed IN past 1x the
- * rocket counter-scales against the camera (fixed ~96px on screen), so it
- * can be seen, grabbed and parked even on tiny moons. Zoomed OUT it keeps
- * its world size and shrinks along with everything else — otherwise it
- * would loom disproportionately large over a small body at overview.
+ * rocket counter-scales against the camera (fixed ~96px on screen, ~69px
+ * on phones), so it can be seen, grabbed and parked even on tiny moons.
+ * Zoomed OUT it keeps its world size and shrinks along with everything
+ * else — otherwise it would loom disproportionately large over a small
+ * body at overview.
  */
 export const rocketWorldScale = (cameraScale: number) =>
-  1 / Math.max(1, cameraScale);
+  mobileShrink() / Math.max(1, cameraScale);
 /** Sprite aspect is 407x1067 after alpha-trimming. */
 export const ROCKET_W = Math.round((ROCKET_H * 407) / 1067);
 const FLAME_H = 61;

@@ -45,8 +45,8 @@ interface BodyInfoPanelProps {
 }
 
 /**
- * The double-click information panel (generator): a screen-space card on
- * the right, styled like the Navigator — deep-space glass, hand-lettered
+ * The double-tap information panel: a card docked right on desktop, a
+ * bottom sheet on phones, styled like the Navigator — deep-space glass, hand-lettered
  * Amatic SC names in quote marks, dashed golden accents. For the skeleton
  * UI it keeps only the portrait, the story, the children list, and the
  * single "grow this family" primary action.
@@ -61,7 +61,7 @@ export function BodyInfoPanel({
   return (
     <aside
       aria-label={`About ${info.name}`}
-      className="animate-panel-in fixed right-3 top-14 z-20 flex max-h-[calc(100vh-7rem)] w-72 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm sm:right-4 sm:top-16 sm:w-72 sm:max-w-[calc(100vw-2rem)]"
+      className="animate-sheet-in fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 flex max-h-[52vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm sm:animate-panel-in sm:bottom-auto sm:left-auto sm:right-4 sm:top-16 sm:max-h-[calc(100vh-7rem)] sm:w-72 sm:max-w-[calc(100vw-2rem)]"
     >
       <div className="flex items-start gap-3 px-4 pb-2 pt-3">
         <img
@@ -82,13 +82,13 @@ export function BodyInfoPanel({
           type="button"
           aria-label="Close the info panel"
           onClick={onClose}
-          className="-mr-1 -mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/20 hover:text-white"
+          className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/20 hover:text-white sm:h-7 sm:w-7"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="flex flex-col gap-3 overflow-y-auto px-4 pb-4 pt-1">
+      <div className="flex flex-col gap-3 overflow-y-auto overscroll-contain px-4 pb-4 pt-1 [touch-action:pan-y]">
         {info.line && (
           <p className="rounded-2xl border-2 border-dashed border-white/25 px-3 py-2 font-hand text-xl font-bold leading-snug text-white/90">
             &ldquo;{info.line}&rdquo;
@@ -109,7 +109,7 @@ export function BodyInfoPanel({
                   <button
                     type="button"
                     onClick={() => onSelect(c.id)}
-                    className="flex w-full items-center gap-2.5 rounded-2xl px-2 py-1 text-left transition-colors hover:bg-white/10"
+                    className="flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-left transition-colors hover:bg-white/10 sm:py-1"
                   >
                     <img
                       src={c.img}

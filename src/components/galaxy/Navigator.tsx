@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, List, Sparkle, X } from "lucide-react";
 
 export interface NavigatorEntry {
@@ -47,8 +47,15 @@ interface NavigatorProps {
  * land on anything — sun, planet or moon — so every entry stays live.
  */
 export function Navigator({ items, activeId, focusedId, onSelect, onInfo, departingIds, rocket }: NavigatorProps) {
-  const [open, setOpen] = useState(true);
+  // null = not yet decided. Phones start collapsed so the world stays
+  // visible; desktop starts open. Decided after mount so SSR and
+  // hydration render identical markup (no window reads during render).
+  const [open, setOpen] = useState<boolean | null>(null);
   const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    setOpen(window.matchMedia("(min-width: 640px)").matches);
+  }, []);
 
   /** Fold the menu away first, then swap to the round list button. */
   const collapse = () => {
@@ -60,6 +67,8 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
     }, 210);
   };
 
+  if (open === null) return null;
+
   if (!open) {
     return (
       <button
@@ -67,7 +76,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
         aria-label="Open the navigator"
         title="Navigator"
         onClick={() => setOpen(true)}
-        className="animate-pop-in fixed left-4 top-16 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-space-deep/90 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 active:scale-95"
+        className="animate-pop-in fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-space-deep/90 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 active:scale-95"
       >
         <List className="h-5 w-5" />
       </button>
@@ -120,7 +129,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
               : activeId === entry.id
                 ? "bg-white/20"
                 : ""
-          } ${depth === 0 ? "py-1.5" : "py-1"} ${rocketHere ? "pr-10" : ""}`}
+          } ${depth === 0 ? "py-2.5 sm:py-1.5" : "py-2 sm:py-1"} ${rocketHere ? "pr-10" : ""}`}
         >
           <img
             src={entry.img}
@@ -154,7 +163,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
             }
             title={armed ? "Cancel rocket move" : "Move the rocket"}
             onClick={rocket.onChip}
-            className={`absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-transform hover:scale-110 active:scale-95 ${
+            className={`absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-transform hover:scale-110 active:scale-95 sm:h-7 sm:w-7 ${
               armed ? "border-star bg-star/40" : "border-star/60 bg-star/15"
             } ${rocket.flying ? "animate-pulse" : ""}`}
           >
@@ -197,7 +206,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
   return (
     <nav
       aria-label="System navigator"
-      className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-4 top-16 z-20 flex max-h-[62vh] w-60 flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm`}
+      className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 flex max-h-[62vh] w-[min(15rem,calc(100vw-5rem))] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm`}
     >
       <div className="flex items-center justify-between px-4 pb-1 pt-3">
         <span className="font-hand text-2xl font-bold uppercase tracking-[0.2em] text-white">
@@ -209,7 +218,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
               type="button"
               aria-label="Cancel rocket move"
               onClick={rocket!.onChip}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-star transition-colors hover:bg-star/20"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-star transition-colors hover:bg-star/20 sm:h-7 sm:w-7"
             >
               <X className="h-4 w-4" />
             </button>
@@ -218,7 +227,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
             type="button"
             aria-label="Collapse the navigator"
             onClick={collapse}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/20 hover:text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/20 hover:text-white sm:h-7 sm:w-7"
           >
             <ChevronDown className="h-4 w-4" />
           </button>

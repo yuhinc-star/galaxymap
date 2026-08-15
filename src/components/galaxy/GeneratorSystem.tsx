@@ -192,6 +192,20 @@ export function GeneratorSystem() {
   useEffect(() => {
     warmSpritePool(BACKGROUNDS.map((b) => b.src));
   }, []);
+
+  // Phones open each system with the whole world in view instead of a
+  // 0.36x close-up (SSR keeps the desktop default; re-runs after a warp
+  // because the remounted camera resets to initialScale).
+  useEffect(() => {
+    if (window.innerWidth >= 640) return;
+    const s = Math.max(0.12, Math.min(0.36, (window.innerWidth / WORLD) * 1.02));
+    setTransformRef.current?.(
+      (window.innerWidth - WORLD * s) / 2,
+      (window.innerHeight - WORLD * s) / 2,
+      s,
+      0,
+    );
+  }, [seed, planetCount]);
   const config = extras ?? baseConfig;
 
   useEffect(() => {
@@ -1223,9 +1237,9 @@ export function GeneratorSystem() {
               </div>
             </TransformComponent>
 
-            <header className="pointer-events-none fixed left-4 top-4 flex items-center gap-2">
+            <header className="pointer-events-none fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2">
               <Sparkle className="h-5 w-5 text-star" aria-hidden />
-              <span className="font-display text-xl font-semibold tracking-wide text-star">
+              <span className="font-display text-base font-semibold tracking-wide text-star sm:text-xl">
                 Galaxy Generator
               </span>
             </header>
@@ -1263,7 +1277,7 @@ export function GeneratorSystem() {
               />
             )}
 
-            <div className="fixed right-4 top-4">
+            <div className="fixed right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))]">
               <Link
                 to="/"
                 aria-label="Back to the classic solar system"
@@ -1275,7 +1289,7 @@ export function GeneratorSystem() {
             </div>
 
             {/* Generator controls */}
-            <div className="fixed bottom-5 left-4 flex flex-col gap-2">
+            <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] flex flex-col gap-2">
               <div className="flex items-center gap-2 rounded-full border border-border bg-card/90 px-2 py-1.5 shadow-lg">
                 <button
                   type="button"
@@ -1319,7 +1333,7 @@ export function GeneratorSystem() {
               </p>
             </div>
 
-            <div className="fixed bottom-5 right-4 flex flex-col gap-2">
+            <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] flex flex-col gap-2">
               <button
                 type="button"
                 aria-label={`Change background (now: ${BACKGROUNDS[bgIndex]!.name})`}
