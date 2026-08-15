@@ -471,6 +471,47 @@
   animation: system-exit 0.36s cubic-bezier(0.5, 0, 0.75, 0.4) both;
 }
 
+/* Orbit ring appearing for a newborn body: fades up while growing out
+   from the ring's own centre with a soft overshoot — like someone
+   quickly sketching the circle in. transform-box keeps the scale
+   anchored to the ring, not the whole sky. */
+@keyframes orbit-ring-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.orbit-ring-in {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: orbit-ring-in 0.7s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+/* Ring melting away while its body spins off into the sky — timed to
+   finish just before the body leaves the world. Opacity only, so it
+   never fights the positioning transform on moon rings. */
+@keyframes orbit-ring-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.orbit-ring-out {
+  animation: orbit-ring-out 0.5s ease-in both;
+}
+
 /* A body saying goodbye: a little hopeful hop, then it spins away upward
    and shrinks into the sky. Applied inline via Planet's departing prop. */
 @keyframes body-goodbye {
