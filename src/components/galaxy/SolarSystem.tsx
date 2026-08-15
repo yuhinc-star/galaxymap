@@ -68,6 +68,8 @@ const RING_STYLES: RingStyle[] = PLANETS.map((p, i) => {
 export function SolarSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bounceId, setBounceId] = useState<string | null>(null);
+  /** Body the camera is currently locked onto (navigator "you are here"). */
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   /** Navigator "find me": dashed ring + single hop. */
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [jumpId, setJumpId] = useState<string | null>(null);
