@@ -56,7 +56,7 @@ import {
 } from "./chatLayout";
 import { Drifter } from "./Drifter";
 import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
-import { HintGuide } from "./HintGuide";
+import { HintGuide, type ContextualHint } from "./HintGuide";
 import { Navigator, type NavigatorEntry } from "./Navigator";
 import { Planet } from "./Planet";
 import { RocketChatInvite } from "./RocketChatInvite";
@@ -1676,6 +1676,23 @@ export function GeneratorSystem() {
       ? talkPanel
       : null;
 
+  // --- Contextual hints ---------------------------------------------------
+  // The current situation, told to the hint guide so tips surface when they
+  // matter. Priority: the mode you're in beats what you're looking at.
+  const hintContext = chatActive
+    ? "chat"
+    : rocketArmed
+      ? "rocket-armed"
+      : flight
+        ? "rocket-flight"
+        : infoId
+          ? "storybook"
+          : summonInfo
+            ? "summon"
+            : focusedId
+              ? "focused"
+              : "explore";
+
   // --- Zoom-out pill --------------------------------------------------------
   // The body's parent is the zoom-out landing spot: a planet's parent is
   // the sun, a moon's parent is whatever it orbits. At the root sun the
@@ -2290,7 +2307,12 @@ export function GeneratorSystem() {
               )}
             </div>
 
-            {!chatActive && <HintGuide pageId="generator" hints={GENERATOR_HINTS} />}
+            <HintGuide
+              pageId="generator"
+              hints={GENERATOR_HINTS}
+              context={hintContext}
+              docked={chatActive}
+            />
           </>
           );
         }}
