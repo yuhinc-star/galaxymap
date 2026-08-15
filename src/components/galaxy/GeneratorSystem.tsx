@@ -307,24 +307,37 @@ export function GeneratorSystem() {
     );
   }, [t]);
 
-  /**
-   * Navigator click: zoom so the body and everything orbiting it fits
-   * (the sun with all planet rings, a planet with its moon rings),
-   * glide there, pop its speech bubble, hop once, flash a dashed ring.
-   */
-  const handleNavigate = (id: string) => {
+  // Flight completion: the rocket becomes parked on its destination,
+  // squashes on touchdown and flashes the golden finder ring.
+  useEffect(() => {
+    if (!flight) return;
+    if (performance.now() < flight.startAt + flight.dur) return;
+    const dest = flight.toId;
+    setFlight(null);
+    setRocketHostId(dest);
+    setRocketInboundId(null);
+    setLandingSquash(true);
+    window.clearTimeout(squashTimer.current);
+    squashTimer.current = window.setTimeout(() => setLandingSquash(false), 600);
+    window.clearTimeout(highlightTimer.current);
+    setHighlightId(dest);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+  }, [t, flight]);
+
+  // If the rocket's host vanishes (planet count changed), park on the sun.
+  useEffect(() => {
+    if (
+      rocketHostId !== config.sun.id &&
+      !config.planets.some((p) => p.id === rocketHostId)
+    ) {
+      setRocketHostId(config.sun.id);
+    }
+  }, [config, rocketHostId]);
+
+  /** Glide the camera so the body and everything orbiting it fits. */
+  const focusCamera = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
-    window.clearTimeout(hideTimer.current);
-    window.clearTimeout(jumpTimer.current);
-    window.clearTimeout(highlightTimer.current);
-    setActiveId(id);
-    setJumpId(id);
-    setHighlightId(id);
-    setFocusedId(id);
-    jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
-    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
-    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
     const fit =
       (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
       (2 * frameRadius(id));
@@ -342,7 +355,206 @@ export function GeneratorSystem() {
           },
       startAt: performance.now(),
     };
+    setFocusedId(id);
   };
+
+  /**
+   * Launch the rocket along a hand-drawn arc. The end point is the
+   * destination's park spot recomputed every frame, so the rocket homes
+   * in on its target even while that body keeps orbiting.
+   */
+  const launchRocket = (
+    from: { x: number; y: number },
+    fromRot: number,
+    toId: string,
+  ) => {
+    const end = parkPos(toId);
+    if (!end) return;
+    const dist = Math.hypot(end.x - from.x, end.y - from.y);
+    if (dist < 30) return;
+    const dur = Math.min(3.4, Math.max(1.15, dist / 1500)) * 1000;
+    arcSideRef.current *= -1;
+    const nx = -(end.y - from.y) / dist;
+    const ny = (end.x - from.x) / dist;
+    const lift = Math.min(430, Math.max(120, dist * 0.26)) * arcSideRef.current;
+    setFlight({
+      fx: from.x,
+      fy: from.y,
+      cx: (from.x + end.x) / 2 + nx * lift,
+      cy: (from.y + end.y) / 2 + ny * lift,
+      toId,
+      fromRot,
+      startAt: performance.now(),
+      dur,
+    });
+    setRocketInboundId(toId);
+  };
+
+  /** Navigator move mode: send the rocket to the picked sun or planet. */
+  const handleRocketDestination = (id: string) => {
+    setRocketArmed(false);
+    if (flight || id === rocketHostId) return;
+    const from = parkPos(rocketHostId);
+    if (!from) return;
+    launchRocket(from, PARK_ROT, id);
+    focusCamera(id);
+  };
+
+  /** Client px → world px using the live pan/zoom transform. */
+  const toWorld = (clientX: number, clientY: number) => {
+    const st = stateRef.current;
+    if (!st) return { x: clientX, y: clientY };
+    return {
+      x: (clientX - st.positionX) / st.scale,
+      y: (clientY - st.positionY) / st.scale,
+    };
+  };
+
+  /** Nearest landable body under a dragged point, if any. */
+  const pickHover = (w: { x: number; y: number }): string | null => {
+    let best: string | null = null;
+    let bestD = Infinity;
+    const consider = (id: string) => {
+      const c = bodyPos(id);
+      const s = bodySize(id);
+      if (!c || !s) return;
+      const d = Math.hypot(w.x - c.x, w.y - c.y);
+      if (d < Math.max((s / 2) * 1.25, 90) && d < bestD) {
+        best = id;
+        bestD = d;
+      }
+    };
+    consider(config.sun.id);
+    for (const p of config.planets) consider(p.id);
+    return best;
+  };
+
+  /**
+   * Drag the rocket: a capture-phase pointerdown keeps the camera from
+   * panning, then window listeners track the drag. Dropping on a body
+   * flies the rocket there; dropping on empty sky flies it back home.
+   */
+  const onRocketDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    stopFollow();
+    const w = toWorld(e.clientX, e.clientY);
+    dragRef.current = {
+      cur: w,
+      hover: null,
+      startClient: { x: e.clientX, y: e.clientY },
+      moved: false,
+      lastX: w.x,
+    };
+    setDragActive(true);
+    const onMove = (ev: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      d.cur = toWorld(ev.clientX, ev.clientY);
+      if (
+        Math.hypot(ev.clientX - d.startClient.x, ev.clientY - d.startClient.y) >
+        8
+      ) {
+        d.moved = true;
+      }
+      d.hover = pickHover(d.cur);
+    };
+    const onUp = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      const d = dragRef.current;
+      dragRef.current = null;
+      setDragActive(false);
+      if (!d) return;
+      d.cur = toWorld(ev.clientX, ev.clientY);
+      const target = d.hover ?? pickHover(d.cur);
+      if (target && target !== rocketHostId) {
+        launchRocket(d.cur, 0, target);
+        focusCamera(target);
+      } else if (d.moved) {
+        launchRocket(d.cur, 0, rocketHostId);
+      } else {
+        // A gentle tap: a little squash hello.
+        setLandingSquash(true);
+        window.clearTimeout(squashTimer.current);
+        squashTimer.current = window.setTimeout(
+          () => setLandingSquash(false),
+          600,
+        );
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  };
+
+  /**
+   * Navigator click: zoom so the body and everything orbiting it fits
+   * (the sun with all planet rings, a planet with its moon rings),
+   * glide there, pop its speech bubble, hop once, flash a dashed ring.
+   */
+  const handleNavigate = (id: string) => {
+    const q = bodyPos(id);
+    if (!q) return;
+    window.clearTimeout(hideTimer.current);
+    window.clearTimeout(jumpTimer.current);
+    window.clearTimeout(highlightTimer.current);
+    setActiveId(id);
+    setJumpId(id);
+    setHighlightId(id);
+    jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
+    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+    focusCamera(id);
+  };
+
+  // --- Hero rocket pose ---------------------------------------------------
+  const dragNow = dragActive ? dragRef.current : null;
+  const dragHoverId = dragNow?.hover ?? null;
+  const dragHoverPos = dragHoverId ? bodyPos(dragHoverId) : null;
+
+  let rocketX = CENTER;
+  let rocketY = CENTER;
+  let rocketRot = PARK_ROT;
+  let rocketFlame = 0;
+  if (dragNow) {
+    const dx = dragNow.cur.x - dragNow.lastX;
+    dragNow.lastX = dragNow.cur.x;
+    rocketX = dragNow.cur.x;
+    rocketY = dragNow.cur.y;
+    rocketRot = Math.max(-24, Math.min(24, dx * 0.5));
+    rocketFlame = 0.85;
+  } else if (flight) {
+    const p = Math.min(1, (performance.now() - flight.startAt) / flight.dur);
+    const e = easeInOutCubicFn(p);
+    const end = parkPos(flight.toId) ?? { x: CENTER, y: CENTER };
+    const u = 1 - e;
+    rocketX = u * u * flight.fx + 2 * u * e * flight.cx + e * e * end.x;
+    rocketY = u * u * flight.fy + 2 * u * e * flight.cy + e * e * end.y;
+    const vx = 2 * u * (flight.cx - flight.fx) + 2 * e * (end.x - flight.cx);
+    const vy = 2 * u * (flight.cy - flight.fy) + 2 * e * (end.y - flight.cy);
+    const heading = (Math.atan2(vy, vx) * 180) / Math.PI + 90;
+    if (p < 0.16) {
+      rocketRot = lerpAngle(flight.fromRot, heading, easeOutCubic(p / 0.16));
+    } else if (p > 0.76) {
+      rocketRot = lerpAngle(
+        heading,
+        PARK_ROT,
+        easeInOutCubicFn((p - 0.76) / 0.24),
+      );
+    } else {
+      rocketRot = heading;
+    }
+    rocketFlame =
+      p < 0.12 ? p / 0.12 : p > 0.84 ? Math.max(0, (1 - p) / 0.16) : 1;
+  } else {
+    const pp = parkPos(rocketHostId);
+    if (pp) {
+      rocketX = pp.x;
+      rocketY = pp.y;
+    }
+  }
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
