@@ -613,27 +613,12 @@ export function SolarSystem() {
       img: p.img,
       kindLabel: "Planet",
       line: p.line,
-      facts: [
-        {
-          label: "Size",
-          value:
-            p.size >= 250
-              ? "Gas giant"
-              : p.size >= 150
-                ? "Mid-sized world"
-                : "Pebble planet",
-        },
-        { label: "Orbit", value: `Ring #${PLANETS.indexOf(p) + 1} from the Sun` },
-        { label: "One year", value: fmtPeriod(p.period) },
-        { label: "Moons", value: hasMoon ? "1 of 2" : "0 of 2" },
-      ],
       childrenLabel: "Moons",
       childrenCap: 2,
       children: hasMoon
         ? [{ id: MOON.id, name: MOON.name, img: MOON.img }]
         : [],
       add,
-      remove: null,
     };
   };
 
