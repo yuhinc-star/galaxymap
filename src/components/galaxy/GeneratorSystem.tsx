@@ -144,6 +144,9 @@ export function GeneratorSystem() {
   const [newbornId, setNewbornId] = useState<string | null>(null);
   /** Bodies mid-goodbye animation, removed from the config when it ends. */
   const [departingIds, setDepartingIds] = useState<string[]>([]);
+  /** Phone shrink for the rocket's fixed on-screen size — decided after
+      mount so SSR and hydration render identical park positions. */
+  const [rocketShrink, setRocketShrink] = useState(1);
   /** True while the old world warps out before a regenerate/count change. */
   const [warping, setWarping] = useState(false);
   /** Dice icon tumble on the "New system" button. */
@@ -198,6 +201,7 @@ export function GeneratorSystem() {
   // because the remounted camera resets to initialScale).
   useEffect(() => {
     if (window.innerWidth >= 640) return;
+    setRocketShrink(0.72);
     const s = Math.max(0.12, Math.min(0.36, (window.innerWidth / WORLD) * 1.02));
     setTransformRef.current?.(
       (window.innerWidth - WORLD * s) / 2,
@@ -413,7 +417,7 @@ export function GeneratorSystem() {
     const c = bodyPos(id);
     const s = bodySize(id);
     if (!c || !s) return null;
-    const k = rocketWorldScale(stateRef.current?.scale ?? 1);
+    const k = rocketWorldScale(stateRef.current?.scale ?? 1, rocketShrink);
     if (id === config.sun.id) {
       const r = s / 2 + ROCKET_H * SUN_ORBIT_STANDOFF * k;
       const a = PARK_ANGLE + (t * TAU) / SUN_ORBIT_PERIOD;

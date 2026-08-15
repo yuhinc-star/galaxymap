@@ -145,6 +145,9 @@ export function SolarSystem() {
   const [dragActive, setDragActive] = useState(false);
   /** Body currently showing its information panel. */
   const [infoId, setInfoId] = useState<string | null>(null);
+  /** Phone shrink for the rocket's fixed on-screen size — decided after
+      mount so SSR and hydration render identical park positions. */
+  const [rocketShrink, setRocketShrink] = useState(1);
   /** Double-tap detection on the focused body (tap → focus, double-tap → panel). */
   const lastTapRef = useRef<{ id: string; t: number } | null>(null);
   /** Live drag data — read every frame by the render loop. */
@@ -197,6 +200,7 @@ export function SolarSystem() {
   // one silent transform after mount (SSR keeps the desktop default).
   useEffect(() => {
     if (window.innerWidth >= 640) return;
+    setRocketShrink(0.72);
     const s = Math.max(0.12, Math.min(0.36, (window.innerWidth / WORLD) * 1.02));
     setTransformRef.current?.(
       (window.innerWidth - WORLD * s) / 2,
@@ -405,7 +409,7 @@ export function SolarSystem() {
     const c = bodyPos(id);
     const s = bodySize(id);
     if (!c || !s) return null;
-    const k = rocketWorldScale(stateRef.current?.scale ?? 1);
+    const k = rocketWorldScale(stateRef.current?.scale ?? 1, rocketShrink);
     if (id === SUN.id) {
       const r = s / 2 + ROCKET_H * SUN_ORBIT_STANDOFF * k;
       const a = PARK_ANGLE + (t * TAU) / SUN_ORBIT_PERIOD;
