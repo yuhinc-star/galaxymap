@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "A playful cartoon solar system you can drag, zoom, and tap. Planets orbit a smiling sun and talk back when you poke them.",
+          "A playful cartoon solar system that really moves — nine planets orbit a smiling sun while you drag, zoom, and tap them to hear what they say.",
       },
       {
         property: "og:title",
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "A playful cartoon solar system you can drag, zoom, and tap. Planets orbit a smiling sun and talk back when you poke them.",
+          "A playful cartoon solar system that really moves — nine planets orbit a smiling sun while you drag, zoom, and tap them to hear what they say.",
       },
       { property: "og:type", content: "website" },
       {

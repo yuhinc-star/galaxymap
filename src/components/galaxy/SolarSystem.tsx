@@ -1,15 +1,30 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import { Minus, Plus, RotateCcw, Sparkle } from "lucide-react";
-import { HOTSPOTS, MAP_URL, WORLD_H, WORLD_W } from "./planets";
-import { Hotspot } from "./Hotspot";
+import { CENTER, MOON, PLANETS, SUN, WORLD } from "./planets";
+import { Planet } from "./Planet";
 import { Starfield } from "./Starfield";
+
+const TAU = Math.PI * 2;
 
 export function SolarSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [bounceId, setBounceId] = useState<string | null>(null);
+  /** Animation clock, seconds. Starts at 0 so SSR and hydration agree. */
+  const [t, setT] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
   const bounceTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    let raf = 0;
+    const t0 = performance.now();
+    const loop = (now: number) => {
+      setT((now - t0) / 1000);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   const handleTap = useCallback((id: string) => {
     window.clearTimeout(hideTimer.current);
@@ -20,11 +35,27 @@ export function SolarSystem() {
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
   }, []);
 
+  // Orbit math: every planet advances along its ring at its own speed.
+  const positions = new Map<string, { x: number; y: number }>();
+  for (const p of PLANETS) {
+    const a = p.startAngle + (t * TAU) / p.period;
+    positions.set(p.id, {
+      x: CENTER + p.orbitR * Math.cos(a),
+      y: CENTER + p.orbitR * Math.sin(a),
+    });
+  }
+  const earth = positions.get("earth") ?? { x: CENTER, y: CENTER };
+  const moonAngle = (t * TAU) / MOON.period;
+  const moonPos = {
+    x: earth.x + MOON.orbitR * Math.cos(moonAngle),
+    y: earth.y + MOON.orbitR * Math.sin(moonAngle),
+  };
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
       <TransformWrapper
-        initialScale={0.55}
-        minScale={0.3}
+        initialScale={0.34}
+        minScale={0.12}
         maxScale={2.5}
         centerOnInit
         limitToBounds={false}
@@ -39,29 +70,102 @@ export function SolarSystem() {
             >
               <div
                 className="relative"
-                style={{ width: WORLD_W, height: WORLD_H }}
+                style={{ width: WORLD, height: WORLD }}
               >
-                <img
-                  src={MAP_URL}
-                  alt="Cartoon solar system map with smiling planets"
-                  width={WORLD_W}
-                  height={WORLD_H}
-                  draggable={false}
-                  className="absolute inset-0 select-none"
+                {/* Soft nebula glow behind the whole system */}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      "radial-gradient(circle at center, oklch(0.34 0.09 300 / 0.5), transparent 62%)",
+                  }}
                 />
 
-                {/* Twinkling stars and comets over the picture */}
-                <Starfield size={Math.max(WORLD_W, WORLD_H)} width={WORLD_W} height={WORLD_H} />
+                {/* Twinkling stars and comets */}
+                <Starfield size={WORLD} />
 
-                {HOTSPOTS.map((h) => (
-                  <Hotspot
-                    key={h.id}
-                    def={h}
-                    active={activeId === h.id}
-                    bouncing={bounceId === h.id}
-                    onTap={handleTap}
+                {/* Dashed orbit rings, like the reference drawing */}
+                <svg
+                  width={WORLD}
+                  height={WORLD}
+                  viewBox={`0 0 ${WORLD} ${WORLD}`}
+                  className="pointer-events-none absolute inset-0"
+                  aria-hidden
+                >
+                  {PLANETS.map((p) => (
+                    <circle
+                      key={p.id}
+                      cx={CENTER}
+                      cy={CENTER}
+                      r={p.orbitR}
+                      fill="none"
+                      stroke="white"
+                      strokeOpacity={0.3}
+                      strokeWidth={3}
+                      strokeDasharray="0.1 20"
+                      strokeLinecap="round"
+                    />
+                  ))}
+                  <circle
+                    cx={earth.x}
+                    cy={earth.y}
+                    r={MOON.orbitR}
+                    fill="none"
+                    stroke="white"
+                    strokeOpacity={0.22}
+                    strokeWidth={2.5}
+                    strokeDasharray="0.1 14"
+                    strokeLinecap="round"
                   />
-                ))}
+                </svg>
+
+                {/* Warm glow behind the Sun */}
+                <div
+                  className="pointer-events-none absolute rounded-full"
+                  style={{
+                    left: CENTER,
+                    top: CENTER,
+                    width: SUN.size * 2.1,
+                    height: SUN.size * 2.1,
+                    transform: "translate(-50%, -50%)",
+                    background:
+                      "radial-gradient(circle, oklch(0.9 0.16 95 / 0.4), transparent 65%)",
+                  }}
+                />
+
+                <Planet
+                  def={SUN}
+                  x={CENTER}
+                  y={CENTER}
+                  active={activeId === SUN.id}
+                  bouncing={bounceId === SUN.id}
+                  onTap={handleTap}
+                  spin
+                />
+
+                {PLANETS.map((p) => {
+                  const q = positions.get(p.id)!;
+                  return (
+                    <Planet
+                      key={p.id}
+                      def={p}
+                      x={q.x}
+                      y={q.y}
+                      active={activeId === p.id}
+                      bouncing={bounceId === p.id}
+                      onTap={handleTap}
+                    />
+                  );
+                })}
+
+                <Planet
+                  def={MOON}
+                  x={moonPos.x}
+                  y={moonPos.y}
+                  active={activeId === MOON.id}
+                  bouncing={bounceId === MOON.id}
+                  onTap={handleTap}
+                />
               </div>
             </TransformComponent>
 
