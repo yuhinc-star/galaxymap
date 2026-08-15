@@ -28,6 +28,8 @@ interface NavigatorProps {
   onSelect: (id: string) => void;
   /** Double-click an entry: fly there and open its information panel. */
   onInfo?: ((id: string) => void) | undefined;
+  /** Bodies mid-goodbye animation — their entries dim and go inert. */
+  departingIds?: string[] | undefined;
   rocket?: NavigatorRocket;
 }
 
@@ -44,8 +46,19 @@ interface NavigatorProps {
  * the rocket's destination instead of a camera target. The rocket can
  * land on anything — sun, planet or moon — so every entry stays live.
  */
-export function Navigator({ items, activeId, focusedId, onSelect, onInfo, rocket }: NavigatorProps) {
+export function Navigator({ items, activeId, focusedId, onSelect, onInfo, departingIds, rocket }: NavigatorProps) {
   const [open, setOpen] = useState(true);
+  const [closing, setClosing] = useState(false);
+
+  /** Fold the menu away first, then swap to the round list button. */
+  const collapse = () => {
+    if (closing) return;
+    setClosing(true);
+    window.setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+    }, 210);
+  };
 
   if (!open) {
     return (
@@ -54,7 +67,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, rocket
         aria-label="Open the navigator"
         title="Navigator"
         onClick={() => setOpen(true)}
-        className="fixed left-4 top-16 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-space-deep/90 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 active:scale-95"
+        className="animate-pop-in fixed left-4 top-16 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-space-deep/90 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 active:scale-95"
       >
         <List className="h-5 w-5" />
       </button>
@@ -62,12 +75,17 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, rocket
   }
 
   const armed = rocket?.armed ?? false;
+  // Running cascade index — each entry (and each nested moon) steps in a
+  // beat after the previous one whenever the menu (re)generates.
+  let cascade = 0;
 
   const renderEntry = (entry: NavigatorEntry, depth: number) => {
     const focused = focusedId === entry.id;
+    const departing = departingIds?.includes(entry.id) ?? false;
     // The rocket can park on any body, at any depth of the moon tree.
     const rocketHere = rocket?.hostId === entry.id;
     const handleClick = () => {
+      if (departing) return;
       if (armed) {
         rocket!.onDestination(entry.id);
         return;
@@ -89,7 +107,10 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, rocket
             if (!armed) onInfo?.(entry.id);
           }}
           aria-current={focused ? "true" : undefined}
-          className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 text-left transition-colors ${
+          disabled={departing}
+          className={`flex w-full items-center gap-2.5 rounded-2xl px-2.5 text-left transition-all duration-500 ${
+            departing ? "scale-95 opacity-35 saturate-50" : ""
+          } ${
             armed
               ? "cursor-pointer hover:bg-star/20 hover:ring-1 hover:ring-star/50"
               : "hover:bg-white/10"
@@ -150,8 +171,15 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, rocket
   };
 
   /** One entry plus its nested moon tree, indented along a dashed line. */
-  const renderItem = (item: NavigatorEntry, depth: number): ReactNode => (
-    <li key={item.id} className="flex flex-col gap-0.5">
+  const renderItem = (item: NavigatorEntry, depth: number): ReactNode => {
+    // Cap the cascade so long lists don't keep you waiting at the bottom.
+    const delay = Math.min(cascade++, 14) * 42;
+    return (
+    <li
+      key={item.id}
+      className="nav-item-in flex flex-col gap-0.5"
+      style={{ animationDelay: `${delay}ms` }}
+    >
       {renderEntry(item, depth)}
       {item.moons && item.moons.length > 0 && (
         <ul
@@ -163,12 +191,13 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, rocket
         </ul>
       )}
     </li>
-  );
+    );
+  };
 
   return (
     <nav
       aria-label="System navigator"
-      className="animate-pop-in fixed left-4 top-16 z-20 flex max-h-[62vh] w-60 flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm"
+      className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-4 top-16 z-20 flex max-h-[62vh] w-60 flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm`}
     >
       <div className="flex items-center justify-between px-4 pb-1 pt-3">
         <span className="font-hand text-2xl font-bold uppercase tracking-[0.2em] text-white">
@@ -188,7 +217,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, rocket
           <button
             type="button"
             aria-label="Collapse the navigator"
-            onClick={() => setOpen(false)}
+            onClick={collapse}
             className="flex h-7 w-7 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/20 hover:text-white"
           >
             <ChevronDown className="h-4 w-4" />

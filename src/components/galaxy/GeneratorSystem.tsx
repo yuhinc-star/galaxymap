@@ -140,6 +140,12 @@ export function GeneratorSystem() {
   const [infoId, setInfoId] = useState<string | null>(null);
   /** Just-born body playing its pop-in animation. */
   const [newbornId, setNewbornId] = useState<string | null>(null);
+  /** Bodies mid-goodbye animation, removed from the config when it ends. */
+  const [departingIds, setDepartingIds] = useState<string[]>([]);
+  /** True while the old world warps out before a regenerate/count change. */
+  const [warping, setWarping] = useState(false);
+  /** Dice icon tumble on the "New system" button. */
+  const [diceRolling, setDiceRolling] = useState(false);
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
@@ -148,6 +154,11 @@ export function GeneratorSystem() {
   const jumpTimer = useRef<number | undefined>(undefined);
   const squashTimer = useRef<number | undefined>(undefined);
   const newbornTimer = useRef<number | undefined>(undefined);
+  const warpTimer = useRef<number | undefined>(undefined);
+  const departTimer = useRef<number | undefined>(undefined);
+  const diceTimer = useRef<number | undefined>(undefined);
+  /** Synchronous warp guard — state lags a frame behind the click. */
+  const warpingRef = useRef(false);
   /** Double-tap detection on the focused body (tap → focus, double-tap → add). */
   const lastTapRef = useRef<{ id: string; t: number } | null>(null);
   /** Live drag data — read every frame by the render loop. */
@@ -186,6 +197,16 @@ export function GeneratorSystem() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // No orphaned timers after the page unmounts.
+  useEffect(
+    () => () => {
+      window.clearTimeout(warpTimer.current);
+      window.clearTimeout(departTimer.current);
+      window.clearTimeout(diceTimer.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     const savedBg = Number(window.localStorage.getItem("galaxy-bg"));
     if (Number.isInteger(savedBg) && savedBg >= 0 && savedBg < BACKGROUNDS.length) {
@@ -211,16 +232,33 @@ export function GeneratorSystem() {
     });
   }, []);
 
-  const regenerate = useCallback(() => {
-    const next = Math.floor(Math.random() * 1_000_000_000) + 1;
-    window.localStorage.setItem("galaxy-gen-seed", String(next));
-    setSeed(next);
+  /**
+   * Regenerate / count-change transition: the old world warps out first,
+   * then the swap happens and the seed-keyed world remounts and warps in.
+   * Extra clicks during the warp are ignored so the two beats never overlap.
+   */
+  const warpTo = (apply: () => void) => {
+    if (warpingRef.current) return;
+    warpingRef.current = true;
+    setWarping(true);
+    window.clearTimeout(warpTimer.current);
+    warpTimer.current = window.setTimeout(() => {
+      apply();
+      warpingRef.current = false;
+      setWarping(false);
+    }, 370);
+  };
+
+  /** Shared reset for a brand-new system (regenerate or count change). */
+  const resetForNewSystem = () => {
     setActiveId(null);
     setHighlightId(null);
     setFocusedId(null);
     setExtras(null);
     setInfoId(null);
     setNewbornId(null);
+    window.clearTimeout(departTimer.current);
+    setDepartingIds([]);
     lastTapRef.current = null;
     followRef.current = null;
     // The rocket always starts parked on the new sun.
@@ -230,29 +268,31 @@ export function GeneratorSystem() {
     setRocketInboundId(null);
     setDragActive(false);
     dragRef.current = null;
-  }, []);
+  };
 
-  const changeCount = useCallback((delta: number) => {
-    setPlanetCount((c) => {
-      const next = Math.min(MAX_PLANETS, Math.max(MIN_PLANETS, c + delta));
-      window.localStorage.setItem("galaxy-gen-count", String(next));
-      return next;
+  const regenerate = () => {
+    // Tumble the dice right away so the click feels instant.
+    setDiceRolling(true);
+    window.clearTimeout(diceTimer.current);
+    diceTimer.current = window.setTimeout(() => setDiceRolling(false), 650);
+    warpTo(() => {
+      const next = Math.floor(Math.random() * 1_000_000_000) + 1;
+      window.localStorage.setItem("galaxy-gen-seed", String(next));
+      setSeed(next);
+      resetForNewSystem();
     });
-    setActiveId(null);
-    setHighlightId(null);
-    setFocusedId(null);
-    setExtras(null);
-    setInfoId(null);
-    setNewbornId(null);
-    lastTapRef.current = null;
-    followRef.current = null;
-    setRocketHostId("sun");
-    setRocketArmed(false);
-    setFlight(null);
-    setRocketInboundId(null);
-    setDragActive(false);
-    dragRef.current = null;
-  }, []);
+  };
+
+  const changeCount = (delta: number) => {
+    warpTo(() => {
+      setPlanetCount((c) => {
+        const next = Math.min(MAX_PLANETS, Math.max(MIN_PLANETS, c + delta));
+        window.localStorage.setItem("galaxy-gen-count", String(next));
+        return next;
+      });
+      resetForNewSystem();
+    });
+  };
 
   /** Any manual camera move takes control back from the follow mode. */
   const stopFollow = useCallback(() => {
@@ -729,27 +769,36 @@ export function GeneratorSystem() {
   };
 
   /**
-   * The panel's "say goodbye" button: remove the body and everything
-   * orbiting it, then tidy up every bit of state that pointed at the
-   * departed family. The sun itself can never leave.
+   * The panel's "say goodbye" button: the body (and everything orbiting
+   * it) plays its spin-away goodbye first — the actual removal lands when
+   * the animation ends. State pointing at the departing family is tidied
+   * right away so nothing chases a ghost. The sun itself can never leave.
    */
   const handleRemoveBody = () => {
     if (!infoId || infoId === config.sun.id) return;
+    if (departingIds.length > 0) return; // one goodbye at a time
     const next = removeBodyFromSystem(config, infoId);
     if (!next) return;
     const removedId = infoId;
+    // Every id leaving with it: the body plus its whole moon subtree.
+    const ids: string[] = [];
+    const collect = (ms: GeneratedMoon[]) =>
+      ms.forEach((m) => {
+        ids.push(m.id);
+        collect(m.moons);
+      });
+    const rootPlanet = config.planets.find((pp) => pp.id === removedId);
+    if (rootPlanet) {
+      ids.push(rootPlanet.id);
+      collect(rootPlanet.moons);
+    } else {
+      const rootMoon = findMoonById(config.planets, removedId);
+      if (!rootMoon) return;
+      ids.push(rootMoon.id);
+      collect(rootMoon.moons);
+    }
     /** True when id is the removed body or rides anywhere under it. */
-    const gone = (id: string | null): boolean => {
-      if (!id) return false;
-      if (id === removedId) return true;
-      const p = config.planets.find((pp) => pp.id === removedId);
-      const root = p
-        ? p.moons
-        : (findMoonById(config.planets, removedId)?.moons ?? []);
-      const walk = (ms: GeneratedMoon[]): boolean =>
-        ms.some((m) => m.id === id || walk(m.moons));
-      return walk(root);
-    };
+    const gone = (id: string | null): boolean => !!id && ids.includes(id);
     // A rocket flying to a departing body turns back home; one parked
     // there moves back to the sun right away (never renders on a ghost).
     if (flight && gone(flight.toId)) {
@@ -765,8 +814,14 @@ export function GeneratorSystem() {
     if (highlightId && gone(highlightId)) setHighlightId(null);
     if (jumpId && gone(jumpId)) setJumpId(null);
     if (newbornId && gone(newbornId)) setNewbornId(null);
-    setExtras(next);
+    // Close the panel so the goodbye plays out in the world.
     setInfoId(null);
+    setDepartingIds(ids);
+    window.clearTimeout(departTimer.current);
+    departTimer.current = window.setTimeout(() => {
+      setDepartingIds([]);
+      setExtras(next);
+    }, 700);
   };
 
   /** Everything the information panel shows about a body. */
@@ -1000,6 +1055,7 @@ export function GeneratorSystem() {
             }
             highlightMode={highlightId === m.id ? "flash" : "steady"}
             newborn={newbornId === m.id}
+            departing={departingIds.includes(m.id)}
             onTap={handleBodyTap}
           />
           {renderMoonTree(m.moons, mx, my)}
@@ -1036,7 +1092,10 @@ export function GeneratorSystem() {
           return (
           <>
             <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}>
-              <div className="relative" style={{ width: WORLD, height: WORLD }}>
+              <div
+                className={`relative ${warping ? "system-exit" : "system-enter"}`}
+                style={{ width: WORLD, height: WORLD }}
+              >
                 <Starfield size={WORLD} />
 
                 {/* Hand-drawn orbit rings — every planet's ring is a
@@ -1125,6 +1184,7 @@ export function GeneratorSystem() {
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         newborn={newbornId === p.id}
+                        departing={departingIds.includes(p.id)}
                         highlighted={
                           highlightId === p.id ||
                           dragHoverId === p.id ||
@@ -1194,11 +1254,13 @@ export function GeneratorSystem() {
             </header>
 
             <Navigator
+              key={`${seed}-${planetCount}`}
               items={navItems}
               activeId={activeId}
               focusedId={focusedId}
               onSelect={handleNavigate}
               onInfo={handleInfoSelect}
+              departingIds={departingIds}
               rocket={{
                 img: heroRocketImg,
                 hostId: flight ? flight.toId : rocketHostId,
@@ -1243,7 +1305,7 @@ export function GeneratorSystem() {
                   type="button"
                   aria-label="Fewer planets"
                   onClick={() => changeCount(-1)}
-                  disabled={planetCount <= MIN_PLANETS}
+                  disabled={warping || planetCount <= MIN_PLANETS}
                   className="flex h-8 w-8 items-center justify-center rounded-full text-card-foreground transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
                 >
                   <Minus className="h-4 w-4" />
@@ -1255,7 +1317,7 @@ export function GeneratorSystem() {
                   type="button"
                   aria-label="More planets"
                   onClick={() => changeCount(1)}
-                  disabled={planetCount >= MAX_PLANETS}
+                  disabled={warping || planetCount >= MAX_PLANETS}
                   className="flex h-8 w-8 items-center justify-center rounded-full text-card-foreground transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
                 >
                   <Plus className="h-4 w-4" />
@@ -1264,9 +1326,16 @@ export function GeneratorSystem() {
               <button
                 type="button"
                 onClick={regenerate}
-                className="flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2.5 font-display text-sm font-semibold text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+                disabled={warping}
+                className="group flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2.5 font-display text-sm font-semibold text-card-foreground shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-60"
               >
-                <Dices className="h-4 w-4" />
+                <Dices
+                  className={`h-4 w-4 ${
+                    diceRolling
+                      ? "animate-dice-roll"
+                      : "group-hover:animate-[dice-wiggle_0.5s_ease-in-out]"
+                  }`}
+                />
                 New system
               </button>
               <p className="pointer-events-none text-center font-display text-xs text-star/70">
