@@ -64,15 +64,15 @@ export const SUN: BodyDef = {
  * passes behind a bigger neighbor, like layered paper stickers.
  */
 export const PLANETS: PlanetDef[] = [
-  { id: "mercury", name: "Mercury", img: mercuryImg, size: 105, orbitR: 445, period: 70, startAngle: 0.6, line: "Fastest planet in the club!", breathe: 3.4, delay: 0.6 },
-  { id: "venus", name: "Venus", img: venusImg, size: 165, orbitR: 560, period: 110, startAngle: 2.4, line: "Hottest around — and it's not close.", breathe: 4.1, delay: 1.3 },
-  { id: "earth", name: "Earth", img: earthImg, size: 250, orbitR: 725, period: 160, startAngle: 4.1, line: "You are here. Hi!", breathe: 4.6, delay: 0.2 },
-  { id: "mars", name: "Mars", img: marsImg, size: 140, orbitR: 880, period: 220, startAngle: 5.3, line: "One day I'll have wifi.", breathe: 3.8, delay: 1.7 },
-  { id: "jupiter", name: "Jupiter", img: jupiterImg, size: 300, orbitR: 1055, period: 350, startAngle: 1.2, line: "Biggest planet. Humble too.", breathe: 5.6, delay: 0.4 },
-  { id: "saturn", name: "Saturn", img: saturnImg, size: 215, orbitR: 1255, period: 475, startAngle: 3.3, line: "These rings? All natural.", breathe: 4.9, delay: 1.1 },
-  { id: "uranus", name: "Uranus", img: uranusImg, size: 190, orbitR: 1415, period: 625, startAngle: 5.9, line: "I roll sideways through life.", breathe: 4.4, delay: 0.8 },
-  { id: "neptune", name: "Neptune", img: neptuneImg, size: 160, orbitR: 1560, period: 775, startAngle: 2.0, line: "Brrr… it's windy out here.", breathe: 4.2, delay: 1.5 },
-  { id: "pluto", name: "Pluto", img: plutoImg, size: 70, orbitR: 1660, period: 950, startAngle: 4.6, line: "Still a planet in my heart.", breathe: 3.0, delay: 0.3 },
+  { id: "mercury", name: "Mercury", img: mercuryImg, size: 105, orbitR: 445, period: 140, startAngle: 0.6, line: "Fastest planet in the club!", breathe: 3.4, delay: 0.6 },
+  { id: "venus", name: "Venus", img: venusImg, size: 165, orbitR: 560, period: 220, startAngle: 2.4, line: "Hottest around — and it's not close.", breathe: 4.1, delay: 1.3 },
+  { id: "earth", name: "Earth", img: earthImg, size: 250, orbitR: 725, period: 320, startAngle: 4.1, line: "You are here. Hi!", breathe: 4.6, delay: 0.2 },
+  { id: "mars", name: "Mars", img: marsImg, size: 140, orbitR: 880, period: 440, startAngle: 5.3, line: "One day I'll have wifi.", breathe: 3.8, delay: 1.7 },
+  { id: "jupiter", name: "Jupiter", img: jupiterImg, size: 300, orbitR: 1055, period: 700, startAngle: 1.2, line: "Biggest planet. Humble too.", breathe: 5.6, delay: 0.4 },
+  { id: "saturn", name: "Saturn", img: saturnImg, size: 215, orbitR: 1255, period: 950, startAngle: 3.3, line: "These rings? All natural.", breathe: 4.9, delay: 1.1 },
+  { id: "uranus", name: "Uranus", img: uranusImg, size: 190, orbitR: 1415, period: 1250, startAngle: 5.9, line: "I roll sideways through life.", breathe: 4.4, delay: 0.8 },
+  { id: "neptune", name: "Neptune", img: neptuneImg, size: 160, orbitR: 1560, period: 1550, startAngle: 2.0, line: "Brrr… it's windy out here.", breathe: 4.2, delay: 1.5 },
+  { id: "pluto", name: "Pluto", img: plutoImg, size: 70, orbitR: 1660, period: 1900, startAngle: 4.6, line: "Still a planet in my heart.", breathe: 3.0, delay: 0.3 },
 ];
 
 /** The Moon circles Earth instead of the Sun. */
@@ -82,7 +82,7 @@ export const MOON = {
   img: moonImg,
   size: 58,
   orbitR: 165,
-  period: 25,
+  period: 50,
   line: "I only shine at night.",
   breathe: 3.1,
   delay: 0.9,
