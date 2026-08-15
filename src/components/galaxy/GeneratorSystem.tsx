@@ -1865,7 +1865,9 @@ export function GeneratorSystem() {
                 className={`relative ${warping ? "system-exit" : "system-enter"}`}
                 style={{ width: WORLD, height: WORLD }}
               >
-                <Starfield size={WORLD} />
+                {/* Twinkling stars and comets — dimmed in chat mode so the
+                    family strip stays the star of the show. */}
+                <Starfield size={WORLD} chatMix={chatMix} />
 
                 {/* Hand-drawn orbit rings — every planet's ring is a
                     different asymmetric closed curve */}
