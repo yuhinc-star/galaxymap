@@ -243,18 +243,23 @@ export function GeneratorSystem() {
   /**
    * Regenerate / count-change transition: the old world warps out first,
    * then the swap happens and the seed-keyed world remounts and warps in.
-   * Extra clicks during the warp are ignored so the two beats never overlap.
+   * The swap waits for BOTH the exit beat and the next system's sprites to
+   * be fully decoded, so the new world never pops in half-painted. Extra
+   * clicks during the warp are ignored so the two beats never overlap.
    */
-  const warpTo = (apply: () => void) => {
+  const warpTo = (apply: () => void, ready: Promise<unknown> = Promise.resolve()) => {
     if (warpingRef.current) return;
     warpingRef.current = true;
     setWarping(true);
     window.clearTimeout(warpTimer.current);
-    warpTimer.current = window.setTimeout(() => {
+    const exitDone = new Promise<void>((resolve) => {
+      warpTimer.current = window.setTimeout(resolve, 370);
+    });
+    void Promise.all([exitDone, ready]).then(() => {
       apply();
       warpingRef.current = false;
       setWarping(false);
-    }, 370);
+    });
   };
 
   /** Shared reset for a brand-new system (regenerate or count change). */
