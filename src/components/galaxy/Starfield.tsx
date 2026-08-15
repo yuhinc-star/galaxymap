@@ -92,7 +92,7 @@ export function Starfield({
     const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)] as T;
 
     // Twinkling confetti dots — a light animated layer over the painted sky.
-    const stars: Star[] = Array.from({ length: 380 }, () => ({
+    const stars: Star[] = Array.from({ length: 420 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       r: 1 + Math.random() * 3,
@@ -102,11 +102,11 @@ export function Starfield({
       color: pick(DOT_COLORS),
     }));
 
-    // Solid 5-point candy stars — few and small so they never rival planets.
-    const solidStars: SolidStar[] = Array.from({ length: 16 }, () => ({
+    // Solid 5-point candy stars — small but luminous against the dark sky.
+    const solidStars: SolidStar[] = Array.from({ length: 20 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
-      r: 5 + Math.random() * 7,
+      r: 6 + Math.random() * 8,
       rot: Math.random() * Math.PI * 2,
       speed: 0.5 + Math.random() * 1.2,
       phase: Math.random() * Math.PI * 2,
@@ -114,17 +114,17 @@ export function Starfield({
     }));
 
     // Plus-shaped sparkles scattered between the dots.
-    const sparkles: Sparkle[] = Array.from({ length: 26 }, () => ({
+    const sparkles: Sparkle[] = Array.from({ length: 32 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
-      size: 6 + Math.random() * 7,
+      size: 7 + Math.random() * 8,
       speed: 0.8 + Math.random() * 1.6,
       phase: Math.random() * Math.PI * 2,
       color: pick(SPARKLE_COLORS),
     }));
 
     // Hand-drawn spiral swirls, slowly turning.
-    const spirals: Spiral[] = Array.from({ length: 6 }, () => ({
+    const spirals: Spiral[] = Array.from({ length: 8 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       maxR: 16 + Math.random() * 18,
@@ -169,7 +169,7 @@ export function Starfield({
       // Solid candy stars with a gentle pulse
       for (const s of solidStars) {
         const pulse = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
-        ctx.globalAlpha = 0.35 + 0.4 * pulse;
+        ctx.globalAlpha = 0.55 + 0.45 * pulse;
         ctx.fillStyle = s.color;
         starPath(s.x, s.y, s.r * (0.85 + 0.2 * pulse), s.rot);
         ctx.fill();
@@ -182,7 +182,7 @@ export function Starfield({
         ctx.save();
         ctx.translate(sp.x, sp.y);
         ctx.rotate(sp.phase + t * sp.rotSpeed);
-        ctx.globalAlpha = 0.3 + 0.15 * Math.sin(t * 0.7 + sp.phase);
+        ctx.globalAlpha = 0.45 + 0.2 * Math.sin(t * 0.7 + sp.phase);
         ctx.strokeStyle = sp.color;
         ctx.beginPath();
         const steps = 56;
@@ -203,7 +203,7 @@ export function Starfield({
       for (const sp of sparkles) {
         const pulse = 0.5 + 0.5 * Math.sin(t * sp.speed + sp.phase);
         const len = sp.size * (0.55 + 0.45 * pulse);
-        ctx.globalAlpha = 0.2 + 0.6 * pulse;
+        ctx.globalAlpha = 0.3 + 0.7 * pulse;
         ctx.strokeStyle = sp.color;
         ctx.beginPath();
         ctx.moveTo(sp.x - len, sp.y);
