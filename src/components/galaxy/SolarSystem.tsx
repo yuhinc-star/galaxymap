@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
-import { Minus, Palette, Plus, RotateCcw, Sparkle } from "lucide-react";
+import { Dices, Minus, Palette, Plus, RotateCcw, Sparkle } from "lucide-react";
 import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, DRIFTERS, MOON, PLANETS, SUN, WORLD } from "./planets";
 import { Drifter } from "./Drifter";

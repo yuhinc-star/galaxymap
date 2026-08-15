@@ -1,0 +1,346 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
+import {
+  Dices,
+  Home,
+  Minus,
+  Palette,
+  Plus,
+  RotateCcw,
+  Sparkle,
+} from "lucide-react";
+import { BACKGROUNDS } from "./backgrounds";
+import { CENTER, WORLD } from "./planets";
+import { generateSystem } from "./systemGenerator";
+import { Drifter } from "./Drifter";
+import { Planet } from "./Planet";
+import { Starfield } from "./Starfield";
+
+const TAU = Math.PI * 2;
+const MIN_PLANETS = 2;
+const MAX_PLANETS = 8;
+const DEFAULT_SEED = 20260214;
+const DEFAULT_COUNT = 6;
+
+/**
+ * The Galaxy Generator: every seed assembles a brand-new solar-system-like
+ * world from the sprite pool — a random sun, random planets on asymmetric
+ * hand-drawn orbits, 0–2 moons each, and a few drifting friends.
+ */
+export function GeneratorSystem() {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [bounceId, setBounceId] = useState<string | null>(null);
+  const [bgIndex, setBgIndex] = useState(0);
+  const [seed, setSeed] = useState(DEFAULT_SEED);
+  const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
+  const [t, setT] = useState(0);
+  const hideTimer = useRef<number | undefined>(undefined);
+  const bounceTimer = useRef<number | undefined>(undefined);
+
+  const config = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
+
+  useEffect(() => {
+    let raf = 0;
+    const t0 = performance.now();
+    const loop = (now: number) => {
+      setT((now - t0) / 1000);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    const savedBg = Number(window.localStorage.getItem("galaxy-bg"));
+    if (Number.isInteger(savedBg) && savedBg >= 0 && savedBg < BACKGROUNDS.length) {
+      setBgIndex(savedBg);
+    }
+    const savedSeed = Number(window.localStorage.getItem("galaxy-gen-seed"));
+    if (Number.isInteger(savedSeed) && savedSeed > 0) setSeed(savedSeed);
+    const savedCount = Number(window.localStorage.getItem("galaxy-gen-count"));
+    if (
+      Number.isInteger(savedCount) &&
+      savedCount >= MIN_PLANETS &&
+      savedCount <= MAX_PLANETS
+    ) {
+      setPlanetCount(savedCount);
+    }
+  }, []);
+
+  const cycleBg = useCallback(() => {
+    setBgIndex((i) => {
+      const next = (i + 1) % BACKGROUNDS.length;
+      window.localStorage.setItem("galaxy-bg", String(next));
+      return next;
+    });
+  }, []);
+
+  const regenerate = useCallback(() => {
+    const next = Math.floor(Math.random() * 1_000_000_000) + 1;
+    window.localStorage.setItem("galaxy-gen-seed", String(next));
+    setSeed(next);
+    setActiveId(null);
+  }, []);
+
+  const changeCount = useCallback((delta: number) => {
+    setPlanetCount((c) => {
+      const next = Math.min(MAX_PLANETS, Math.max(MIN_PLANETS, c + delta));
+      window.localStorage.setItem("galaxy-gen-count", String(next));
+      return next;
+    });
+    setActiveId(null);
+  }, []);
+
+  const handleTap = useCallback((id: string) => {
+    window.clearTimeout(hideTimer.current);
+    window.clearTimeout(bounceTimer.current);
+    setActiveId(id);
+    setBounceId(id);
+    bounceTimer.current = window.setTimeout(() => setBounceId(null), 700);
+    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+  }, []);
+
+  // Orbit math: bodies advance along their own wobbly closed curves.
+  const planetPos = new Map<string, { x: number; y: number }>();
+  for (const p of config.planets) {
+    const q = p.orbit.pointAt(p.startAngle + (t * TAU) / p.period);
+    planetPos.set(p.id, { x: CENTER + q.x, y: CENTER + q.y });
+  }
+  const drifterPos = new Map<string, { x: number; y: number }>();
+  for (const d of config.drifters) {
+    const q = d.orbit.pointAt(d.startAngle + (d.dir * t * TAU) / d.period);
+    drifterPos.set(d.id, { x: CENTER + q.x, y: CENTER + q.y });
+  }
+
+  return (
+    <div className="fixed inset-0 overflow-hidden bg-space">
+      <img
+        key={BACKGROUNDS[bgIndex]!.src}
+        src={BACKGROUNDS[bgIndex]!.src}
+        alt=""
+        draggable={false}
+        className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+      />
+      <TransformWrapper
+        key={`${seed}-${planetCount}`}
+        initialScale={0.36}
+        minScale={0.12}
+        maxScale={2.5}
+        centerOnInit
+        limitToBounds={false}
+        doubleClick={{ disabled: true }}
+        wheel={{ step: 0.15 }}
+        panning={{ velocityDisabled: true }}
+      >
+        {({ zoomIn, zoomOut, resetTransform }) => (
+          <>
+            <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}>
+              <div className="relative" style={{ width: WORLD, height: WORLD }}>
+                <Starfield size={WORLD} />
+
+                {/* Hand-drawn orbit rings — every planet's ring is a
+                    different asymmetric closed curve */}
+                <svg
+                  width={WORLD}
+                  height={WORLD}
+                  viewBox={`0 0 ${WORLD} ${WORLD}`}
+                  className="pointer-events-none absolute inset-0"
+                  aria-hidden
+                >
+                  <g transform={`translate(${CENTER} ${CENTER})`}>
+                    {config.planets.map((p) => (
+                      <path
+                        key={p.id}
+                        d={p.orbit.d}
+                        fill="none"
+                        stroke="white"
+                        strokeOpacity={p.ringOpacity}
+                        strokeWidth={p.ringWidth}
+                        strokeDasharray={p.dash}
+                        strokeLinecap="round"
+                      />
+                    ))}
+                  </g>
+                  {/* Moon rings follow their planets */}
+                  {config.planets.map((p) => {
+                    const q = planetPos.get(p.id)!;
+                    return p.moons.map((m) => (
+                      <path
+                        key={m.id}
+                        d={m.ringD}
+                        transform={`translate(${q.x} ${q.y})`}
+                        fill="none"
+                        stroke="white"
+                        strokeOpacity={0.72}
+                        strokeWidth={6.5}
+                        strokeDasharray="22 17"
+                        strokeLinecap="round"
+                      />
+                    ));
+                  })}
+                </svg>
+
+                {/* Warm glow behind the Sun */}
+                <div
+                  className="pointer-events-none absolute rounded-full"
+                  style={{
+                    left: CENTER,
+                    top: CENTER,
+                    width: config.sun.size * 1.8,
+                    height: config.sun.size * 1.8,
+                    transform: "translate(-50%, -50%)",
+                    background:
+                      "radial-gradient(circle, oklch(0.9 0.16 95 / 0.4), transparent 65%)",
+                  }}
+                />
+
+                {config.drifters.map((d) => {
+                  const q = drifterPos.get(d.id)!;
+                  return <Drifter key={d.id} def={d} x={q.x} y={q.y} />;
+                })}
+
+                <Planet
+                  def={config.sun}
+                  x={CENTER}
+                  y={CENTER}
+                  active={activeId === config.sun.id}
+                  bouncing={bounceId === config.sun.id}
+                  onTap={handleTap}
+                  spin
+                />
+
+                {[...config.planets]
+                  .sort((a, b) => b.size - a.size)
+                  .map((p) => {
+                    const q = planetPos.get(p.id)!;
+                    return (
+                      <Planet
+                        key={p.id}
+                        def={p}
+                        x={q.x}
+                        y={q.y}
+                        active={activeId === p.id}
+                        bouncing={bounceId === p.id}
+                        onTap={handleTap}
+                      />
+                    );
+                  })}
+
+                {config.planets.map((p) => {
+                  const q = planetPos.get(p.id)!;
+                  return p.moons.map((m) => {
+                    const a = m.startAngle + (t * TAU) / m.period;
+                    return (
+                      <Planet
+                        key={m.id}
+                        def={m}
+                        x={q.x + m.orbitR * Math.cos(a)}
+                        y={q.y + m.orbitR * Math.sin(a)}
+                        active={activeId === m.id}
+                        bouncing={bounceId === m.id}
+                        onTap={handleTap}
+                      />
+                    );
+                  });
+                })}
+              </div>
+            </TransformComponent>
+
+            <header className="pointer-events-none fixed left-4 top-4 flex items-center gap-2">
+              <Sparkle className="h-5 w-5 text-star" aria-hidden />
+              <span className="font-display text-xl font-semibold tracking-wide text-star">
+                Galaxy Generator
+              </span>
+            </header>
+
+            <div className="fixed right-4 top-4">
+              <Link
+                to="/"
+                aria-label="Back to the classic solar system"
+                title="Back to the classic solar system"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <Home className="h-5 w-5" />
+              </Link>
+            </div>
+
+            {/* Generator controls */}
+            <div className="fixed bottom-5 left-4 flex flex-col gap-2">
+              <div className="flex items-center gap-2 rounded-full border border-border bg-card/90 px-2 py-1.5 shadow-lg">
+                <button
+                  type="button"
+                  aria-label="Fewer planets"
+                  onClick={() => changeCount(-1)}
+                  disabled={planetCount <= MIN_PLANETS}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-card-foreground transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="min-w-20 text-center font-display text-sm font-semibold text-card-foreground">
+                  {planetCount} planets
+                </span>
+                <button
+                  type="button"
+                  aria-label="More planets"
+                  onClick={() => changeCount(1)}
+                  disabled={planetCount >= MAX_PLANETS}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-card-foreground transition-transform hover:scale-110 active:scale-95 disabled:opacity-30"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={regenerate}
+                className="flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2.5 font-display text-sm font-semibold text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <Dices className="h-4 w-4" />
+                New system
+              </button>
+              <p className="pointer-events-none text-center font-display text-xs text-star/70">
+                seed #{seed}
+              </p>
+            </div>
+
+            <div className="fixed bottom-5 right-4 flex flex-col gap-2">
+              <button
+                type="button"
+                aria-label={`Change background (now: ${BACKGROUNDS[bgIndex]!.name})`}
+                title={`Sky: ${BACKGROUNDS[bgIndex]!.name}`}
+                onClick={cycleBg}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <Palette className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Zoom in"
+                onClick={() => zoomIn()}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Zoom out"
+                onClick={() => zoomOut()}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <Minus className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Recenter"
+                onClick={() => resetTransform()}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <RotateCcw className="h-5 w-5" />
+              </button>
+            </div>
+          </>
+        )}
+      </TransformWrapper>
+    </div>
+  );
+}
