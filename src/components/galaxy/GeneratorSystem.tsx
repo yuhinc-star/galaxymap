@@ -637,7 +637,7 @@ export function GeneratorSystem() {
     a: number,
     parentId = "",
   ) => {
-    const subj = chatSubjectRef.current;
+    const subj = fanSubjectRef.current;
     if (subj && chatMixRef.current > 0.004) {
       if (m.id === subj.layout.parentId) {
         return chatAdjustSubject(
@@ -647,15 +647,54 @@ export function GeneratorSystem() {
           m.size,
         );
       }
-      // Any moon not in the fan (a grandchild at any depth, or a moon
-      // of an off-screen planet) keeps orbiting its parent, tightened
-      // as the fan forms so it never swings under the chat panel.
       if (!subj.layout.slots.has(m.id)) {
+        const circ = (aa: number) => ({
+          x: m.orbitR * Math.cos(aa),
+          y: m.orbitR * Math.sin(aa),
+        });
+        // Just left the fan (the fan re-focused on another star): glide
+        // home along the ring instead of snapping back onto the orbit.
+        if (chatRideRef.current.has(m.id)) {
+          const r = rideChatOrbitExit(
+            chatRideRef.current,
+            m.id,
+            px,
+            py,
+            a,
+            circ,
+            m.size,
+            t,
+          );
+          if (r.done) ringScaleRef.current.delete(m.id);
+          else ringScaleRef.current.set(m.id, r.ringScale);
+          return { x: r.x, y: r.y, size: r.size };
+        }
+        // A former fan subject glides straight back to its live pose.
+        if (chatRenderRef.current.has(m.id)) {
+          const live = { x: px + m.orbitR * Math.cos(a), y: py + m.orbitR * Math.sin(a), size: m.size };
+          const c = chaseChatTarget(chatRenderRef.current, m.id, live, live, t);
+          if (
+            Math.abs(c.x - live.x) + Math.abs(c.y - live.y) < 2 &&
+            Math.abs(c.size - live.size) < 1
+          ) {
+            chatRenderRef.current.delete(m.id);
+          }
+          return { x: c.x, y: c.y, size: c.size };
+        }
+        // Any moon not in the fan (a grandchild at any depth, or a moon
+        // of an off-screen planet) keeps orbiting its parent, tightened
+        // as the fan forms so it never swings under the chat panel. The
+        // tightening eases in so entering this band never snaps.
         const k = 1 - 0.45 * chatEase(chatMixRef.current);
-        ringScaleRef.current.set(m.id, k);
+        const prev = ringScaleRef.current.get(m.id);
+        const next =
+          prev !== undefined && Math.abs(prev - k) > 0.008
+            ? prev + (k - prev) * 0.16
+            : k;
+        ringScaleRef.current.set(m.id, next);
         return {
-          x: px + m.orbitR * k * Math.cos(a),
-          y: py + m.orbitR * k * Math.sin(a),
+          x: px + m.orbitR * next * Math.cos(a),
+          y: py + m.orbitR * next * Math.sin(a),
           size: m.size,
         };
       }
@@ -734,8 +773,10 @@ export function GeneratorSystem() {
       };
     }
     chatSubjectRef.current = subject;
+    fanSubjectRef.current = { id: subject.info.id, layout: subject.layout };
   }
   const chatSubj = chatSubjectRef.current;
+  const fanSubj = fanSubjectRef.current;
 
   // In chat mode the navigator lists only the family on screen: the
   // subject at the top with its children (and their moons) nested below.
@@ -773,19 +814,49 @@ export function GeneratorSystem() {
     return navItems;
   })();
 
-  // Planets in the chat set render at their chased pose — the map feeds
+  // Planets in the chat fan render at their chased pose — the map feeds
   // moons, rings, rocket parking and hover-picking, so all of them ride
-  // along into the column.
-  if (chatSubj && chatActive) {
+  // along into the fan. Bodies that just left the fan (it re-focused on
+  // another star) glide back to their live orbits instead of snapping.
+  if (fanSubj && chatActive) {
     for (const p of config.planets) {
-      if (!chatSubj.layout.slots.has(p.id)) continue;
+      const inFan = fanSubj.layout.slots.has(p.id);
+      const wasSubject = chatRenderRef.current.has(p.id);
+      const wasRiding = chatRideRef.current.has(p.id);
+      if (!inFan && !wasSubject && !wasRiding) continue;
       const q = planetPos.get(p.id);
       if (!q) continue;
       const a = p.startAngle + (t * TAU) / p.period;
-      const r =
-        p.id === chatSubj.layout.parentId
-          ? chatAdjustSubject(p.id, q.x, q.y, p.size)
-          : chatRide(p.id, CENTER, CENTER, a, p.orbit.pointAt, p.size);
+      let r: { x: number; y: number; size: number };
+      if (inFan && p.id === fanSubj.layout.parentId) {
+        r = chatAdjustSubject(p.id, q.x, q.y, p.size);
+      } else if (inFan) {
+        r = chatRide(p.id, CENTER, CENTER, a, p.orbit.pointAt, p.size);
+      } else if (wasSubject) {
+        const live = { x: q.x, y: q.y, size: p.size };
+        const c = chaseChatTarget(chatRenderRef.current, p.id, live, live, t);
+        if (
+          Math.abs(c.x - live.x) + Math.abs(c.y - live.y) < 2 &&
+          Math.abs(c.size - live.size) < 1
+        ) {
+          chatRenderRef.current.delete(p.id);
+        }
+        r = c;
+      } else {
+        const x = rideChatOrbitExit(
+          chatRideRef.current,
+          p.id,
+          CENTER,
+          CENTER,
+          a,
+          p.orbit.pointAt,
+          p.size,
+          t,
+        );
+        if (x.done) ringScaleRef.current.delete(p.id);
+        else ringScaleRef.current.set(p.id, x.ringScale);
+        r = x;
+      }
       planetPos.set(p.id, { x: r.x, y: r.y });
     }
   }
