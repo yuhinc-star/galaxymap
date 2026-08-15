@@ -179,7 +179,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
     const orbitR = inner + gap * i + (rand() - 0.5) * 36;
     const kind: OrbitShapeKind = pick(ORBIT_SHAPE_KINDS);
     const orbit = makeOrbitShape(kind, orbitR, Math.floor(rand() * 1e9));
-    const period = 210 * Math.pow(orbitR / 445, 1.35) * (0.9 + rand() * 0.2);
+    const period = 315 * Math.pow(orbitR / 445, 1.35) * (0.9 + rand() * 0.2);
 
     // 0, 1 or 2 moons — weighted so every count shows up often.
     const moonRoll = rand();
@@ -195,7 +195,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
         img: ms.img,
         size: 44 + rand() * 26,
         orbitR: mOrbitR,
-        period: 60 + rand() * 52.5,
+        period: 90 + rand() * 78.75,
         startAngle: rand() * TAU,
         ringD: makeOrbitShape("ring", mOrbitR, Math.floor(rand() * 1e9), 10).d,
         line: "I'm a little moon, short and stout.",
@@ -235,7 +235,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
         size: 80 + rand() * 40,
         orbit: makeOrbitShape(pick(ORBIT_SHAPE_KINDS), orbitR, Math.floor(rand() * 1e9)),
         orbitR,
-        period: 75 + rand() * 70,
+        period: 112.5 + rand() * 105,
         startAngle: rand() * TAU,
         dir: rand() < 0.5 ? -1 : 1,
         line: "",
