@@ -430,7 +430,7 @@ export function SolarSystem() {
   }
   // Names stay readable while the camera zooms the column out.
   const chatLabelBoost = chatActive
-    ? Math.min(2.6, Math.max(1, 1 / (stateRef.current?.scale ?? 1)))
+    ? Math.min(2.0, Math.max(1, 1 / (stateRef.current?.scale ?? 1)))
     : 1;
   const moonChatSize = chatRenderRef.current.get(MOON.id)?.size ?? MOON.size;
 
