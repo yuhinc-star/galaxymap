@@ -42,6 +42,9 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
   const [queueTotal, setQueueTotal] = useState(0);
   const seenRef = useRef<Set<string>>(new Set());
   const bootedRef = useRef(false);
+  /** Mirror of the live queue so the context effect can farewell the tip
+      being replaced (a shown tip counts as seen, even when interrupted). */
+  const queueRef = useRef<string[]>([]);
 
   const startQueue = useCallback((ids: string[]) => {
     setQueue(ids);
@@ -66,9 +69,20 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
     }
   }, [storageKey]);
 
+  // Keep the queue mirror current (declared before the context effect so
+  // the swap below still sees the outgoing queue).
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
   // Situation changed → offer its unseen tips. The very first pop waits a
   // beat so the scene can settle; later swaps are immediate.
   useEffect(() => {
+    const outgoing = queueRef.current[0];
+    if (outgoing) {
+      seenRef.current.add(outgoing);
+      persistSeen();
+    }
     const fresh = hints
       .filter((h) => h.context === context && !seenRef.current.has(h.id))
       .map((h) => h.id);
