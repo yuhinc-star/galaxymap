@@ -270,6 +270,8 @@ export function GeneratorSystem() {
                   y={CENTER}
                   active={activeId === config.sun.id}
                   bouncing={bounceId === config.sun.id}
+                  jumping={jumpId === config.sun.id}
+                  highlighted={highlightId === config.sun.id}
                   onTap={handleTap}
                   spin
                 />
@@ -286,6 +288,8 @@ export function GeneratorSystem() {
                         y={q.y}
                         active={activeId === p.id}
                         bouncing={bounceId === p.id}
+                        jumping={jumpId === p.id}
+                        highlighted={highlightId === p.id}
                         onTap={handleTap}
                       />
                     );
@@ -303,6 +307,8 @@ export function GeneratorSystem() {
                         y={q.y + m.orbitR * Math.sin(a)}
                         active={activeId === m.id}
                         bouncing={bounceId === m.id}
+                        jumping={jumpId === m.id}
+                        highlighted={highlightId === m.id}
                         onTap={handleTap}
                       />
                     );
@@ -317,6 +323,12 @@ export function GeneratorSystem() {
                 Galaxy Generator
               </span>
             </header>
+
+            <Navigator
+              items={navItems}
+              activeId={activeId}
+              onSelect={(id) => handleNavigate(id, state.scale, setTransform)}
+            />
 
             <div className="fixed right-4 top-4">
               <Link
