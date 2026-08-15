@@ -57,8 +57,8 @@ const RING_STYLES: RingStyle[] = PLANETS.map((p, i) => {
   const cy = CENTER + (rand() - 0.5) * 26;
   return {
     d: wobblyRing(cx, cy, p.orbitR, i * 7 + 3),
-    dash: `${(30 + rand() * 14).toFixed(0)} ${(20 + rand() * 10).toFixed(0)}`,
-    width: 8.5 + rand() * 2.5,
+    dash: `${(34 + rand() * 14).toFixed(0)} ${(22 + rand() * 10).toFixed(0)}`,
+    width: 10 + rand() * 3,
     opacity: 0.76 + rand() * 0.16,
   };
 });
@@ -143,7 +143,7 @@ export function SolarSystem() {
         className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
       />
       <TransformWrapper
-        initialScale={0.34}
+        initialScale={0.36}
         minScale={0.12}
         maxScale={2.5}
         centerOnInit
@@ -192,8 +192,8 @@ export function SolarSystem() {
                     fill="none"
                     stroke="white"
                     strokeOpacity={0.72}
-                    strokeWidth={5.5}
-                    strokeDasharray="19 15"
+                    strokeWidth={6.5}
+                    strokeDasharray="22 17"
                     strokeLinecap="round"
                   />
                 </svg>
@@ -204,13 +204,20 @@ export function SolarSystem() {
                   style={{
                     left: CENTER,
                     top: CENTER,
-                    width: SUN.size * 2.1,
-                    height: SUN.size * 2.1,
+                    width: SUN.size * 1.8,
+                    height: SUN.size * 1.8,
                     transform: "translate(-50%, -50%)",
                     background:
                       "radial-gradient(circle, oklch(0.9 0.16 95 / 0.4), transparent 65%)",
                   }}
                 />
+
+                {/* Drifting characters fly behind the planets, like the
+                    rocket and astronaut floating between the posters' rings */}
+                {DRIFTERS.map((d) => {
+                  const q = positions.get(d.id)!;
+                  return <Drifter key={d.id} def={d} x={q.x} y={q.y} />;
+                })}
 
                 <Planet
                   def={SUN}
@@ -222,20 +229,24 @@ export function SolarSystem() {
                   spin
                 />
 
-                {PLANETS.map((p) => {
-                  const q = positions.get(p.id)!;
-                  return (
-                    <Planet
-                      key={p.id}
-                      def={p}
-                      x={q.x}
-                      y={q.y}
-                      active={activeId === p.id}
-                      bouncing={bounceId === p.id}
-                      onTap={handleTap}
-                    />
-                  );
-                })}
+                {/* Biggest first so small planets pass in front at
+                    conjunction and never disappear behind a giant */}
+                {[...PLANETS]
+                  .sort((a, b) => b.size - a.size)
+                  .map((p) => {
+                    const q = positions.get(p.id)!;
+                    return (
+                      <Planet
+                        key={p.id}
+                        def={p}
+                        x={q.x}
+                        y={q.y}
+                        active={activeId === p.id}
+                        bouncing={bounceId === p.id}
+                        onTap={handleTap}
+                      />
+                    );
+                  })}
 
                 <Planet
                   def={MOON}
@@ -245,11 +256,6 @@ export function SolarSystem() {
                   bouncing={bounceId === MOON.id}
                   onTap={handleTap}
                 />
-
-                {DRIFTERS.map((d) => {
-                  const q = positions.get(d.id)!;
-                  return <Drifter key={d.id} def={d} x={q.x} y={q.y} />;
-                })}
               </div>
             </TransformComponent>
 
