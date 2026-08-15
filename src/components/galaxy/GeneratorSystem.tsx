@@ -1461,7 +1461,8 @@ export function GeneratorSystem() {
     moons: GeneratedMoon[],
     px: number,
     py: number,
-    depth: number,
+    parentId = "",
+    depth = 0,
   ): ReactNode =>
     moons.map((m) => {
       const a = m.startAngle + (t * TAU) / m.period;
@@ -1629,7 +1630,7 @@ export function GeneratorSystem() {
                     const q = planetPos.get(p.id)!;
                     return (
                       <Fragment key={p.id}>
-                        {renderMoonRings(p.moons, q.x, q.y, 0)}
+                        {renderMoonRings(p.moons, q.x, q.y, p.id, 0)}
                       </Fragment>
                     );
                   })}
