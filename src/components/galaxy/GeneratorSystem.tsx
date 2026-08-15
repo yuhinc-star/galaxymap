@@ -186,6 +186,12 @@ export function GeneratorSystem() {
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
 
   const baseConfig = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
+
+  // Warm every sprite and sky in the background right after mount, so a later
+  // "New system" warp or palette switch never waits on image loads.
+  useEffect(() => {
+    warmSpritePool(BACKGROUNDS.map((b) => b.src));
+  }, []);
   const config = extras ?? baseConfig;
 
   useEffect(() => {
