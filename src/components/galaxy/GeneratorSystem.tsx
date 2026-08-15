@@ -955,15 +955,18 @@ export function GeneratorSystem() {
     );
   }, [t]);
 
-  // Chat-mode camera: while chat is open the camera chases the column
+  // Chat-mode camera: while chat is open the camera chases the fan
   // framing inside the sky strip; while it closes it glides back to the
-  // pre-chat view. Chase-cam style, like the navigator follow.
+  // pre-chat view. Once the fan has settled the user owns the zoom —
+  // wheel/pinch can zoom IN freely, but zooming out stops at the fan
+  // framing (the family stays on screen; no drifting off to other
+  // stars), where the camera re-locks onto the fan.
   useEffect(() => {
     if (!chatActive) return;
-    const subj = chatSubjectRef.current;
+    const fan = fanSubjectRef.current;
     const apply = setTransformRef.current;
     const st = stateRef.current;
-    if (!subj || !apply || !st) return;
+    if (!fan || !apply || !st) return;
     let target: { posX: number; posY: number; scale: number } | null = null;
     if (chatOpen) {
       const rect = stripRef.current?.getBoundingClientRect();
@@ -971,12 +974,21 @@ export function GeneratorSystem() {
       // The strip is still animating to its chat width (or the window
       // moved): re-solve the fan so slots and camera track it.
       if (
-        Math.abs(subj.layout.stripW - rect.width) > 2 ||
-        Math.abs(subj.layout.stripH - rect.height) > 2
+        Math.abs(fan.layout.stripW - rect.width) > 2 ||
+        Math.abs(fan.layout.stripH - rect.height) > 2
       ) {
         rebuildChatLayout(config);
+        chatGlideRef.current = true;
       }
-      target = subj.layout.camera;
+      const lay = fan.layout;
+      const settled = chatMixRef.current > 0.9;
+      if (!chatGlideRef.current && settled) {
+        // The user is exploring zoomed-in — the camera is theirs until
+        // they come all the way back out to the fan framing.
+        if (st.scale > lay.camera.scale * 1.03) return;
+        chatGlideRef.current = true;
+      }
+      target = lay.camera;
     } else if (preChatCamRef.current) {
       const pre = preChatCamRef.current;
       target = { posX: pre.positionX, posY: pre.positionY, scale: pre.scale };
@@ -992,6 +1004,9 @@ export function GeneratorSystem() {
         st.scale + ds * 0.14,
         0,
       );
+    } else if (chatOpen) {
+      // Arrived — from here the user may zoom in; the fan waits below.
+      chatGlideRef.current = false;
     }
   });
 
@@ -1224,9 +1239,15 @@ export function GeneratorSystem() {
     jumpTimer.current = window.setTimeout(() => setJumpId(null), 850);
     hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
-    // In chat mode the camera stays on the column — the hop, ring and
-    // bubble still play, but nobody leaves their slot.
-    if (!chatOpen) focusCamera(id);
+    // In chat mode the picked star becomes the fan's focus: the camera
+    // glides over and its own children line up above it. The hop, ring
+    // and bubble still play along the way.
+    if (chatOpen) {
+      setFocusedId(id);
+      focusChatFan(id);
+    } else {
+      focusCamera(id);
+    }
   };
 
   /** Double-tap on the focused body: open its information panel. */
