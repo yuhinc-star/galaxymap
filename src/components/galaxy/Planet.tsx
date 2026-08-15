@@ -186,7 +186,7 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
         className={`pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 font-hand font-bold uppercase tracking-[0.2em] text-orbit-label transition-opacity duration-500 ${
           departing ? "opacity-0" : ""
         } ${
-          longName ? "w-max max-w-[380px] whitespace-normal text-center leading-none" : "whitespace-nowrap"
+          longName ? "w-max max-w-[380px] whitespace-normal text-center leading-none [overflow-wrap:anywhere]" : "whitespace-nowrap"
         }`}
         style={{
           fontSize: labelSize * labelBoost,
