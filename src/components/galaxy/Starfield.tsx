@@ -189,14 +189,14 @@ export function Starfield({
         ctx.fill();
       }
 
-      // Spiral swirls, slowly rotating
+      // Spiral swirls, slowly rotating — dimmed in chat mode.
       ctx.lineCap = "round";
       ctx.lineWidth = 4.5;
       for (const sp of spirals) {
         ctx.save();
         ctx.translate(sp.x, sp.y);
         ctx.rotate(sp.phase + t * sp.rotSpeed);
-        ctx.globalAlpha = 0.45 + 0.2 * Math.sin(t * 0.7 + sp.phase);
+        ctx.globalAlpha = dim * (0.45 + 0.2 * Math.sin(t * 0.7 + sp.phase));
         ctx.strokeStyle = sp.color;
         ctx.beginPath();
         const steps = 56;
@@ -212,12 +212,12 @@ export function Starfield({
         ctx.restore();
       }
 
-      // Plus-shaped sparkle crosses that pulse in and out
+      // Plus-shaped sparkle crosses that pulse in and out — dimmed in chat mode.
       ctx.lineWidth = 3.5;
       for (const sp of sparkles) {
         const pulse = 0.5 + 0.5 * Math.sin(t * sp.speed + sp.phase);
         const len = sp.size * (0.55 + 0.45 * pulse);
-        ctx.globalAlpha = 0.3 + 0.7 * pulse;
+        ctx.globalAlpha = dim * (0.3 + 0.7 * pulse);
         ctx.strokeStyle = sp.color;
         ctx.beginPath();
         ctx.moveTo(sp.x - len, sp.y);
