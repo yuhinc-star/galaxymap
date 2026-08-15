@@ -853,13 +853,6 @@ export function GeneratorSystem() {
         img: config.sun.img,
         kindLabel: "Sun",
         line: config.sun.line,
-        facts: [
-          { label: "Size", value: "Supergiant star" },
-          {
-            label: "Planets in orbit",
-            value: `${config.planets.length} of ${MAX_SYSTEM_PLANETS}`,
-          },
-        ],
         childrenLabel: "Planets",
         childrenCap: MAX_SYSTEM_PLANETS,
         children: config.planets.map((p) => ({
@@ -868,7 +861,6 @@ export function GeneratorSystem() {
           img: p.img,
         })),
         add,
-        remove: null, // the sun is the heart of the system — it stays
       };
     }
     const p = config.planets.find((pp) => pp.id === id);
