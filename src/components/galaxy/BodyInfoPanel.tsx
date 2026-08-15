@@ -61,7 +61,11 @@ export function BodyInfoPanel({
   return (
     <aside
       aria-label={`About ${info.name}`}
-      className="animate-sheet-in fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 flex max-h-[52vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm sm:animate-panel-in sm:bottom-auto sm:left-auto sm:right-4 sm:top-16 sm:max-h-[calc(100vh-7rem)] sm:w-72 sm:max-w-[calc(100vw-2rem)]"
+      className={
+        chatMode
+          ? "animate-sheet-in fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[60] flex max-h-[52vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm sm:animate-panel-in sm:bottom-3 sm:left-auto sm:right-3 sm:top-3 sm:max-h-none sm:w-80"
+          : "animate-sheet-in fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 flex max-h-[52vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm sm:animate-panel-in sm:bottom-auto sm:left-auto sm:right-4 sm:top-16 sm:max-h-[calc(100vh-7rem)] sm:w-72 sm:max-w-[calc(100vw-2rem)]"
+      }
     >
       <div className="flex items-start gap-3 px-4 pb-2 pt-3">
         <img
