@@ -24,6 +24,8 @@ interface PlanetProps {
   y: number;
   active: boolean;
   bouncing?: boolean;
+  /** Just born via the generator's add-a-body bubble: pop-in animation. */
+  newborn?: boolean;
   onTap: (id: string) => void;
   /** Slowly rotate the sprite (used for the Sun's rays). */
   spin?: boolean;
@@ -39,11 +41,13 @@ interface PlanetProps {
  * A celestial body floating in the world: sprite, name label, tap
  * reaction. Position comes from the parent's orbit math.
  */
-export function Planet({ def, x, y, active, bouncing = false, onTap, spin, jumping, highlighted, highlightMode = "flash" }: PlanetProps) {
+export function Planet({ def, x, y, active, bouncing = false, newborn = false, onTap, spin, jumping, highlighted, highlightMode = "flash" }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
 
   let animation: string | undefined;
-  if (jumping) {
+  if (newborn) {
+    animation = "planet-birth 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 1";
+  } else if (jumping) {
     animation = "planet-jump 0.8s cubic-bezier(0.36, 0, 0.66, 1) 1";
   } else if (!bouncing) {
     animation = spin

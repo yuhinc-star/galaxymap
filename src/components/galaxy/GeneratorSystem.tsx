@@ -1,10 +1,12 @@
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 import { Link } from "@tanstack/react-router";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
@@ -20,7 +22,18 @@ import {
 import heroRocketImg from "@/assets/planets/hero-rocket.png";
 import { BACKGROUNDS } from "./backgrounds";
 import { CENTER, WORLD } from "./planets";
-import { generateSystem } from "./systemGenerator";
+import {
+  addMoonToSystem,
+  addPlanetToSystem,
+  findMoonById,
+  generateSystem,
+  MAX_MOONS_PER_BODY,
+  MAX_SYSTEM_PLANETS,
+  MIN_MOON_PARENT_SIZE,
+  type GeneratedMoon,
+  type SystemConfig,
+} from "./systemGenerator";
+import { AddBodyMenu } from "./AddBodyMenu";
 import { Drifter } from "./Drifter";
 import { HeroRocket, ROCKET_H } from "./HeroRocket";
 import { Navigator, type NavigatorEntry } from "./Navigator";
@@ -46,6 +59,13 @@ interface RocketFlight {
   fromRot: number;
   startAt: number;
   dur: number;
+}
+
+/** What the double-tap "add a body" bubble offers for a body. */
+interface AddMenuInfo {
+  canAdd: boolean;
+  actionLabel?: string;
+  fullNote?: string;
 }
 
 const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3);
@@ -80,6 +100,13 @@ export function GeneratorSystem() {
   const [landingSquash, setLandingSquash] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
+  /** Runtime-grown system: once the user adds bodies by double-clicking,
+      this replaces the seeded config (regenerating resets it). */
+  const [extras, setExtras] = useState<SystemConfig | null>(null);
+  /** Focused body currently showing its "add a body" bubble. */
+  const [addMenuId, setAddMenuId] = useState<string | null>(null);
+  /** Just-born body playing its pop-in animation. */
+  const [newbornId, setNewbornId] = useState<string | null>(null);
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
@@ -87,6 +114,9 @@ export function GeneratorSystem() {
   const highlightTimer = useRef<number | undefined>(undefined);
   const jumpTimer = useRef<number | undefined>(undefined);
   const squashTimer = useRef<number | undefined>(undefined);
+  const newbornTimer = useRef<number | undefined>(undefined);
+  /** Double-tap detection on the focused body (tap → focus, double-tap → add). */
+  const lastTapRef = useRef<{ id: string; t: number } | null>(null);
   /** Live drag data — read every frame by the render loop. */
   const dragRef = useRef<{
     cur: { x: number; y: number };
@@ -109,7 +139,8 @@ export function GeneratorSystem() {
       is now — even mid-flight from a previous pick. */
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
 
-  const config = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
+  const baseConfig = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
+  const config = extras ?? baseConfig;
 
   useEffect(() => {
     let raf = 0;
@@ -154,6 +185,10 @@ export function GeneratorSystem() {
     setActiveId(null);
     setHighlightId(null);
     setFocusedId(null);
+    setExtras(null);
+    setAddMenuId(null);
+    setNewbornId(null);
+    lastTapRef.current = null;
     followRef.current = null;
     // The rocket always starts parked on the new sun.
     setRocketHostId("sun");
@@ -173,6 +208,10 @@ export function GeneratorSystem() {
     setActiveId(null);
     setHighlightId(null);
     setFocusedId(null);
+    setExtras(null);
+    setAddMenuId(null);
+    setNewbornId(null);
+    lastTapRef.current = null;
     followRef.current = null;
     setRocketHostId("sun");
     setRocketArmed(false);
@@ -186,6 +225,7 @@ export function GeneratorSystem() {
   const stopFollow = useCallback(() => {
     followRef.current = null;
     setFocusedId(null);
+    setAddMenuId(null);
   }, []);
 
   // Orbit math: bodies advance along their own wobbly closed curves.
@@ -200,42 +240,64 @@ export function GeneratorSystem() {
     drifterPos.set(d.id, { x: CENTER + q.x, y: CENTER + q.y });
   }
 
-  /** Navigator entries: the sun, then every planet with its moons nested. */
+  /** Navigator entries: the sun, then every planet with its moon tree. */
+  const moonEntry = (m: GeneratedMoon): NavigatorEntry => ({
+    id: m.id,
+    name: m.name,
+    img: m.img,
+    moons: m.moons.length > 0 ? m.moons.map(moonEntry) : undefined,
+  });
   const navItems: NavigatorEntry[] = [
     { id: config.sun.id, name: config.sun.name, img: config.sun.img },
     ...config.planets.map((p) => ({
       id: p.id,
       name: p.name,
       img: p.img,
-      moons: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
+      moons: p.moons.length > 0 ? p.moons.map(moonEntry) : undefined,
     })),
   ];
+
+  /** Recursive moon position: mini-moons ride on their parent moon. */
+  const moonWorldPos = (
+    moons: GeneratedMoon[],
+    id: string,
+    px: number,
+    py: number,
+  ): { x: number; y: number } | null => {
+    for (const m of moons) {
+      const a = m.startAngle + (t * TAU) / m.period;
+      const pos = {
+        x: px + m.orbitR * Math.cos(a),
+        y: py + m.orbitR * Math.sin(a),
+      };
+      if (m.id === id) return pos;
+      const sub = moonWorldPos(m.moons, id, pos.x, pos.y);
+      if (sub) return sub;
+    }
+    return null;
+  };
 
   /** Current world position of any navigator-listed body. */
   const bodyPos = (id: string): { x: number; y: number } | null => {
     if (id === config.sun.id) return { x: CENTER, y: CENTER };
     const pq = planetPos.get(id);
     if (pq) return pq;
-    // Moons ride on their planet's position.
+    // Moons (and their own mini-moons) ride on their parent's position.
     for (const p of config.planets) {
-      const m = p.moons.find((mm) => mm.id === id);
-      if (m) {
-        const base = planetPos.get(p.id)!;
-        const a = m.startAngle + (t * TAU) / m.period;
-        return {
-          x: base.x + m.orbitR * Math.cos(a),
-          y: base.y + m.orbitR * Math.sin(a),
-        };
-      }
+      const base = planetPos.get(p.id)!;
+      const hit = moonWorldPos(p.moons, id, base.x, base.y);
+      if (hit) return hit;
     }
     return null;
   };
 
-  /** Display size of a rocket-landable body (sun or planet — no moons). */
+  /** Display size of any body (sun, planet or moon). */
   const bodySize = (id: string): number | null => {
     if (id === config.sun.id) return config.sun.size;
     const p = config.planets.find((pp) => pp.id === id);
-    return p ? p.size : null;
+    if (p) return p.size;
+    const m = findMoonById(config.planets, id);
+    return m ? m.size : null;
   };
 
   /** Where the parked rocket stands: the host's upper-right shoulder. */
@@ -270,9 +332,15 @@ export function GeneratorSystem() {
         Math.max(...p.moons.map((m) => m.orbitR + m.size / 2)) + 60;
       return Math.max(own, moonEdge);
     }
-    for (const pp of config.planets) {
-      const m = pp.moons.find((mm) => mm.id === id);
-      if (m) return m.size * 1.6;
+    const m = findMoonById(config.planets, id);
+    if (m) {
+      const own = m.size * 1.6;
+      if (m.moons.length === 0) return own;
+      // Frame the moon together with its own mini-moon rings.
+      return Math.max(
+        own,
+        Math.max(...m.moons.map((c) => c.orbitR + c.size / 2)) + 40,
+      );
     }
     return 200;
   };
@@ -497,6 +565,7 @@ export function GeneratorSystem() {
   const handleNavigate = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
+    setAddMenuId(null);
     window.clearTimeout(hideTimer.current);
     window.clearTimeout(jumpTimer.current);
     window.clearTimeout(highlightTimer.current);
@@ -509,10 +578,85 @@ export function GeneratorSystem() {
     focusCamera(id);
   };
 
+  /** Double-tap on the focused body: float the add-a-body bubble above it. */
+  const openAddMenu = (id: string) => {
+    window.clearTimeout(hideTimer.current);
+    setActiveId(null);
+    setAddMenuId(id);
+  };
+
+  /**
+   * Body tap with double-tap detection: a quick second tap on the body
+   * that holds camera focus opens its "add a body" bubble. The first tap
+   * still does its usual happy jump — the bubble simply replaces it.
+   */
+  const handleBodyTap = (id: string) => {
+    const now = Date.now();
+    const last = lastTapRef.current;
+    lastTapRef.current = { id, t: now };
+    if (focusedId === id && last?.id === id && now - last.t < 450) {
+      lastTapRef.current = null;
+      openAddMenu(id);
+      return;
+    }
+    handleNavigate(id);
+  };
+
+  /** What the add-a-body bubble offers for this body, if anything. */
+  const getAddMenuInfo = (id: string): AddMenuInfo | null => {
+    if (id === config.sun.id) {
+      return config.planets.length < MAX_SYSTEM_PLANETS
+        ? { canAdd: true, actionLabel: "Add a planet" }
+        : { canAdd: false, fullNote: "All 8 planet seats are full!" };
+    }
+    const p = config.planets.find((pp) => pp.id === id);
+    if (p) {
+      return p.moons.length < MAX_MOONS_PER_BODY
+        ? { canAdd: true, actionLabel: "Add a moon" }
+        : { canAdd: false, fullNote: "This planet's sky is full!" };
+    }
+    const m = findMoonById(config.planets, id);
+    if (m) {
+      if (m.moons.length >= MAX_MOONS_PER_BODY)
+        return { canAdd: false, fullNote: "This little moon is full!" };
+      if (m.size < MIN_MOON_PARENT_SIZE)
+        return { canAdd: false, fullNote: "Too tiny for a moon of its own!" };
+      return { canAdd: true, actionLabel: "Add a tiny moon" };
+    }
+    return null;
+  };
+
+  /** The bubble's button: grow the family and celebrate the newborn. */
+  const handleAddBody = () => {
+    if (!addMenuId) return;
+    const result =
+      addMenuId === config.sun.id
+        ? addPlanetToSystem(config)
+        : addMoonToSystem(config, addMenuId);
+    setAddMenuId(null);
+    if (!result) return;
+    setExtras(result.next);
+    // Newborn celebration: pop-in, a hello bubble and the golden ring.
+    setNewbornId(result.newId);
+    window.clearTimeout(newbornTimer.current);
+    newbornTimer.current = window.setTimeout(() => setNewbornId(null), 1000);
+    window.clearTimeout(hideTimer.current);
+    setActiveId(result.newId);
+    hideTimer.current = window.setTimeout(() => setActiveId(null), 2800);
+    window.clearTimeout(highlightTimer.current);
+    setHighlightId(result.newId);
+    highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
+  };
+
   // --- Hero rocket pose ---------------------------------------------------
   const dragNow = dragActive ? dragRef.current : null;
   const dragHoverId = dragNow?.hover ?? null;
   const dragHoverPos = dragHoverId ? bodyPos(dragHoverId) : null;
+
+  // --- Add-a-body bubble anchor --------------------------------------------
+  const menuPos = addMenuId ? bodyPos(addMenuId) : null;
+  const menuSize = addMenuId ? bodySize(addMenuId) : null;
+  const menuInfo = addMenuId ? getAddMenuInfo(addMenuId) : null;
 
   let rocketX = CENTER;
   let rocketY = CENTER;
@@ -556,6 +700,61 @@ export function GeneratorSystem() {
     }
   }
 
+  /** Moon rings, recursively: each ring is centered on its parent's spot. */
+  const renderMoonRings = (
+    moons: GeneratedMoon[],
+    px: number,
+    py: number,
+    depth: number,
+  ): ReactNode =>
+    moons.map((m) => {
+      const a = m.startAngle + (t * TAU) / m.period;
+      const mx = px + m.orbitR * Math.cos(a);
+      const my = py + m.orbitR * Math.sin(a);
+      return (
+        <Fragment key={m.id}>
+          <path
+            d={m.ringD}
+            transform={`translate(${px} ${py})`}
+            fill="none"
+            stroke="white"
+            strokeOpacity={0.72}
+            strokeWidth={depth === 0 ? 6.5 : 5}
+            strokeDasharray={depth === 0 ? "22 17" : "16 13"}
+            strokeLinecap="round"
+          />
+          {renderMoonRings(m.moons, mx, my, depth + 1)}
+        </Fragment>
+      );
+    });
+
+  /** Moons (and their own smaller moons) riding on their parent body. */
+  const renderMoonTree = (
+    moons: GeneratedMoon[],
+    px: number,
+    py: number,
+  ): ReactNode =>
+    moons.map((m) => {
+      const a = m.startAngle + (t * TAU) / m.period;
+      const mx = px + m.orbitR * Math.cos(a);
+      const my = py + m.orbitR * Math.sin(a);
+      return (
+        <Fragment key={m.id}>
+          <Planet
+            def={m}
+            x={mx}
+            y={my}
+            active={activeId === m.id}
+            jumping={jumpId === m.id}
+            highlighted={highlightId === m.id}
+            newborn={newbornId === m.id}
+            onTap={handleBodyTap}
+          />
+          {renderMoonTree(m.moons, mx, my)}
+        </Fragment>
+      );
+    });
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
       <img
@@ -575,7 +774,7 @@ export function GeneratorSystem() {
         doubleClick={{ disabled: true }}
         wheel={{ step: 0.15 }}
         panning={{ velocityDisabled: true, disabled: dragActive }}
-        onPanningStart={stopFollow}
+        onPanning={stopFollow}
         onWheel={stopFollow}
         onPinchStart={stopFollow}
       >
@@ -611,22 +810,15 @@ export function GeneratorSystem() {
                       />
                     ))}
                   </g>
-                  {/* Moon rings follow their planets */}
+                  {/* Moon rings follow their parent body — planets, and
+                      moons with mini-moons of their own */}
                   {config.planets.map((p) => {
                     const q = planetPos.get(p.id)!;
-                    return p.moons.map((m) => (
-                      <path
-                        key={m.id}
-                        d={m.ringD}
-                        transform={`translate(${q.x} ${q.y})`}
-                        fill="none"
-                        stroke="white"
-                        strokeOpacity={0.72}
-                        strokeWidth={6.5}
-                        strokeDasharray="22 17"
-                        strokeLinecap="round"
-                      />
-                    ));
+                    return (
+                      <Fragment key={p.id}>
+                        {renderMoonRings(p.moons, q.x, q.y, 0)}
+                      </Fragment>
+                    );
                   })}
                 </svg>
 
@@ -655,6 +847,7 @@ export function GeneratorSystem() {
                   y={CENTER}
                   active={activeId === config.sun.id}
                   jumping={jumpId === config.sun.id}
+                  newborn={newbornId === config.sun.id}
                   highlighted={
                     highlightId === config.sun.id ||
                     dragHoverId === config.sun.id ||
@@ -663,7 +856,7 @@ export function GeneratorSystem() {
                   highlightMode={
                     highlightId === config.sun.id ? "flash" : "steady"
                   }
-                  onTap={handleNavigate}
+                  onTap={handleBodyTap}
                   spin
                 />
 
@@ -679,6 +872,7 @@ export function GeneratorSystem() {
                         y={q.y}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
+                        newborn={newbornId === p.id}
                         highlighted={
                           highlightId === p.id ||
                           dragHoverId === p.id ||
@@ -687,28 +881,18 @@ export function GeneratorSystem() {
                         highlightMode={
                           highlightId === p.id ? "flash" : "steady"
                         }
-                        onTap={handleNavigate}
+                        onTap={handleBodyTap}
                       />
                     );
                   })}
 
                 {config.planets.map((p) => {
                   const q = planetPos.get(p.id)!;
-                  return p.moons.map((m) => {
-                    const a = m.startAngle + (t * TAU) / m.period;
-                    return (
-                      <Planet
-                        key={m.id}
-                        def={m}
-                        x={q.x + m.orbitR * Math.cos(a)}
-                        y={q.y + m.orbitR * Math.sin(a)}
-                        active={activeId === m.id}
-                        jumping={jumpId === m.id}
-                        highlighted={highlightId === m.id}
-                        onTap={handleNavigate}
-                      />
-                    );
-                  });
+                  return (
+                    <Fragment key={p.id}>
+                      {renderMoonTree(p.moons, q.x, q.y)}
+                    </Fragment>
+                  );
                 })}
 
                 {/* Golden tether from the dragged rocket to its target */}
@@ -733,6 +917,20 @@ export function GeneratorSystem() {
                       className="rocket-tether"
                     />
                   </svg>
+                )}
+
+                {/* Double-tap bubble: grow this body's family */}
+                {addMenuId && menuPos && menuSize != null && menuInfo && (
+                  <AddBodyMenu
+                    x={menuPos.x}
+                    y={menuPos.y}
+                    bodyR={menuSize / 2}
+                    canAdd={menuInfo.canAdd}
+                    actionLabel={menuInfo.actionLabel}
+                    fullNote={menuInfo.fullNote}
+                    onAdd={handleAddBody}
+                    onClose={() => setAddMenuId(null)}
+                  />
                 )}
 
                 <HeroRocket
@@ -794,7 +992,7 @@ export function GeneratorSystem() {
                   <Minus className="h-4 w-4" />
                 </button>
                 <span className="min-w-20 text-center font-display text-sm font-semibold text-card-foreground">
-                  {planetCount} planets
+                  {config.planets.length} planets
                 </span>
                 <button
                   type="button"

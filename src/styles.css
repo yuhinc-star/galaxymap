@@ -258,6 +258,27 @@
   animation: planet-jump 0.8s cubic-bezier(0.36, 0, 0.66, 1) 1;
 }
 
+/* A body being born (generator "add a body" bubble): pops out of nothing
+   with a little spin and an overshoot bounce. */
+@keyframes planet-birth {
+  0% {
+    transform: scale(0) rotate(-32deg);
+  }
+  55% {
+    transform: scale(1.18) rotate(7deg);
+  }
+  75% {
+    transform: scale(0.94) rotate(-2.5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.planet-birth {
+  animation: planet-birth 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+}
+
 /* Golden hand-drawn ring that spins and pulses around a body found via
    the navigator — golden (not orbit-white) so it can't be confused with
    an orbit line. */

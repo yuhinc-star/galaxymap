@@ -21,6 +21,8 @@ export interface GeneratedMoon extends BodyDef {
   startAngle: number;
   /** SVG path of the moon's little ring, centered on (0,0). */
   ringD: string;
+  /** Moons can have smaller moons of their own (added at runtime). */
+  moons: GeneratedMoon[];
 }
 
 export interface GeneratedPlanet extends BodyDef {
@@ -201,6 +203,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
         line: "I'm a little moon, short and stout.",
         breathe: 2.8 + rand() * 1.2,
         delay: rand() * 1.5,
+        moons: [],
       });
     }
 
@@ -245,4 +248,240 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
     });
 
   return { seed, planetCount, sun, planets, drifters };
+}
+
+// --- Runtime additions ------------------------------------------------------
+// Bodies the user grows by double-clicking a focused body. Not seeded —
+// Math.random is fine here because this only runs client-side, after
+// interaction.
+
+export const MAX_SYSTEM_PLANETS = 8;
+export const MAX_MOONS_PER_BODY = 2;
+/** A moon smaller than this can't host a mini-moon of its own. */
+export const MIN_MOON_PARENT_SIZE = 46;
+
+const ADDED_MOON_LINES = [
+  "I'm a little moon, short and stout.",
+  "I'm the tiniest moon around!",
+  "I orbit my big sibling!",
+  "Freshly hatched moon!",
+];
+
+const pickRandom = <T,>(arr: readonly T[]): T =>
+  arr[Math.floor(Math.random() * arr.length)]!;
+
+/** Every name already taken in this system (sun, planets, whole moon tree). */
+const collectUsedNames = (system: SystemConfig): Set<string> => {
+  const used = new Set<string>([system.sun.name]);
+  const walk = (moons: GeneratedMoon[]) => {
+    for (const m of moons) {
+      used.add(m.name);
+      walk(m.moons);
+    }
+  };
+  for (const p of system.planets) {
+    used.add(p.name);
+    walk(p.moons);
+  }
+  return used;
+};
+
+const uniqueRuntimeName = (base: string, used: Set<string>): string => {
+  if (!used.has(base)) {
+    used.add(base);
+    return base;
+  }
+  const numerals = ["II", "III", "IV", "V", "VI", "VII"];
+  for (const n of numerals) {
+    const candidate = `${base} ${n}`;
+    if (!used.has(candidate)) {
+      used.add(candidate);
+      return candidate;
+    }
+  }
+  const fallback = `${base} ${Math.floor(Math.random() * 900) + 100}`;
+  used.add(fallback);
+  return fallback;
+};
+
+const runtimePlanetName = (used: Set<string>): string =>
+  Math.random() < 0.45
+    ? uniqueRuntimeName(
+        `${pickRandom(LONG_OPENERS)} ${pickRandom(LONG_TYPES)} ${1000 + Math.floor(Math.random() * 98999)} ${pickRandom(LONG_SUFFIXES)}`,
+        used,
+      )
+    : uniqueRuntimeName(pickRandom(PLANET_NAMES), used);
+
+/** Find a moon by id anywhere in the planets' moon trees. */
+export function findMoonById(
+  planets: GeneratedPlanet[],
+  id: string,
+): GeneratedMoon | null {
+  const walk = (moons: GeneratedMoon[]): GeneratedMoon | null => {
+    for (const m of moons) {
+      if (m.id === id) return m;
+      const sub = walk(m.moons);
+      if (sub) return sub;
+    }
+    return null;
+  };
+  for (const p of planets) {
+    const hit = walk(p.moons);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * Add a planet to the system (double-click the sun). The new orbit parks
+ * in the widest gap between existing rings so the family stays evenly
+ * spread; the sprite is one nobody in the system uses yet. Null when the
+ * system already has 8 planets.
+ */
+export function addPlanetToSystem(
+  system: SystemConfig,
+): { next: SystemConfig; newId: string } | null {
+  if (system.planets.length >= MAX_SYSTEM_PLANETS) return null;
+  const used = collectUsedNames(system);
+  const usedImgs = new Set(system.planets.map((p) => p.img));
+  const fresh = PLANET_SPRITES.filter((s) => !usedImgs.has(s.img));
+  const sprite = pickRandom(fresh.length > 0 ? fresh : PLANET_SPRITES);
+
+  const radii = system.planets.map((p) => p.orbit.maxR).sort((a, b) => a - b);
+  const edges = [560, ...radii, 1740];
+  let gapStart = edges[0]!;
+  let gapEnd = edges[1]!;
+  for (let i = 0; i < edges.length - 1; i++) {
+    if (edges[i + 1]! - edges[i]! > gapEnd - gapStart) {
+      gapStart = edges[i]!;
+      gapEnd = edges[i + 1]!;
+    }
+  }
+  const orbitR = (gapStart + gapEnd) / 2;
+
+  const roll = Math.random();
+  const size =
+    roll < 0.25
+      ? 250 + Math.random() * 60
+      : roll < 0.7
+        ? 150 + Math.random() * 65
+        : 85 + Math.random() * 50;
+  const orbit = makeOrbitShape(
+    pickRandom(ORBIT_SHAPE_KINDS),
+    orbitR,
+    Math.floor(Math.random() * 1e9),
+  );
+  const planet: GeneratedPlanet = {
+    id: `planet-new-${Date.now().toString(36)}-${sprite.id}`,
+    name: runtimePlanetName(used),
+    img: sprite.img,
+    size,
+    orbit,
+    period: 315 * Math.pow(orbitR / 445, 1.35) * (0.9 + Math.random() * 0.2),
+    startAngle: Math.random() * TAU,
+    dash: `${(30 + Math.random() * 18).toFixed(0)} ${(20 + Math.random() * 12).toFixed(0)}`,
+    ringWidth: 9 + Math.random() * 4,
+    ringOpacity: 0.72 + Math.random() * 0.2,
+    moons: [],
+    line: pickRandom(PLANET_LINES),
+    breathe: 3 + Math.random() * 2.4,
+    delay: Math.random() * 1.6,
+  };
+  return {
+    next: { ...system, planets: [...system.planets, planet] },
+    newId: planet.id,
+  };
+}
+
+/**
+ * Add a moon to a planet — or a smaller mini-moon to a moon (yes, moons
+ * can have moons). Null when the parent already has 2 moons or is too
+ * tiny to host one.
+ */
+export function addMoonToSystem(
+  system: SystemConfig,
+  parentId: string,
+): { next: SystemConfig; newId: string } | null {
+  const used = collectUsedNames(system);
+  const makeChild = (
+    parentSize: number,
+    siblingCount: number,
+    isPlanet: boolean,
+  ): GeneratedMoon => {
+    const sprite = pickRandom(MOON_SPRITES);
+    const size = isPlanet
+      ? Math.min(44 + Math.random() * 26, parentSize * 0.55)
+      : parentSize * (0.45 + Math.random() * 0.15);
+    const orbitR = isPlanet
+      ? parentSize * 0.72 + 50 + siblingCount * 62
+      : parentSize * 0.85 + 34 + siblingCount * 40;
+    return {
+      id: `moon-new-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`,
+      name: uniqueRuntimeName(sprite.name, used),
+      img: sprite.img,
+      size,
+      orbitR,
+      period: 60 + Math.random() * 60,
+      startAngle: Math.random() * TAU,
+      ringD: makeOrbitShape("ring", orbitR, Math.floor(Math.random() * 1e9), 10).d,
+      line: pickRandom(ADDED_MOON_LINES),
+      breathe: 2.8 + Math.random() * 1.2,
+      delay: Math.random() * 1.5,
+      moons: [],
+    };
+  };
+
+  // Parent is a planet?
+  const planet = system.planets.find((p) => p.id === parentId);
+  if (planet) {
+    if (planet.moons.length >= MAX_MOONS_PER_BODY) return null;
+    const child = makeChild(planet.size, planet.moons.length, true);
+    return {
+      next: {
+        ...system,
+        planets: system.planets.map((p) =>
+          p.id === parentId ? { ...p, moons: [...p.moons, child] } : p,
+        ),
+      },
+      newId: child.id,
+    };
+  }
+
+  // Parent is a moon somewhere in the tree.
+  const parent = findMoonById(system.planets, parentId);
+  if (
+    !parent ||
+    parent.moons.length >= MAX_MOONS_PER_BODY ||
+    parent.size < MIN_MOON_PARENT_SIZE
+  ) {
+    return null;
+  }
+  const child = makeChild(parent.size, parent.moons.length, false);
+  const insert = (moons: GeneratedMoon[]): GeneratedMoon[] | null => {
+    let changed = false;
+    const next = moons.map((m) => {
+      if (m.id === parentId) {
+        changed = true;
+        return { ...m, moons: [...m.moons, child] };
+      }
+      const sub = insert(m.moons);
+      if (sub) {
+        changed = true;
+        return { ...m, moons: sub };
+      }
+      return m;
+    });
+    return changed ? next : null;
+  };
+  let changedAny = false;
+  const planets = system.planets.map((p) => {
+    const sub = insert(p.moons);
+    if (sub) {
+      changedAny = true;
+      return { ...p, moons: sub };
+    }
+    return p;
+  });
+  if (!changedAny) return null;
+  return { next: { ...system, planets }, newId: child.id };
 }
