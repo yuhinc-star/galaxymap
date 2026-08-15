@@ -1072,16 +1072,14 @@ export function GeneratorSystem() {
     window.clearTimeout(highlightTimer.current);
     setHighlightId(dest);
     highlightTimer.current = window.setTimeout(() => setHighlightId(null), 2800);
-    // Landed with the chat closed: the rocket offers to introduce its new
-    // host — where the rocket lands is who we chat with.
-    if (!chatOpen) {
-      window.clearTimeout(suggestionTimer.current);
-      setChatSuggestionId(dest);
-      suggestionTimer.current = window.setTimeout(
-        () => setChatSuggestionId(null),
-        9000,
-      );
-    }
+    // Every touchdown follows the same handshake: only after the rocket has
+    // arrived does it offer a chat with its new host, in either view.
+    window.clearTimeout(suggestionTimer.current);
+    setChatSuggestionId(dest);
+    suggestionTimer.current = window.setTimeout(
+      () => setChatSuggestionId(null),
+      9000,
+    );
   }, [t, flight, chatOpen]);
 
   // If the rocket's host vanishes (regenerate / planet count changed),
@@ -1653,10 +1651,10 @@ export function GeneratorSystem() {
       }
     : (chatSubj?.info ?? null);
 
-  // Post-landing invite bubble (galaxy view only): the rocket offers a
-  // chat with its new host.
+  // Post-landing invite: shared by galaxy and chat mode. It is created by
+  // the touchdown effect, so it can never appear while the rocket is flying.
   const suggestionInfo =
-    chatSuggestionId && !chatActive && !flight && !dragActive
+    chatSuggestionId && !flight && !dragActive
       ? getPanelInfo(chatSuggestionId)
       : null;
 
@@ -2221,14 +2219,17 @@ export function GeneratorSystem() {
                   }}
                 />
               )}
-              {/* Post-landing invite: the rocket offers to introduce its new
-                  host (galaxy view only; time-boxed and dismissible). */}
+              {/* Post-landing invite: identical timing in both views. */}
               {suggestionInfo && (
                 <RocketChatInvite
                   key={suggestionInfo.id}
                   name={suggestionInfo.name}
                   img={suggestionInfo.img}
-                  onChat={() => openChat(suggestionInfo.id)}
+                  onChat={() => {
+                    setChatSuggestionId(null);
+                    if (chatActive) handleNavigate(suggestionInfo.id);
+                    else openChat(suggestionInfo.id);
+                  }}
                   onDismiss={() => setChatSuggestionId(null)}
                 />
               )}
