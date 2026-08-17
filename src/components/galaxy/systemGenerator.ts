@@ -203,19 +203,66 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
     const orbit = makeOrbitShape(kind, orbitR, Math.floor(rand() * 1e9));
     const period = 315 * Math.pow(orbitR / 445, 1.35) * (0.9 + rand() * 0.2);
 
-    // 0, 1 or 2 moons — weighted so every count shows up often.
+    // 0–5 moons — weighted so busy skies show up often, and every moon is
+    // strictly smaller than its planet.
     const moonRoll = rand();
-    const moonCount = moonRoll < 0.35 ? 0 : moonRoll < 0.7 ? 1 : 2;
+    const moonCount =
+      moonRoll < 0.16
+        ? 0
+        : moonRoll < 0.36
+          ? 1
+          : moonRoll < 0.55
+            ? 2
+            : moonRoll < 0.72
+              ? 3
+              : moonRoll < 0.88
+                ? 4
+                : 5;
     const moonSprites = shuffled(MOON_SPRITES);
+
+    // Moons can carry their own tiny moons (generated to depth 3 — the
+    // info panel can then grow the chain by hand up to ten generations).
+    const genSubMoons = (
+      parent: GeneratedMoon,
+      depth: number,
+      idPrefix: string,
+    ) => {
+      if (depth >= 3) return;
+      const roll = rand();
+      const n =
+        depth === 1 ? (roll < 0.5 ? 0 : roll < 0.85 ? 1 : 2) : roll < 0.75 ? 0 : 1;
+      for (let k = 0; k < n; k++) {
+        const ms = MOON_SPRITES[Math.floor(rand() * MOON_SPRITES.length)]!;
+        const sz = childMoonSize(parent.size, rand);
+        const orbitR = moonChildOrbit(parent.size, k);
+        const child: GeneratedMoon = {
+          id: `${idPrefix}-${k}`,
+          name: `${ms.name} ${pick(SUB_MOON_SUFFIXES)}`,
+          img: ms.img,
+          size: sz,
+          orbitR,
+          period: 55 + rand() * 60,
+          startAngle: rand() * TAU,
+          ringD: makeOrbitShape("ring", orbitR, Math.floor(rand() * 1e9), 10).d,
+          line: "I'm a little moon, short and stout.",
+          breathe: 2.8 + rand() * 1.2,
+          delay: rand() * 1.5,
+          moons: [],
+        };
+        parent.moons.push(child);
+        genSubMoons(child, depth + 1, child.id);
+      }
+    };
+
     const moons: GeneratedMoon[] = [];
     for (let m = 0; m < moonCount; m++) {
       const ms = moonSprites[m % moonSprites.length]!;
       const mOrbitR = size * 0.72 + 50 + m * 62;
-      moons.push({
+      const moon: GeneratedMoon = {
         id: `moon-${i}-${m}`,
         name: ms.name,
         img: ms.img,
-        size: 44 + rand() * 26,
+        size: Math.min(44 + rand() * 26, size * 0.5),
         orbitR: mOrbitR,
         period: 90 + rand() * 78.75,
         startAngle: rand() * TAU,
@@ -224,7 +271,9 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
         breathe: 2.8 + rand() * 1.2,
         delay: rand() * 1.5,
         moons: [],
-      });
+      };
+      genSubMoons(moon, 1, moon.id);
+      moons.push(moon);
     }
 
     return {
