@@ -942,38 +942,15 @@ export function GeneratorSystem() {
   };
 
   /**
-   * World-pixel radius the camera should frame for a navigator pick:
-   * the sun gets every planet ring (asymmetric — use the shape's maxR),
-   * a planet gets its outermost moon ring (or just its own disc when
-   * it has no moons), a moon its own disc.
+   * The body's own configured size — never the chat-fan slot size — so
+   * zoom promotion math stays stable while the fan forms.
    */
-  const frameRadius = (id: string): number => {
-    if (id === config.sun.id) {
-      // Every planet may have been waved goodbye — frame just the sun.
-      if (config.planets.length === 0) return config.sun.size * 1.2;
-      return (
-        Math.max(...config.planets.map((p) => p.orbit.maxR + p.size / 2)) + 80
-      );
-    }
+  const configSize = (id: string): number | null => {
+    if (id === config.sun.id) return config.sun.size;
     const p = config.planets.find((pp) => pp.id === id);
-    if (p) {
-      const own = p.size * 1.15;
-      if (p.moons.length === 0) return own;
-      const moonEdge =
-        Math.max(...p.moons.map((m) => m.orbitR + m.size / 2)) + 60;
-      return Math.max(own, moonEdge);
-    }
+    if (p) return p.size;
     const m = findMoonById(config.planets, id);
-    if (m) {
-      const own = m.size * 1.6;
-      if (m.moons.length === 0) return own;
-      // Frame the moon together with its own mini-moon rings.
-      return Math.max(
-        own,
-        Math.max(...m.moons.map((c) => c.orbitR + c.size / 2)) + 40,
-      );
-    }
-    return 200;
+    return m ? m.size : null;
   };
 
   // Camera follow, chase-cam style: every frame we ease from the camera
@@ -1102,14 +1079,16 @@ export function GeneratorSystem() {
     }
   }, [config, rocketHostId]);
 
-  /** Glide the camera so the body and everything orbiting it fits. */
+  /**
+   * Glide the camera to a body, promoting it to the standard on-screen
+   * size — a tiny moon gets just as big a close-up as the sun. Its
+   * family stays reachable via the zoom-out pill and the wheel.
+   */
   const focusCamera = (id: string) => {
     const q = bodyPos(id);
-    if (!q) return;
-    const fit =
-      (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
-      (2 * frameRadius(id));
-    const s = Math.min(Math.max(fit, 0.16), 1.35);
+    const size = configSize(id);
+    if (!q || !size) return;
+    const s = promoteScaleFor(size, window.innerWidth, window.innerHeight);
     const st = stateRef.current;
     followRef.current = {
       id,
@@ -1224,12 +1203,16 @@ export function GeneratorSystem() {
       }
     };
     consider(config.sun.id);
+    // Moons nest up to ten generations deep — walk the whole tree.
+    const walkMoons = (moons: GeneratedMoon[]) => {
+      for (const m of moons) {
+        consider(m.id);
+        walkMoons(m.moons);
+      }
+    };
     for (const p of config.planets) {
       consider(p.id);
-      for (const m of p.moons) {
-        consider(m.id);
-        for (const g of m.moons) consider(g.id);
-      }
+      walkMoons(p.moons);
     }
     return best;
   };
