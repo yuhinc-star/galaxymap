@@ -566,6 +566,7 @@ export function SolarSystem() {
         SUN.id,
         anchor,
         SUN.size,
+        SUN.name,
         PLANETS.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
         strip.w,
         strip.h,
@@ -573,7 +574,7 @@ export function SolarSystem() {
       return;
     }
     if (id === MOON.id) {
-      fan.layout = computeChatLayout(MOON.id, anchor, MOON.size, [], strip.w, strip.h);
+      fan.layout = computeChatLayout(MOON.id, anchor, MOON.size, MOON.name, [], strip.w, strip.h);
       return;
     }
     const p = PLANETS.find((pp) => pp.id === id);
@@ -582,6 +583,7 @@ export function SolarSystem() {
         p.id,
         anchor,
         p.size,
+        p.name,
         p.id === "earth" ? [{ id: MOON.id, size: MOON.size, name: MOON.name }] : [],
         strip.w,
         strip.h,
@@ -599,17 +601,21 @@ export function SolarSystem() {
     if (!anchor) return;
     const strip = stripSize();
     let size: number;
+    let name: string;
     let kids: ChatChildInput[];
     if (id === SUN.id) {
       size = SUN.size;
+      name = SUN.name;
       kids = PLANETS.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name }));
     } else if (id === MOON.id) {
       size = MOON.size;
+      name = MOON.name;
       kids = [];
     } else {
       const p = PLANETS.find((pp) => pp.id === id);
       if (!p) return;
       size = p.size;
+      name = p.name;
       kids =
         p.id === "earth"
           ? [{ id: MOON.id, size: MOON.size, name: MOON.name }]
@@ -617,7 +623,7 @@ export function SolarSystem() {
     }
     fanSubjectRef.current = {
       id,
-      layout: computeChatLayout(id, anchor, size, kids, strip.w, strip.h),
+      layout: computeChatLayout(id, anchor, size, name, kids, strip.w, strip.h),
     };
     chatGlideRef.current = true;
   };
@@ -630,7 +636,7 @@ export function SolarSystem() {
     if (fid === MOON.id) {
       subject = {
         info: { id: MOON.id, name: MOON.name, img: MOON.img, line: MOON.line, kindLabel: "Moon" },
-        layout: computeChatLayout(MOON.id, moonPos, MOON.size, [], stripSize().w, stripSize().h),
+        layout: computeChatLayout(MOON.id, moonPos, MOON.size, MOON.name, [], stripSize().w, stripSize().h),
       };
     } else {
       const p = fid ? PLANETS.find((pp) => pp.id === fid) : undefined;
@@ -642,6 +648,7 @@ export function SolarSystem() {
             p.id,
             anchor,
             p.size,
+            p.name,
             p.id === "earth" ? [{ id: MOON.id, size: MOON.size, name: MOON.name }] : [],
             stripSize().w,
             stripSize().h,
@@ -656,6 +663,7 @@ export function SolarSystem() {
           SUN.id,
           { x: CENTER, y: CENTER },
           SUN.size,
+          SUN.name,
           PLANETS.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
           stripSize().w,
           stripSize().h,
