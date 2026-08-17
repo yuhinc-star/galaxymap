@@ -33,15 +33,12 @@ import {
   generateSystem,
   removeBodyFromSystem,
   renameBodyInSystem,
-  MAX_MOON_GENERATIONS,
   MAX_MOONS_PER_BODY,
   MAX_SYSTEM_PLANETS,
-  MIN_MOON_SIZE,
-  moonGenerationOf,
+  MIN_MOON_PARENT_SIZE,
   type GeneratedMoon,
   type SystemConfig,
 } from "./systemGenerator";
-import { labelCounterScale, promoteScaleFor } from "./focusZoom";
 import { ensureSpritesReady, warmSpritePool } from "./spritePool";
 import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 import type { OrbitShapeKind } from "./orbitShapes";
@@ -776,7 +773,6 @@ export function GeneratorSystem() {
           p.id,
           anchor,
           p.size,
-          p.name,
           p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name })),
           stripSize().w,
           stripSize().h,
@@ -799,7 +795,6 @@ export function GeneratorSystem() {
           m.id,
           anchor,
           m.size,
-          m.name,
           m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name })),
           stripSize().w,
           stripSize().h,
@@ -819,7 +814,6 @@ export function GeneratorSystem() {
           config.sun.id,
           { x: CENTER, y: CENTER },
           config.sun.size,
-          config.sun.name,
           config.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
           stripSize().w,
           stripSize().h,
@@ -945,15 +939,38 @@ export function GeneratorSystem() {
   };
 
   /**
-   * The body's own configured size — never the chat-fan slot size — so
-   * zoom promotion math stays stable while the fan forms.
+   * World-pixel radius the camera should frame for a navigator pick:
+   * the sun gets every planet ring (asymmetric — use the shape's maxR),
+   * a planet gets its outermost moon ring (or just its own disc when
+   * it has no moons), a moon its own disc.
    */
-  const configSize = (id: string): number | null => {
-    if (id === config.sun.id) return config.sun.size;
+  const frameRadius = (id: string): number => {
+    if (id === config.sun.id) {
+      // Every planet may have been waved goodbye — frame just the sun.
+      if (config.planets.length === 0) return config.sun.size * 1.2;
+      return (
+        Math.max(...config.planets.map((p) => p.orbit.maxR + p.size / 2)) + 80
+      );
+    }
     const p = config.planets.find((pp) => pp.id === id);
-    if (p) return p.size;
+    if (p) {
+      const own = p.size * 1.15;
+      if (p.moons.length === 0) return own;
+      const moonEdge =
+        Math.max(...p.moons.map((m) => m.orbitR + m.size / 2)) + 60;
+      return Math.max(own, moonEdge);
+    }
     const m = findMoonById(config.planets, id);
-    return m ? m.size : null;
+    if (m) {
+      const own = m.size * 1.6;
+      if (m.moons.length === 0) return own;
+      // Frame the moon together with its own mini-moon rings.
+      return Math.max(
+        own,
+        Math.max(...m.moons.map((c) => c.orbitR + c.size / 2)) + 40,
+      );
+    }
+    return 200;
   };
 
   // Camera follow, chase-cam style: every frame we ease from the camera
@@ -1082,16 +1099,14 @@ export function GeneratorSystem() {
     }
   }, [config, rocketHostId]);
 
-  /**
-   * Glide the camera to a body, promoting it to the standard on-screen
-   * size — a tiny moon gets just as big a close-up as the sun. Its
-   * family stays reachable via the zoom-out pill and the wheel.
-   */
+  /** Glide the camera so the body and everything orbiting it fits. */
   const focusCamera = (id: string) => {
     const q = bodyPos(id);
-    const size = configSize(id);
-    if (!q || !size) return;
-    const s = promoteScaleFor(size, window.innerWidth, window.innerHeight);
+    if (!q) return;
+    const fit =
+      (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
+      (2 * frameRadius(id));
+    const s = Math.min(Math.max(fit, 0.16), 1.35);
     const st = stateRef.current;
     followRef.current = {
       id,
@@ -1206,16 +1221,12 @@ export function GeneratorSystem() {
       }
     };
     consider(config.sun.id);
-    // Moons nest up to ten generations deep — walk the whole tree.
-    const walkMoons = (moons: GeneratedMoon[]) => {
-      for (const m of moons) {
-        consider(m.id);
-        walkMoons(m.moons);
-      }
-    };
     for (const p of config.planets) {
       consider(p.id);
-      walkMoons(p.moons);
+      for (const m of p.moons) {
+        consider(m.id);
+        for (const g of m.moons) consider(g.id);
+      }
     }
     return best;
   };
@@ -1362,12 +1373,7 @@ export function GeneratorSystem() {
     if (m) {
       if (m.moons.length >= MAX_MOONS_PER_BODY)
         return { canAdd: false, fullNote: "This little moon is full!" };
-      if (moonGenerationOf(config.planets, id) >= MAX_MOON_GENERATIONS)
-        return {
-          canAdd: false,
-          fullNote: "Ten generations deep — the tiniest sky!",
-        };
-      if (m.size * 0.72 <= MIN_MOON_SIZE)
+      if (m.size < MIN_MOON_PARENT_SIZE)
         return { canAdd: false, fullNote: "Too tiny for a moon of its own!" };
       return { canAdd: true, actionLabel: "Add a tiny moon" };
     }
@@ -1392,7 +1398,6 @@ export function GeneratorSystem() {
         id,
         anchor,
         cfg.sun.size,
-        cfg.sun.name,
         cfg.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
         strip.w,
         strip.h,
@@ -1405,7 +1410,6 @@ export function GeneratorSystem() {
         id,
         anchor,
         p.size,
-        p.name,
         p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name })),
         strip.w,
         strip.h,
@@ -1418,7 +1422,6 @@ export function GeneratorSystem() {
         id,
         anchor,
         m.size,
-        m.name,
         m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name })),
         strip.w,
         strip.h,
@@ -1436,29 +1439,25 @@ export function GeneratorSystem() {
     if (!anchor) return;
     const strip = stripSize();
     let size: number;
-    let name: string;
     let kids: ChatChildInput[] = [];
     if (id === config.sun.id) {
       size = config.sun.size;
-      name = config.sun.name;
       kids = config.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name }));
     } else {
       const p = config.planets.find((pp) => pp.id === id);
       if (p) {
         size = p.size;
-        name = p.name;
         kids = p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name }));
       } else {
         const m = findMoonById(config.planets, id);
         if (!m) return;
         size = m.size;
-        name = m.name;
         kids = m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name }));
       }
     }
     fanSubjectRef.current = {
       id,
-      layout: computeChatLayout(id, anchor, size, name, kids, strip.w, strip.h),
+      layout: computeChatLayout(id, anchor, size, kids, strip.w, strip.h),
     };
     chatGlideRef.current = true;
   };
@@ -1888,7 +1887,7 @@ export function GeneratorSystem() {
             def={chatSized ? { ...m, size: r.size } : m}
             x={r.x}
             y={r.y}
-            labelBoost={fanSubj?.layout.slots.get(m.id)?.labelBoost ?? galaxyLabelBoost}
+            labelBoost={fanSubj?.layout.slots.get(m.id)?.labelBoost ?? 1}
             active={activeId === m.id}
             jumping={jumpId === m.id}
             highlighted={
@@ -1905,26 +1904,6 @@ export function GeneratorSystem() {
         </Fragment>
       );
     });
-
-  // Labels freeze at a constant screen size once zoomed in past 1x (like
-  // map place-names); chat-fan slots bring their own exact boost.
-  const camScale = stateRef.current?.scale ?? 1;
-  const galaxyLabelBoost = labelCounterScale(camScale);
-
-  // The zoom ceiling follows the focused body: promoting a 3px tiny moon
-  // to full focus size needs a far deeper zoom than the sun does.
-  const focusNeed = focusedId ? configSize(focusedId) : null;
-  const maxScale = Math.max(
-    2.5,
-    focusNeed
-      ? promoteScaleFor(
-          focusNeed,
-          typeof window === "undefined" ? 900 : window.innerWidth,
-          typeof window === "undefined" ? 900 : window.innerHeight,
-        ) * 1.7
-      : 0,
-    chatOpen && fanSubj ? fanSubj.layout.camera.scale * 1.7 : 0,
-  );
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
@@ -1949,7 +1928,7 @@ export function GeneratorSystem() {
         key={`${seed}-${planetCount}`}
         initialScale={0.36}
         minScale={chatOpen && fanSubj ? fanSubj.layout.camera.scale : 0.12}
-        maxScale={maxScale}
+        maxScale={2.5}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
@@ -2047,7 +2026,6 @@ export function GeneratorSystem() {
 
                 <Planet
                   def={config.sun}
-                  labelBoost={fanSubj?.layout.slots.get(config.sun.id)?.labelBoost ?? galaxyLabelBoost}
                   x={CENTER}
                   y={CENTER}
                   active={activeId === config.sun.id}
@@ -2079,7 +2057,7 @@ export function GeneratorSystem() {
                         def={chatSized && cr ? { ...p, size: cr.size } : p}
                         x={q.x}
                         y={q.y}
-                        labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? galaxyLabelBoost}
+                        labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         newborn={newbornId === p.id}

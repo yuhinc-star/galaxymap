@@ -76,17 +76,14 @@ export function computeChatLayout(
   parentId: string,
   anchor: { x: number; y: number },
   parentSize: number,
-  parentName: string,
   children: ChatChildInput[],
   stripW: number,
   stripH: number,
 ): ChatLayout {
   // The subject looms large at the bottom — like the sun in the
-  // reference poster, only its upper half (and face) on screen. The
-  // scale ceiling is high so even a ten-generations-deep tiny moon is
-  // promoted to the same looming size as the sun.
+  // reference poster, only its upper half (and face) on screen.
   const r0max = clamp(stripW * 0.62, 130, 380);
-  let scale = clamp((r0max * 2) / parentSize, 0.12, 240);
+  let scale = clamp((r0max * 2) / parentSize, 0.12, 2.0);
   let r0 = (parentSize * scale) / 2;
   const sx = stripW * 0.5;
   const sy = stripH * 0.94;
@@ -143,7 +140,7 @@ export function computeChatLayout(
     if (topNeed() > sy - 12) {
       // Extreme case (many kids, short strip): shrink the subject too.
       const f2 = clamp((sy - 12) / topNeed(), 0.55, 1);
-      scale = clamp(scale * Math.max(f, f2), 0.12, 240);
+      scale = clamp(scale * Math.max(f, f2), 0.12, 2.0);
       r0 = (parentSize * scale) / 2;
       kids = plan();
     }
@@ -151,16 +148,13 @@ export function computeChatLayout(
   }
 
   const slots = new Map<string, ChatSlot>();
-  // The subject's name gets a fixed screen font too — otherwise a tiny
-  // moon's label would fill the strip once the camera dives deep.
-  const subjectFont = clamp(stripW * 0.085, 18, 34);
   slots.set(parentId, {
     x: anchor.x,
     y: anchor.y,
     size: parentSize,
     angle: -Math.PI / 2,
     radius: 0,
-    labelBoost: subjectFont / (planetLabelSize(parentSize, parentName) * scale),
+    labelBoost: 1,
   });
   for (const k of kids) {
     const radius = k.rho / scale;

@@ -113,9 +113,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
       }
     };
     // Same storybook art style in every mode — chat mode only changes
-    // WHICH bodies are listed, never how the entries look. Deep moon
-    // chains (up to ten generations) clamp at the smallest tier so the
-    // list stays tidy no matter how far down the family goes.
+    // WHICH bodies are listed, never how the entries look.
     const avatarSize =
       depth === 0 ? "h-9 w-9" : depth === 1 ? "h-7 w-7" : "h-6 w-6";
     const nameSize =
@@ -211,7 +209,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
       {item.moons && item.moons.length > 0 && (
         <ul
           className={`flex flex-col gap-0.5 border-l-2 border-dashed border-white/40 pl-2 ${
-            depth === 0 ? "ml-6" : depth >= 3 ? "ml-3" : "ml-5"
+            depth === 0 ? "ml-6" : "ml-5"
           }`}
         >
           {item.moons.map((m) => renderItem(m, depth + 1))}

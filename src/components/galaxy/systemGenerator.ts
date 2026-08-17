@@ -82,12 +82,6 @@ const SUN_LINES = [
   "Generated, but still glorious.",
 ];
 
-/** Little suffixes for generated sub-moons, so "Lune" can have a
-    "Lune Bit" of its own. */
-const SUB_MOON_SUFFIXES = [
-  "Minor", "Jr", "II", "Bit", "Pebble", "Pip", "Speck", "Mite",
-];
-
 /**
  * Long storybook names, in the spirit of "Super Big Star 29444 Cajun
  * Cafe" — an opener, a body type, a catalog number and a quirky little
@@ -209,66 +203,19 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
     const orbit = makeOrbitShape(kind, orbitR, Math.floor(rand() * 1e9));
     const period = 315 * Math.pow(orbitR / 445, 1.35) * (0.9 + rand() * 0.2);
 
-    // 0–5 moons — weighted so busy skies show up often, and every moon is
-    // strictly smaller than its planet.
+    // 0, 1 or 2 moons — weighted so every count shows up often.
     const moonRoll = rand();
-    const moonCount =
-      moonRoll < 0.16
-        ? 0
-        : moonRoll < 0.36
-          ? 1
-          : moonRoll < 0.55
-            ? 2
-            : moonRoll < 0.72
-              ? 3
-              : moonRoll < 0.88
-                ? 4
-                : 5;
+    const moonCount = moonRoll < 0.35 ? 0 : moonRoll < 0.7 ? 1 : 2;
     const moonSprites = shuffled(MOON_SPRITES);
-
-    // Moons can carry their own tiny moons (generated to depth 3 — the
-    // info panel can then grow the chain by hand up to ten generations).
-    const genSubMoons = (
-      parent: GeneratedMoon,
-      depth: number,
-      idPrefix: string,
-    ) => {
-      if (depth >= 3) return;
-      const roll = rand();
-      const n =
-        depth === 1 ? (roll < 0.5 ? 0 : roll < 0.85 ? 1 : 2) : roll < 0.75 ? 0 : 1;
-      for (let k = 0; k < n; k++) {
-        const ms = MOON_SPRITES[Math.floor(rand() * MOON_SPRITES.length)]!;
-        const sz = childMoonSize(parent.size, rand);
-        const orbitR = moonChildOrbit(parent.size, k);
-        const child: GeneratedMoon = {
-          id: `${idPrefix}-${k}`,
-          name: `${ms.name} ${pick(SUB_MOON_SUFFIXES)}`,
-          img: ms.img,
-          size: sz,
-          orbitR,
-          period: 55 + rand() * 60,
-          startAngle: rand() * TAU,
-          ringD: makeOrbitShape("ring", orbitR, Math.floor(rand() * 1e9), 10).d,
-          line: "I'm a little moon, short and stout.",
-          breathe: 2.8 + rand() * 1.2,
-          delay: rand() * 1.5,
-          moons: [],
-        };
-        parent.moons.push(child);
-        genSubMoons(child, depth + 1, child.id);
-      }
-    };
-
     const moons: GeneratedMoon[] = [];
     for (let m = 0; m < moonCount; m++) {
       const ms = moonSprites[m % moonSprites.length]!;
       const mOrbitR = size * 0.72 + 50 + m * 62;
-      const moon: GeneratedMoon = {
+      moons.push({
         id: `moon-${i}-${m}`,
         name: ms.name,
         img: ms.img,
-        size: Math.min(44 + rand() * 26, size * 0.5),
+        size: 44 + rand() * 26,
         orbitR: mOrbitR,
         period: 90 + rand() * 78.75,
         startAngle: rand() * TAU,
@@ -277,9 +224,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
         breathe: 2.8 + rand() * 1.2,
         delay: rand() * 1.5,
         moons: [],
-      };
-      genSubMoons(moon, 1, moon.id);
-      moons.push(moon);
+      });
     }
 
     return {
@@ -331,49 +276,9 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
 // interaction.
 
 export const MAX_SYSTEM_PLANETS = 8;
-export const MAX_MOONS_PER_BODY = 5;
-/** Deepest moon chain: a planet's moon is generation 1, its moon 2, … */
-export const MAX_MOON_GENERATIONS = 10;
-/** Tiny moons never shrink below this world size, so they stay visitable
-    (the camera promotes even a 3px pebble to full focus size). */
-export const MIN_MOON_SIZE = 3;
-
-/**
- * Generation of a moon: 1 = orbits a planet, 2 = orbits that moon, …
- * Returns 0 when the id isn't a moon.
- */
-export const moonGenerationOf = (
-  planets: GeneratedPlanet[],
-  id: string,
-): number => {
-  const walk = (moons: GeneratedMoon[], depth: number): number => {
-    for (const m of moons) {
-      if (m.id === id) return depth;
-      const d = walk(m.moons, depth + 1);
-      if (d) return d;
-    }
-    return 0;
-  };
-  for (const p of planets) {
-    const d = walk(p.moons, 1);
-    if (d) return d;
-  }
-  return 0;
-};
-
-/** Orbit radius for a moon's child: proportional standoff and spacing so
-    tiny parents get tight rings instead of circles that dwarf them. */
-const moonChildOrbit = (parentSize: number, siblingIndex: number) =>
-  parentSize * 0.9 +
-  Math.max(12, parentSize * 0.4) +
-  siblingIndex * Math.max(16, parentSize * 0.8);
-
-/** A child moon's size — always strictly smaller than its parent. */
-const childMoonSize = (parentSize: number, rand: () => number) =>
-  Math.max(
-    MIN_MOON_SIZE,
-    Math.min(parentSize * (0.66 + rand() * 0.12), parentSize * 0.72),
-  );
+export const MAX_MOONS_PER_BODY = 2;
+/** A moon smaller than this can't host a mini-moon of its own. */
+export const MIN_MOON_PARENT_SIZE = 46;
 
 const ADDED_MOON_LINES = [
   "I'm a little moon, short and stout.",
@@ -533,9 +438,8 @@ export function addPlanetToSystem(
 
 /**
  * Add a moon to a planet — or a smaller mini-moon to a moon (yes, moons
- * can have moons, up to ten generations deep). Null when the parent
- * already has 5 children, is ten generations deep, or is too tiny to
- * host a strictly-smaller child.
+ * can have moons). Null when the parent already has 2 moons or is too
+ * tiny to host one.
  */
 export function addMoonToSystem(
   system: SystemConfig,
@@ -548,13 +452,12 @@ export function addMoonToSystem(
     isPlanet: boolean,
   ): GeneratedMoon => {
     const sprite = pickRandom(MOON_SPRITES);
-    // Children are always strictly smaller than their parent.
     const size = isPlanet
-      ? Math.min(44 + Math.random() * 26, parentSize * 0.5)
-      : childMoonSize(parentSize, Math.random);
+      ? Math.min(44 + Math.random() * 26, parentSize * 0.55)
+      : parentSize * (0.45 + Math.random() * 0.15);
     const orbitR = isPlanet
       ? parentSize * 0.72 + 50 + siblingCount * 62
-      : moonChildOrbit(parentSize, siblingCount);
+      : parentSize * 0.85 + 34 + siblingCount * 40;
     return {
       id: `moon-new-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`,
       name: uniqueRuntimeName(sprite.name, used),
@@ -592,8 +495,7 @@ export function addMoonToSystem(
   if (
     !parent ||
     parent.moons.length >= MAX_MOONS_PER_BODY ||
-    moonGenerationOf(system.planets, parentId) >= MAX_MOON_GENERATIONS ||
-    parent.size * 0.72 <= MIN_MOON_SIZE
+    parent.size < MIN_MOON_PARENT_SIZE
   ) {
     return null;
   }
