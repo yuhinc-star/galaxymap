@@ -1878,7 +1878,7 @@ export function GeneratorSystem() {
             def={chatSized ? { ...m, size: r.size } : m}
             x={r.x}
             y={r.y}
-            labelBoost={fanSubj?.layout.slots.get(m.id)?.labelBoost ?? 1}
+            labelBoost={fanSubj?.layout.slots.get(m.id)?.labelBoost ?? galaxyLabelBoost}
             active={activeId === m.id}
             jumping={jumpId === m.id}
             highlighted={
@@ -1895,6 +1895,26 @@ export function GeneratorSystem() {
         </Fragment>
       );
     });
+
+  // Labels freeze at a constant screen size once zoomed in past 1x (like
+  // map place-names); chat-fan slots bring their own exact boost.
+  const camScale = stateRef.current?.scale ?? 1;
+  const galaxyLabelBoost = labelCounterScale(camScale);
+
+  // The zoom ceiling follows the focused body: promoting a 3px tiny moon
+  // to full focus size needs a far deeper zoom than the sun does.
+  const focusNeed = focusedId ? configSize(focusedId) : null;
+  const maxScale = Math.max(
+    2.5,
+    focusNeed
+      ? promoteScaleFor(
+          focusNeed,
+          typeof window === "undefined" ? 900 : window.innerWidth,
+          typeof window === "undefined" ? 900 : window.innerHeight,
+        ) * 1.7
+      : 0,
+    chatOpen && fanSubj ? fanSubj.layout.camera.scale * 1.7 : 0,
+  );
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
@@ -1919,7 +1939,7 @@ export function GeneratorSystem() {
         key={`${seed}-${planetCount}`}
         initialScale={0.36}
         minScale={chatOpen && fanSubj ? fanSubj.layout.camera.scale : 0.12}
-        maxScale={2.5}
+        maxScale={maxScale}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
@@ -2048,7 +2068,7 @@ export function GeneratorSystem() {
                         def={chatSized && cr ? { ...p, size: cr.size } : p}
                         x={q.x}
                         y={q.y}
-                        labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
+                        labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? galaxyLabelBoost}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         newborn={newbornId === p.id}
