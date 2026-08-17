@@ -4,6 +4,11 @@ import sun2Img from "@/assets/planets/sun-2.png";
 import sun3Img from "@/assets/planets/sun-3.png";
 import sun4Img from "@/assets/planets/sun-4.png";
 import sun5Img from "@/assets/planets/sun-5.png";
+import sun6Img from "@/assets/planets/sun-6.png";
+import sun7Img from "@/assets/planets/sun-7.png";
+import sun8Img from "@/assets/planets/sun-8.png";
+import sun9Img from "@/assets/planets/sun-9.png";
+import sun10Img from "@/assets/planets/sun-10.png";
 import mercuryImg from "@/assets/planets/mercury.png";
 import venusImg from "@/assets/planets/venus.png";
 import earthImg from "@/assets/planets/earth.png";
@@ -54,7 +59,7 @@ export interface SpriteOption {
 
 /**
  * The full cast of hand-painted gouache sprites the generator assembles
- * systems from: 5 suns, 24 planets, 5 moons and 12 drifting friends.
+ * systems from: 10 suns, 24 planets, 5 moons and 12 drifting friends.
  */
 export const SUN_SPRITES: SpriteOption[] = [
   { id: "sun", name: "Sun", img: sunImg },
@@ -62,6 +67,11 @@ export const SUN_SPRITES: SpriteOption[] = [
   { id: "sun-3", name: "Lemon Sun", img: sun3Img },
   { id: "sun-4", name: "Rose Sun", img: sun4Img },
   { id: "sun-5", name: "Amber Sun", img: sun5Img },
+  { id: "sun-6", name: "Mint Sun", img: sun6Img },
+  { id: "sun-7", name: "Lavender Sun", img: sun7Img },
+  { id: "sun-8", name: "Sky Sun", img: sun8Img },
+  { id: "sun-9", name: "Peach Sun", img: sun9Img },
+  { id: "sun-10", name: "Berry Sun", img: sun10Img },
 ];
 
 export const PLANET_SPRITES: SpriteOption[] = [
