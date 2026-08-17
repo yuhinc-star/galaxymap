@@ -276,9 +276,49 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
 // interaction.
 
 export const MAX_SYSTEM_PLANETS = 8;
-export const MAX_MOONS_PER_BODY = 2;
-/** A moon smaller than this can't host a mini-moon of its own. */
-export const MIN_MOON_PARENT_SIZE = 46;
+export const MAX_MOONS_PER_BODY = 5;
+/** Deepest moon chain: a planet's moon is generation 1, its moon 2, … */
+export const MAX_MOON_GENERATIONS = 10;
+/** Tiny moons never shrink below this world size, so they stay visitable
+    (the camera promotes even a 3px pebble to full focus size). */
+export const MIN_MOON_SIZE = 3;
+
+/**
+ * Generation of a moon: 1 = orbits a planet, 2 = orbits that moon, …
+ * Returns 0 when the id isn't a moon.
+ */
+export const moonGenerationOf = (
+  planets: GeneratedPlanet[],
+  id: string,
+): number => {
+  const walk = (moons: GeneratedMoon[], depth: number): number => {
+    for (const m of moons) {
+      if (m.id === id) return depth;
+      const d = walk(m.moons, depth + 1);
+      if (d) return d;
+    }
+    return 0;
+  };
+  for (const p of planets) {
+    const d = walk(p.moons, 1);
+    if (d) return d;
+  }
+  return 0;
+};
+
+/** Orbit radius for a moon's child: proportional standoff and spacing so
+    tiny parents get tight rings instead of circles that dwarf them. */
+const moonChildOrbit = (parentSize: number, siblingIndex: number) =>
+  parentSize * 0.9 +
+  Math.max(12, parentSize * 0.4) +
+  siblingIndex * Math.max(16, parentSize * 0.8);
+
+/** A child moon's size — always strictly smaller than its parent. */
+const childMoonSize = (parentSize: number, rand: () => number) =>
+  Math.max(
+    MIN_MOON_SIZE,
+    Math.min(parentSize * (0.66 + rand() * 0.12), parentSize * 0.72),
+  );
 
 const ADDED_MOON_LINES = [
   "I'm a little moon, short and stout.",
