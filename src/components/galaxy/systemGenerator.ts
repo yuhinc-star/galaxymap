@@ -82,6 +82,12 @@ const SUN_LINES = [
   "Generated, but still glorious.",
 ];
 
+/** Little suffixes for generated sub-moons, so "Lune" can have a
+    "Lune Bit" of its own. */
+const SUB_MOON_SUFFIXES = [
+  "Minor", "Jr", "II", "Bit", "Pebble", "Pip", "Speck", "Mite",
+];
+
 /**
  * Long storybook names, in the spirit of "Super Big Star 29444 Cajun
  * Cafe" — an opener, a body type, a catalog number and a quirky little
