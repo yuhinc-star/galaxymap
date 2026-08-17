@@ -33,11 +33,22 @@ import planetMagentaImg from "@/assets/planets/planet-magenta.png";
 import planetStormImg from "@/assets/planets/planet-storm.png";
 import planetPeachImg from "@/assets/planets/planet-peach.png";
 import planetEmeraldImg from "@/assets/planets/planet-emerald.png";
+import planetCoralImg from "@/assets/planets/planet-coral.png";
+import planetBlueberryImg from "@/assets/planets/planet-blueberry.png";
+import planetButterImg from "@/assets/planets/planet-butter.png";
+import planetRoseImg from "@/assets/planets/planet-rose.png";
+import planetPistachioImg from "@/assets/planets/planet-pistachio.png";
+import planetMidnightImg from "@/assets/planets/planet-midnight.png";
 import moonImg from "@/assets/planets/moon.png";
 import moonLavenderImg from "@/assets/planets/moon-lavender.png";
 import moonPeachImg from "@/assets/planets/moon-peach.png";
 import moonMintImg from "@/assets/planets/moon-mint.png";
 import moonGoldImg from "@/assets/planets/moon-gold.png";
+import moonSkyImg from "@/assets/planets/moon-sky.png";
+import moonRoseImg from "@/assets/planets/moon-rose.png";
+import moonSlateImg from "@/assets/planets/moon-slate.png";
+import moonSageImg from "@/assets/planets/moon-sage.png";
+import moonClayImg from "@/assets/planets/moon-clay.png";
 import rocketImg from "@/assets/planets/rocket.png";
 import astronautImg from "@/assets/planets/astronaut.png";
 import satelliteImg from "@/assets/planets/satellite.png";
@@ -59,7 +70,7 @@ export interface SpriteOption {
 
 /**
  * The full cast of hand-painted gouache sprites the generator assembles
- * systems from: 10 suns, 24 planets, 5 moons and 12 drifting friends.
+ * systems from: 10 suns, 30 planets, 10 moons and 12 drifting friends.
  */
 export const SUN_SPRITES: SpriteOption[] = [
   { id: "sun", name: "Sun", img: sunImg },
