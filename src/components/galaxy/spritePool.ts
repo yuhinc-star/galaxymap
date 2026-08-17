@@ -110,6 +110,12 @@ export const PLANET_SPRITES: SpriteOption[] = [
   { id: "storm", name: "Storm", img: planetStormImg },
   { id: "peach", name: "Peach", img: planetPeachImg },
   { id: "emerald", name: "Emerald", img: planetEmeraldImg },
+  { id: "coral", name: "Coral", img: planetCoralImg },
+  { id: "blueberry", name: "Blueberry", img: planetBlueberryImg },
+  { id: "butter", name: "Butter", img: planetButterImg },
+  { id: "rose", name: "Rose", img: planetRoseImg },
+  { id: "pistachio", name: "Pistachio", img: planetPistachioImg },
+  { id: "midnight", name: "Midnight", img: planetMidnightImg },
 ];
 
 export const MOON_SPRITES: SpriteOption[] = [
@@ -118,6 +124,11 @@ export const MOON_SPRITES: SpriteOption[] = [
   { id: "moon-peach", name: "Pip", img: moonPeachImg },
   { id: "moon-mint", name: "Nib", img: moonMintImg },
   { id: "moon-gold", name: "Glim", img: moonGoldImg },
+  { id: "moon-sky", name: "Wisp", img: moonSkyImg },
+  { id: "moon-rose", name: "Petal", img: moonRoseImg },
+  { id: "moon-slate", name: "Slate", img: moonSlateImg },
+  { id: "moon-sage", name: "Sage", img: moonSageImg },
+  { id: "moon-clay", name: "Clay", img: moonClayImg },
 ];
 
 export const DRIFTER_SPRITES: SpriteOption[] = [
