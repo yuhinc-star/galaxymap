@@ -33,12 +33,15 @@ import {
   generateSystem,
   removeBodyFromSystem,
   renameBodyInSystem,
+  MAX_MOON_GENERATIONS,
   MAX_MOONS_PER_BODY,
   MAX_SYSTEM_PLANETS,
-  MIN_MOON_PARENT_SIZE,
+  MIN_MOON_SIZE,
+  moonGenerationOf,
   type GeneratedMoon,
   type SystemConfig,
 } from "./systemGenerator";
+import { labelCounterScale, promoteScaleFor } from "./focusZoom";
 import { ensureSpritesReady, warmSpritePool } from "./spritePool";
 import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 import type { OrbitShapeKind } from "./orbitShapes";
@@ -1373,7 +1376,12 @@ export function GeneratorSystem() {
     if (m) {
       if (m.moons.length >= MAX_MOONS_PER_BODY)
         return { canAdd: false, fullNote: "This little moon is full!" };
-      if (m.size < MIN_MOON_PARENT_SIZE)
+      if (moonGenerationOf(config.planets, id) >= MAX_MOON_GENERATIONS)
+        return {
+          canAdd: false,
+          fullNote: "Ten generations deep — the tiniest sky!",
+        };
+      if (m.size * 0.72 <= MIN_MOON_SIZE)
         return { canAdd: false, fullNote: "Too tiny for a moon of its own!" };
       return { canAdd: true, actionLabel: "Add a tiny moon" };
     }
