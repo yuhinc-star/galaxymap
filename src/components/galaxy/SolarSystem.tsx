@@ -35,6 +35,7 @@ import { warmSpritePool } from "./spritePool";
 import { Starfield } from "./Starfield";
 import { SuggestionStack } from "./SuggestionStack";
 import { ZoomOutPill, type ZoomOutTarget } from "./ZoomOutPill";
+import { labelCounterScale, promoteScaleFor } from "./focusZoom";
 import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 
 const TAU = Math.PI * 2;
@@ -726,22 +727,12 @@ export function SolarSystem() {
     chatRideRef.current.get(MOON.id)?.size ??
     MOON.size;
 
-  /**
-   * World-pixel radius the camera should frame for a navigator pick:
-   * the sun gets every planet ring, a planet gets its moon's ring
-   * (or just its own disc when it has no moons), a moon its own disc.
-   */
-  const frameRadius = (id: string): number => {
-    if (id === SUN.id) {
-      return Math.max(...PLANETS.map((p) => p.orbitR + p.size / 2)) + 80;
-    }
-    if (id === MOON.id) return MOON.size * 1.6;
+  /** The body's own configured size — never the chat-fan slot size. */
+  const configSize = (id: string): number | null => {
+    if (id === SUN.id) return SUN.size;
+    if (id === MOON.id) return MOON.size;
     const p = PLANETS.find((pp) => pp.id === id);
-    if (!p) return 200;
-    const own = p.size * 1.15;
-    return p.id === "earth"
-      ? Math.max(own, MOON.orbitR + MOON.size / 2 + 60)
-      : own;
+    return p ? p.size : null;
   };
 
   // Camera follow, chase-cam style: every frame we ease from the camera
@@ -832,13 +823,15 @@ export function SolarSystem() {
   });
 
   /** Glide the camera so the body and everything orbiting it fits. */
+  /**
+   * Glide the camera to a body, promoting it to the standard on-screen
+   * size — the moon gets just as big a close-up as the sun.
+   */
   const focusCamera = (id: string) => {
     const q = bodyPos(id);
-    if (!q) return;
-    const fit =
-      (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
-      (2 * frameRadius(id));
-    const s = Math.min(Math.max(fit, 0.16), 1.35);
+    const size = configSize(id);
+    if (!q || !size) return;
+    const s = promoteScaleFor(size, window.innerWidth, window.innerHeight);
     const st = stateRef.current;
     followRef.current = {
       id,
