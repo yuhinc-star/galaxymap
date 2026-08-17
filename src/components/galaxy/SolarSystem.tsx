@@ -35,6 +35,7 @@ import { warmSpritePool } from "./spritePool";
 import { Starfield } from "./Starfield";
 import { SuggestionStack } from "./SuggestionStack";
 import { ZoomOutPill, type ZoomOutTarget } from "./ZoomOutPill";
+import { labelCounterScale, promoteScaleFor } from "./focusZoom";
 import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 
 const TAU = Math.PI * 2;
@@ -566,6 +567,7 @@ export function SolarSystem() {
         SUN.id,
         anchor,
         SUN.size,
+        SUN.name,
         PLANETS.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
         strip.w,
         strip.h,
@@ -573,7 +575,7 @@ export function SolarSystem() {
       return;
     }
     if (id === MOON.id) {
-      fan.layout = computeChatLayout(MOON.id, anchor, MOON.size, [], strip.w, strip.h);
+      fan.layout = computeChatLayout(MOON.id, anchor, MOON.size, MOON.name, [], strip.w, strip.h);
       return;
     }
     const p = PLANETS.find((pp) => pp.id === id);
@@ -582,6 +584,7 @@ export function SolarSystem() {
         p.id,
         anchor,
         p.size,
+        p.name,
         p.id === "earth" ? [{ id: MOON.id, size: MOON.size, name: MOON.name }] : [],
         strip.w,
         strip.h,
@@ -599,17 +602,21 @@ export function SolarSystem() {
     if (!anchor) return;
     const strip = stripSize();
     let size: number;
+    let name: string;
     let kids: ChatChildInput[];
     if (id === SUN.id) {
       size = SUN.size;
+      name = SUN.name;
       kids = PLANETS.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name }));
     } else if (id === MOON.id) {
       size = MOON.size;
+      name = MOON.name;
       kids = [];
     } else {
       const p = PLANETS.find((pp) => pp.id === id);
       if (!p) return;
       size = p.size;
+      name = p.name;
       kids =
         p.id === "earth"
           ? [{ id: MOON.id, size: MOON.size, name: MOON.name }]
@@ -617,7 +624,7 @@ export function SolarSystem() {
     }
     fanSubjectRef.current = {
       id,
-      layout: computeChatLayout(id, anchor, size, kids, strip.w, strip.h),
+      layout: computeChatLayout(id, anchor, size, name, kids, strip.w, strip.h),
     };
     chatGlideRef.current = true;
   };
@@ -630,7 +637,7 @@ export function SolarSystem() {
     if (fid === MOON.id) {
       subject = {
         info: { id: MOON.id, name: MOON.name, img: MOON.img, line: MOON.line, kindLabel: "Moon" },
-        layout: computeChatLayout(MOON.id, moonPos, MOON.size, [], stripSize().w, stripSize().h),
+        layout: computeChatLayout(MOON.id, moonPos, MOON.size, MOON.name, [], stripSize().w, stripSize().h),
       };
     } else {
       const p = fid ? PLANETS.find((pp) => pp.id === fid) : undefined;
@@ -642,6 +649,7 @@ export function SolarSystem() {
             p.id,
             anchor,
             p.size,
+            p.name,
             p.id === "earth" ? [{ id: MOON.id, size: MOON.size, name: MOON.name }] : [],
             stripSize().w,
             stripSize().h,
@@ -656,6 +664,7 @@ export function SolarSystem() {
           SUN.id,
           { x: CENTER, y: CENTER },
           SUN.size,
+          SUN.name,
           PLANETS.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
           stripSize().w,
           stripSize().h,
@@ -718,22 +727,12 @@ export function SolarSystem() {
     chatRideRef.current.get(MOON.id)?.size ??
     MOON.size;
 
-  /**
-   * World-pixel radius the camera should frame for a navigator pick:
-   * the sun gets every planet ring, a planet gets its moon's ring
-   * (or just its own disc when it has no moons), a moon its own disc.
-   */
-  const frameRadius = (id: string): number => {
-    if (id === SUN.id) {
-      return Math.max(...PLANETS.map((p) => p.orbitR + p.size / 2)) + 80;
-    }
-    if (id === MOON.id) return MOON.size * 1.6;
+  /** The body's own configured size — never the chat-fan slot size. */
+  const configSize = (id: string): number | null => {
+    if (id === SUN.id) return SUN.size;
+    if (id === MOON.id) return MOON.size;
     const p = PLANETS.find((pp) => pp.id === id);
-    if (!p) return 200;
-    const own = p.size * 1.15;
-    return p.id === "earth"
-      ? Math.max(own, MOON.orbitR + MOON.size / 2 + 60)
-      : own;
+    return p ? p.size : null;
   };
 
   // Camera follow, chase-cam style: every frame we ease from the camera
@@ -824,13 +823,15 @@ export function SolarSystem() {
   });
 
   /** Glide the camera so the body and everything orbiting it fits. */
+  /**
+   * Glide the camera to a body, promoting it to the standard on-screen
+   * size — the moon gets just as big a close-up as the sun.
+   */
   const focusCamera = (id: string) => {
     const q = bodyPos(id);
-    if (!q) return;
-    const fit =
-      (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
-      (2 * frameRadius(id));
-    const s = Math.min(Math.max(fit, 0.16), 1.35);
+    const size = configSize(id);
+    if (!q || !size) return;
+    const s = promoteScaleFor(size, window.innerWidth, window.innerHeight);
     const st = stateRef.current;
     followRef.current = {
       id,
@@ -1363,6 +1364,11 @@ export function SolarSystem() {
   // and the chat invite anchor read it.
   rocketPoseRef.current = { x: rocketX, y: rocketY, rot: rocketRot };
 
+  // Zoom-in counter-scale for labels: past 1x the names freeze at their
+  // 1x screen size, like map place-names.
+  const camScale = stateRef.current?.scale ?? 1;
+  const galaxyLabelBoost = labelCounterScale(camScale);
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
       <div className="flex h-full w-full">
@@ -1387,7 +1393,7 @@ export function SolarSystem() {
       <TransformWrapper
         initialScale={0.36}
         minScale={chatOpen && fanSubj ? fanSubj.layout.camera.scale : 0.12}
-        maxScale={2.5}
+        maxScale={Math.max(2.5, chatOpen && fanSubj ? fanSubj.layout.camera.scale * 1.4 : 0)}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
@@ -1502,6 +1508,9 @@ export function SolarSystem() {
                   highlightMode={highlightId === SUN.id ? "flash" : "steady"}
                   onTap={handleBodyTap}
                   spin
+                  labelBoost={
+                    fanSubj?.layout.slots.get(SUN.id)?.labelBoost ?? galaxyLabelBoost
+                  }
                 />
 
                 {/* Biggest first so small planets pass in front at
@@ -1520,7 +1529,7 @@ export function SolarSystem() {
                         def={chatSized && cr ? { ...p, size: cr.size } : p}
                         x={q.x}
                         y={q.y}
-                        labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
+                        labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? galaxyLabelBoost}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={
@@ -1544,7 +1553,7 @@ export function SolarSystem() {
                   }
                   x={moonPos.x}
                   y={moonPos.y}
-                  labelBoost={fanSubj?.layout.slots.get(MOON.id)?.labelBoost ?? 1}
+                  labelBoost={fanSubj?.layout.slots.get(MOON.id)?.labelBoost ?? galaxyLabelBoost}
                   active={activeId === MOON.id}
                   jumping={jumpId === MOON.id}
                   highlighted={
