@@ -2037,6 +2037,7 @@ export function GeneratorSystem() {
 
                 <Planet
                   def={config.sun}
+                  labelBoost={fanSubj?.layout.slots.get(config.sun.id)?.labelBoost ?? galaxyLabelBoost}
                   x={CENTER}
                   y={CENTER}
                   active={activeId === config.sun.id}
