@@ -537,7 +537,8 @@ export function addMoonToSystem(
   if (
     !parent ||
     parent.moons.length >= MAX_MOONS_PER_BODY ||
-    parent.size < MIN_MOON_PARENT_SIZE
+    moonGenerationOf(system.planets, parentId) >= MAX_MOON_GENERATIONS ||
+    parent.size * 0.72 <= MIN_MOON_SIZE
   ) {
     return null;
   }
