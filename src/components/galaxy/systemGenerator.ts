@@ -478,8 +478,9 @@ export function addPlanetToSystem(
 
 /**
  * Add a moon to a planet — or a smaller mini-moon to a moon (yes, moons
- * can have moons). Null when the parent already has 2 moons or is too
- * tiny to host one.
+ * can have moons, up to ten generations deep). Null when the parent
+ * already has 5 children, is ten generations deep, or is too tiny to
+ * host a strictly-smaller child.
  */
 export function addMoonToSystem(
   system: SystemConfig,
@@ -492,12 +493,13 @@ export function addMoonToSystem(
     isPlanet: boolean,
   ): GeneratedMoon => {
     const sprite = pickRandom(MOON_SPRITES);
+    // Children are always strictly smaller than their parent.
     const size = isPlanet
-      ? Math.min(44 + Math.random() * 26, parentSize * 0.55)
-      : parentSize * (0.45 + Math.random() * 0.15);
+      ? Math.min(44 + Math.random() * 26, parentSize * 0.5)
+      : childMoonSize(parentSize, Math.random);
     const orbitR = isPlanet
       ? parentSize * 0.72 + 50 + siblingCount * 62
-      : parentSize * 0.85 + 34 + siblingCount * 40;
+      : moonChildOrbit(parentSize, siblingCount);
     return {
       id: `moon-new-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`,
       name: uniqueRuntimeName(sprite.name, used),
