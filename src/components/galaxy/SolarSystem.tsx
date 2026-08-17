@@ -1364,6 +1364,11 @@ export function SolarSystem() {
   // and the chat invite anchor read it.
   rocketPoseRef.current = { x: rocketX, y: rocketY, rot: rocketRot };
 
+  // Zoom-in counter-scale for labels: past 1x the names freeze at their
+  // 1x screen size, like map place-names.
+  const camScale = stateRef.current?.scale ?? 1;
+  const galaxyLabelBoost = labelCounterScale(camScale);
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-space">
       <div className="flex h-full w-full">
@@ -1388,7 +1393,7 @@ export function SolarSystem() {
       <TransformWrapper
         initialScale={0.36}
         minScale={chatOpen && fanSubj ? fanSubj.layout.camera.scale : 0.12}
-        maxScale={2.5}
+        maxScale={Math.max(2.5, chatOpen && fanSubj ? fanSubj.layout.camera.scale * 1.4 : 0)}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
@@ -1503,6 +1508,9 @@ export function SolarSystem() {
                   highlightMode={highlightId === SUN.id ? "flash" : "steady"}
                   onTap={handleBodyTap}
                   spin
+                  labelBoost={
+                    fanSubj?.layout.slots.get(SUN.id)?.labelBoost ?? galaxyLabelBoost
+                  }
                 />
 
                 {/* Biggest first so small planets pass in front at
@@ -1521,7 +1529,7 @@ export function SolarSystem() {
                         def={chatSized && cr ? { ...p, size: cr.size } : p}
                         x={q.x}
                         y={q.y}
-                        labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
+                        labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? galaxyLabelBoost}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         highlighted={
@@ -1545,7 +1553,7 @@ export function SolarSystem() {
                   }
                   x={moonPos.x}
                   y={moonPos.y}
-                  labelBoost={fanSubj?.layout.slots.get(MOON.id)?.labelBoost ?? 1}
+                  labelBoost={fanSubj?.layout.slots.get(MOON.id)?.labelBoost ?? galaxyLabelBoost}
                   active={activeId === MOON.id}
                   jumping={jumpId === MOON.id}
                   highlighted={
