@@ -776,6 +776,7 @@ export function GeneratorSystem() {
           p.id,
           anchor,
           p.size,
+          p.name,
           p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name })),
           stripSize().w,
           stripSize().h,
@@ -798,6 +799,7 @@ export function GeneratorSystem() {
           m.id,
           anchor,
           m.size,
+          m.name,
           m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name })),
           stripSize().w,
           stripSize().h,
@@ -817,6 +819,7 @@ export function GeneratorSystem() {
           config.sun.id,
           { x: CENTER, y: CENTER },
           config.sun.size,
+          config.sun.name,
           config.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
           stripSize().w,
           stripSize().h,
@@ -1389,6 +1392,7 @@ export function GeneratorSystem() {
         id,
         anchor,
         cfg.sun.size,
+        cfg.sun.name,
         cfg.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
         strip.w,
         strip.h,
@@ -1401,6 +1405,7 @@ export function GeneratorSystem() {
         id,
         anchor,
         p.size,
+        p.name,
         p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name })),
         strip.w,
         strip.h,
@@ -1413,6 +1418,7 @@ export function GeneratorSystem() {
         id,
         anchor,
         m.size,
+        m.name,
         m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name })),
         strip.w,
         strip.h,
@@ -1430,25 +1436,29 @@ export function GeneratorSystem() {
     if (!anchor) return;
     const strip = stripSize();
     let size: number;
+    let name: string;
     let kids: ChatChildInput[] = [];
     if (id === config.sun.id) {
       size = config.sun.size;
+      name = config.sun.name;
       kids = config.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name }));
     } else {
       const p = config.planets.find((pp) => pp.id === id);
       if (p) {
         size = p.size;
+        name = p.name;
         kids = p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name }));
       } else {
         const m = findMoonById(config.planets, id);
         if (!m) return;
         size = m.size;
+        name = m.name;
         kids = m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name }));
       }
     }
     fanSubjectRef.current = {
       id,
-      layout: computeChatLayout(id, anchor, size, kids, strip.w, strip.h),
+      layout: computeChatLayout(id, anchor, size, name, kids, strip.w, strip.h),
     };
     chatGlideRef.current = true;
   };
