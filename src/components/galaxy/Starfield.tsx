@@ -101,22 +101,32 @@ export function Starfield({
 
     const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)] as T;
 
+    // The painted sky sheets carry no stars at all, so every mark in the sky
+    // is drawn here. Counts scale with world area (tuned against a 3800px
+    // world) to keep density even instead of thinning out on big systems.
+    const area = (w * h) / (3800 * 3800);
+    const count = (n: number) => Math.max(6, Math.round(n * area * (coarse ? 0.55 : 1)));
+
+    // Every mark stays deliberately SMALL. Background decoration must never
+    // read at planet scale or it competes with the bodies you're steering.
+
     // Twinkling confetti dots — an extremely slow animated layer over the painted sky.
-    const stars: Star[] = Array.from({ length: coarse ? 240 : 420 }, () => ({
+    const stars: Star[] = Array.from({ length: count(1150) }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
-      r: 1 + Math.random() * 3,
+      r: 1 + Math.random() * 2.6,
       base: 0.35 + Math.random() * 0.65,
       speed: 0.05 + Math.random() * 0.15,
       phase: Math.random() * Math.PI * 2,
       color: pick(DOT_COLORS),
     }));
 
-    // Solid 5-point candy stars — small but luminous against the dark sky.
-    const solidStars: SolidStar[] = Array.from({ length: coarse ? 14 : 20 }, () => ({
+    // Solid 5-point candy stars — the largest mark in the sky, and still
+    // only a fraction of the smallest moon.
+    const solidStars: SolidStar[] = Array.from({ length: count(52) }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
-      r: 6 + Math.random() * 8,
+      r: 5 + Math.random() * 5.5,
       rot: Math.random() * Math.PI * 2,
       speed: 0.05 + Math.random() * 0.15,
       phase: Math.random() * Math.PI * 2,
@@ -124,20 +134,20 @@ export function Starfield({
     }));
 
     // Plus-shaped sparkles scattered between the dots.
-    const sparkles: Sparkle[] = Array.from({ length: coarse ? 20 : 32 }, () => ({
+    const sparkles: Sparkle[] = Array.from({ length: count(78) }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
-      size: 7 + Math.random() * 8,
+      size: 5.5 + Math.random() * 5,
       speed: 0.08 + Math.random() * 0.18,
       phase: Math.random() * Math.PI * 2,
       color: pick(SPARKLE_COLORS),
     }));
 
     // Hand-drawn spiral swirls, very slowly turning.
-    const spirals: Spiral[] = Array.from({ length: coarse ? 5 : 8 }, () => ({
+    const spirals: Spiral[] = Array.from({ length: count(16) }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
-      maxR: 16 + Math.random() * 18,
+      maxR: 12 + Math.random() * 12,
       rotSpeed: (Math.random() < 0.5 ? -1 : 1) * (0.01 + Math.random() * 0.02),
       phase: Math.random() * Math.PI * 2,
       color: pick(SPIRAL_COLORS),
