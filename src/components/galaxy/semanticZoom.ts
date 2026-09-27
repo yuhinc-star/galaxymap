@@ -4,6 +4,8 @@ export interface SemanticVisibilityInput {
   depth: number;
   focusDepth: number;
   apparentSize: number;
+  /** Shortest parent/child hops from the current focus. */
+  familyDistance: number;
   protected?: boolean;
   mobile?: boolean;
 }
@@ -30,23 +32,25 @@ export function semanticVisibility({
   depth,
   focusDepth,
   apparentSize,
+  familyDistance,
   protected: keep = false,
   mobile = false,
 }: SemanticVisibilityInput): SemanticVisibility {
-  const minDepth = Math.max(0, focusDepth - 1);
-  const maxDepth = focusDepth === 0 ? 2 : focusDepth + 1;
-  const generationDistance = depth < minDepth
-    ? minDepth - depth
-    : depth > maxDepth
-      ? depth - maxDepth
-      : 0;
+  // Focus + direct family are fully readable. Two hops away is the third
+  // context generation; a fourth only peeks during the handoff.
+  const generationAlpha = familyDistance <= 1
+    ? 1
+    : familyDistance === 2
+      ? (mobile ? 0.44 : 0.56)
+      : familyDistance === 3
+        ? (mobile ? 0.1 : 0.2)
+        : 0;
 
   // Tiny bodies disappear while zoomed out. Extremely oversized ancestors
   // also soften away while zoomed deeply into a local family.
   const tiny = smoothstep(mobile ? 11 : 8, mobile ? 28 : 22, apparentSize);
   const oversized = 1 - smoothstep(mobile ? 760 : 980, mobile ? 1250 : 1650, apparentSize);
   const sizeAlpha = Math.min(tiny, oversized);
-  const generationAlpha = generationDistance === 0 ? 1 : generationDistance === 1 ? (mobile ? 0.16 : 0.28) : 0;
   const opacity = keep ? Math.max(0.92, sizeAlpha) : sizeAlpha * generationAlpha;
 
   if (opacity <= 0.025) {
@@ -56,7 +60,7 @@ export function semanticVisibility({
     return { detail: "context", opacity, scale: 0.9, labelOpacity: 0, ringOpacity: opacity * 0.45, interactive: false };
   }
   if (apparentSize < (mobile ? 54 : 46) || opacity < 0.78) {
-    return { detail: "quiet", opacity, scale: 0.96, labelOpacity: smoothstep(30, 66, apparentSize), ringOpacity: opacity * 0.68, interactive: true };
+    return { detail: "quiet", opacity, scale: 0.96, labelOpacity: familyDistance <= 1 ? smoothstep(30, 66, apparentSize) : 0, ringOpacity: opacity * (familyDistance <= 1 ? 0.68 : 0.18), interactive: familyDistance <= 2 };
   }
-  return { detail: "full", opacity, scale: 1, labelOpacity: smoothstep(38, 76, apparentSize), ringOpacity: opacity, interactive: true };
+  return { detail: "full", opacity, scale: 1, labelOpacity: familyDistance <= 1 ? smoothstep(38, 76, apparentSize) : 0, ringOpacity: opacity * (familyDistance <= 1 ? 1 : 0.18), interactive: true };
 }

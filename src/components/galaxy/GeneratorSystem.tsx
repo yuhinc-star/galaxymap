@@ -321,6 +321,28 @@ export function GeneratorSystem() {
 
   const focusForVisibility = focusedId ?? chatTalkId ?? config.sun.id;
   const focusDepth = bodyMeta.get(focusForVisibility)?.depth ?? 0;
+  const familyDistance = (fromId: string, toId: string) => {
+    const chain = (id: string) => {
+      const result = new Map<string, number>();
+      let current: string | null = id;
+      let hops = 0;
+      while (current) {
+        result.set(current, hops++);
+        current = bodyMeta.get(current)?.parentId ?? null;
+      }
+      return result;
+    };
+    const from = chain(fromId);
+    let current: string | null = toId;
+    let hops = 0;
+    while (current) {
+      const shared = from.get(current);
+      if (shared !== undefined) return shared + hops;
+      current = bodyMeta.get(current)?.parentId ?? null;
+      hops += 1;
+    }
+    return Number.POSITIVE_INFINITY;
+  };
   const protectedBodies = new Set([
     focusForVisibility,
     rocketHostId,
@@ -337,6 +359,7 @@ export function GeneratorSystem() {
       depth: meta.depth,
       focusDepth,
       apparentSize: (renderedSize ?? meta.size) * viewScale,
+      familyDistance: familyDistance(focusForVisibility, id),
       protected: protectedBodies.has(id),
       mobile: isMobileView,
     });
