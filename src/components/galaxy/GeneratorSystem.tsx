@@ -1888,7 +1888,13 @@ export function GeneratorSystem() {
       const pose = chatPoseMoon(m, px, py, a, parentId);
       const s = ringScaleRef.current.get(m.id) ?? 1;
       const vis = visibilityFor(m.id, pose.size);
-      if (vis.detail === "hidden") return null;
+      if (vis.detail === "hidden") {
+        return (
+          <Fragment key={m.id}>
+            {renderMoonRings(m.moons, pose.x, pose.y, m.id, depth + 1)}
+          </Fragment>
+        );
+      }
       return (
         <Fragment key={m.id}>
           {/* Position lives on the <g> so the path's own CSS transform
@@ -1932,7 +1938,13 @@ export function GeneratorSystem() {
       const r = chatPoseMoon(m, px, py, a, parentId);
       const chatSized = Math.abs(r.size - m.size) > 0.5;
       const vis = visibilityFor(m.id, r.size);
-      if (vis.detail === "hidden") return null;
+      if (vis.detail === "hidden") {
+        return (
+          <Fragment key={m.id}>
+            {renderMoonTree(m.moons, r.x, r.y, m.id)}
+          </Fragment>
+        );
+      }
       return (
         <Fragment key={m.id}>
           <Planet
