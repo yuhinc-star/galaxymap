@@ -2025,8 +2025,8 @@ export function GeneratorSystem() {
       <TransformWrapper
         key={`${seed}-${planetCount}`}
         initialScale={0.36}
-        minScale={chatOpen && fanSubj ? Math.min(fanSubj.layout.camera.scale, 0.015) : 0.015}
-        maxScale={24}
+        minScale={chatOpen && fanSubj ? Math.min(fanSubj.layout.camera.scale, 0.002) : 0.002}
+        maxScale={96}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
