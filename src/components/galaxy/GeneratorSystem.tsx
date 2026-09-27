@@ -201,6 +201,7 @@ export function GeneratorSystem() {
   /** React state updates only when zoom meaningfully changes; orbit ticks do not drive it. */
   const [viewScale, setViewScale] = useState(0.36);
   const viewScaleRef = useRef(0.36);
+  const [isMobileView, setIsMobileView] = useState(false);
   /** Chat mode: the family lines up in a sky strip beside the chat panel. */
   const [chatOpen, setChatOpen] = useState(false);
   const hideTimer = useRef<number | undefined>(undefined);
@@ -293,7 +294,13 @@ export function GeneratorSystem() {
     );
   }, [seed, planetCount]);
   const config = extras ?? baseConfig;
-  const isMobileView = typeof window !== "undefined" && window.innerWidth < 640;
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 639px)");
+    const sync = () => setIsMobileView(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
   /** Stable family metadata for arbitrary recursive moon depth. */
   const bodyMeta = useMemo(() => {
