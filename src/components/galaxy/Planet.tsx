@@ -40,6 +40,11 @@ interface PlanetProps {
   /** Chat mode: scale the name label up so it stays readable while the
       camera zooms the family column out. */
   labelBoost?: number;
+  /** Semantic zoom presentation. The body remains in the system tree. */
+  visualOpacity?: number;
+  visualScale?: number;
+  labelOpacity?: number;
+  interactive?: boolean;
 }
 
 /**
@@ -57,7 +62,7 @@ export function planetLabelSize(size: number, name: string): number {
  * A celestial body floating in the world: sprite, name label, tap
  * reaction. Position comes from the parent's orbit math.
  */
-export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1 }: PlanetProps) {
+export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
   const longName = def.name.length > 16;
 
@@ -78,12 +83,14 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
 
   return (
     <div
-      className={`absolute ${departing ? "pointer-events-none" : ""}`}
+      className={`absolute semantic-body ${departing || !interactive ? "pointer-events-none" : ""}`}
       style={{
         left: x,
         top: y,
         transform: "translate(-50%, -50%)",
         zIndex: active || highlighted ? 30 : undefined,
+        opacity: visualOpacity,
+        ["--semantic-scale" as string]: visualScale,
       }}
     >
       <button
@@ -190,6 +197,7 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
         }`}
         style={{
           fontSize: labelSize * labelBoost,
+          opacity: departing ? 0 : labelOpacity,
           textShadow: "0 2px 10px rgba(10, 6, 30, 0.9)",
         }}
       >
