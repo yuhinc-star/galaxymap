@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Semantic zoom is presentation-only: derive a three-generation visibility window from focus and apparent size; never mutate or regenerate bodies when zoom changes.
