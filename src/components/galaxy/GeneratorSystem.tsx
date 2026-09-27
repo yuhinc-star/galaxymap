@@ -65,6 +65,7 @@ import { RocketSummonInvite } from "./RocketSummonInvite";
 import { Starfield } from "./Starfield";
 import { SuggestionStack } from "./SuggestionStack";
 import { ZoomOutPill, type ZoomOutTarget } from "./ZoomOutPill";
+import { semanticVisibility, type SemanticVisibility } from "./semanticZoom";
 
 const TAU = Math.PI * 2;
 const MIN_PLANETS = 2;
@@ -197,6 +198,10 @@ export function GeneratorSystem() {
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
+  /** React state updates only when zoom meaningfully changes; orbit ticks do not drive it. */
+  const [viewScale, setViewScale] = useState(0.36);
+  const viewScaleRef = useRef(0.36);
+  const [isMobileView, setIsMobileView] = useState(false);
   /** Chat mode: the family lines up in a sky strip beside the chat panel. */
   const [chatOpen, setChatOpen] = useState(false);
   const hideTimer = useRef<number | undefined>(undefined);
@@ -289,6 +294,76 @@ export function GeneratorSystem() {
     );
   }, [seed, planetCount]);
   const config = extras ?? baseConfig;
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 639px)");
+    const sync = () => setIsMobileView(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  /** Stable family metadata for arbitrary recursive moon depth. */
+  const bodyMeta = useMemo(() => {
+    const map = new Map<string, { depth: number; parentId: string | null; size: number }>();
+    map.set(config.sun.id, { depth: 0, parentId: null, size: config.sun.size });
+    const addMoons = (moons: GeneratedMoon[], parentId: string, depth: number) => {
+      for (const moon of moons) {
+        map.set(moon.id, { depth, parentId, size: moon.size });
+        addMoons(moon.moons, moon.id, depth + 1);
+      }
+    };
+    for (const planet of config.planets) {
+      map.set(planet.id, { depth: 1, parentId: config.sun.id, size: planet.size });
+      addMoons(planet.moons, planet.id, 2);
+    }
+    return map;
+  }, [config]);
+
+  const focusForVisibility = focusedId ?? chatTalkId ?? config.sun.id;
+  const focusDepth = bodyMeta.get(focusForVisibility)?.depth ?? 0;
+  const familyDistance = (fromId: string, toId: string) => {
+    const chain = (id: string) => {
+      const result = new Map<string, number>();
+      let current: string | null = id;
+      let hops = 0;
+      while (current) {
+        result.set(current, hops++);
+        current = bodyMeta.get(current)?.parentId ?? null;
+      }
+      return result;
+    };
+    const from = chain(fromId);
+    let current: string | null = toId;
+    let hops = 0;
+    while (current) {
+      const shared = from.get(current);
+      if (shared !== undefined) return shared + hops;
+      current = bodyMeta.get(current)?.parentId ?? null;
+      hops += 1;
+    }
+    return Number.POSITIVE_INFINITY;
+  };
+  const protectedBodies = new Set([
+    focusForVisibility,
+    rocketHostId,
+    ...(flight ? [flight.toId] : []),
+    ...(rocketInboundId ? [rocketInboundId] : []),
+  ]);
+  const visibilityFor = (id: string, renderedSize?: number): SemanticVisibility => {
+    if (chatActive && fanSubjectRef.current?.layout.slots.has(id)) {
+      return { detail: "full", opacity: 1, scale: 1, labelOpacity: 1, ringOpacity: 1, interactive: true };
+    }
+    const meta = bodyMeta.get(id);
+    if (!meta) return { detail: "full", opacity: 1, scale: 1, labelOpacity: 1, ringOpacity: 1, interactive: true };
+    return semanticVisibility({
+      depth: meta.depth,
+      focusDepth,
+      apparentSize: (renderedSize ?? meta.size) * viewScale,
+      familyDistance: familyDistance(focusForVisibility, id),
+      protected: protectedBodies.has(id),
+      mobile: isMobileView,
+    });
+  };
 
   // Flight recorder: keep the last-known world state in the heartbeat, so a
   // killed phone tab still tells us which system it was showing.
@@ -1213,7 +1288,7 @@ export function GeneratorSystem() {
     const consider = (id: string) => {
       const c = bodyPos(id);
       const s = bodySize(id);
-      if (!c || !s) return;
+      if (!c || !s || !visibilityFor(id, s).interactive) return;
       const d = Math.hypot(w.x - c.x, w.y - c.y);
       if (d < Math.max((s / 2) * 1.25, 70 / scale) && d < bestD) {
         best = id;
@@ -1221,12 +1296,15 @@ export function GeneratorSystem() {
       }
     };
     consider(config.sun.id);
+    const considerMoons = (moons: GeneratedMoon[]) => {
+      for (const moon of moons) {
+        consider(moon.id);
+        considerMoons(moon.moons);
+      }
+    };
     for (const p of config.planets) {
       consider(p.id);
-      for (const m of p.moons) {
-        consider(m.id);
-        for (const g of m.moons) consider(g.id);
-      }
+      considerMoons(p.moons);
     }
     return best;
   };
@@ -1839,11 +1917,19 @@ export function GeneratorSystem() {
       // rides it into the lineup.
       const pose = chatPoseMoon(m, px, py, a, parentId);
       const s = ringScaleRef.current.get(m.id) ?? 1;
+      const vis = visibilityFor(m.id, pose.size);
+      if (vis.detail === "hidden") {
+        return (
+          <Fragment key={m.id}>
+            {renderMoonRings(m.moons, pose.x, pose.y, m.id, depth + 1)}
+          </Fragment>
+        );
+      }
       return (
         <Fragment key={m.id}>
           {/* Position lives on the <g> so the path's own CSS transform
               stays free for the appear/disappear animation */}
-          <g transform={`translate(${px} ${py}) scale(${s})`}>
+          <g className="semantic-orbit" opacity={vis.ringOpacity} transform={`translate(${px} ${py}) scale(${s})`}>
             <path
               d={m.ringD}
               fill="none"
@@ -1881,6 +1967,14 @@ export function GeneratorSystem() {
       const a = m.startAngle + (t * TAU) / m.period;
       const r = chatPoseMoon(m, px, py, a, parentId);
       const chatSized = Math.abs(r.size - m.size) > 0.5;
+      const vis = visibilityFor(m.id, r.size);
+      if (vis.detail === "hidden") {
+        return (
+          <Fragment key={m.id}>
+            {renderMoonTree(m.moons, r.x, r.y, m.id)}
+          </Fragment>
+        );
+      }
       return (
         <Fragment key={m.id}>
           <Planet
@@ -1898,6 +1992,10 @@ export function GeneratorSystem() {
             highlightMode={highlightId === m.id ? "flash" : "steady"}
             newborn={newbornId === m.id}
             departing={departingIds.includes(m.id)}
+            visualOpacity={vis.opacity}
+            visualScale={vis.scale}
+            labelOpacity={vis.labelOpacity}
+            interactive={vis.interactive}
             onTap={handleBodyTap}
           />
           {renderMoonTree(m.moons, r.x, r.y, m.id)}
@@ -1927,8 +2025,8 @@ export function GeneratorSystem() {
       <TransformWrapper
         key={`${seed}-${planetCount}`}
         initialScale={0.36}
-        minScale={chatOpen && fanSubj ? fanSubj.layout.camera.scale : 0.12}
-        maxScale={2.5}
+        minScale={chatOpen && fanSubj ? Math.min(fanSubj.layout.camera.scale, 0.002) : 0.002}
+        maxScale={96}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
@@ -1937,6 +2035,10 @@ export function GeneratorSystem() {
         onPanning={stopFollow}
         onWheel={chatUserZoom}
         onPinchStart={chatUserZoom}
+        onTransform={(_, next) => {
+          viewScaleRef.current = next.scale;
+          setViewScale((current) => Math.abs(current - next.scale) > Math.max(0.018, current * 0.055) ? next.scale : current);
+        }}
       >
         {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;
@@ -1966,9 +2068,13 @@ export function GeneratorSystem() {
                     // In chat mode each ring breathes toward its fan-arc
                     // radius, carrying its planet along with it.
                     const s = ringScaleRef.current.get(p.id) ?? 1;
+                    const vis = visibilityFor(p.id);
+                    if (vis.detail === "hidden") return null;
                     return (
                       <g
                         key={p.id}
+                        className="semantic-orbit"
+                        opacity={vis.ringOpacity}
                         transform={`translate(${CENTER} ${CENTER}) scale(${s})`}
                       >
                         <path
@@ -2021,6 +2127,7 @@ export function GeneratorSystem() {
 
                 {config.drifters.map((d) => {
                   const q = drifterPos.get(d.id)!;
+                  if (viewScale > 2.8 || viewScale < 0.08) return null;
                   return <Drifter key={d.id} def={d} x={q.x} y={q.y} />;
                 })}
 
@@ -2039,6 +2146,10 @@ export function GeneratorSystem() {
                   highlightMode={
                     highlightId === config.sun.id ? "flash" : "steady"
                   }
+                  visualOpacity={visibilityFor(config.sun.id).opacity}
+                  visualScale={visibilityFor(config.sun.id).scale}
+                  labelOpacity={visibilityFor(config.sun.id).labelOpacity}
+                  interactive={visibilityFor(config.sun.id).interactive}
                   onTap={handleBodyTap}
                   spin
                 />
@@ -2051,6 +2162,9 @@ export function GeneratorSystem() {
                       chatRenderRef.current.get(p.id) ??
                       chatRideRef.current.get(p.id);
                     const chatSized = cr != null && Math.abs(cr.size - p.size) > 0.5;
+                    const renderSize = chatSized && cr ? cr.size : p.size;
+                    const vis = visibilityFor(p.id, renderSize);
+                    if (vis.detail === "hidden") return null;
                     return (
                       <Planet
                         key={p.id}
@@ -2070,6 +2184,10 @@ export function GeneratorSystem() {
                         highlightMode={
                           highlightId === p.id ? "flash" : "steady"
                         }
+                        visualOpacity={vis.opacity}
+                        visualScale={vis.scale}
+                        labelOpacity={vis.labelOpacity}
+                        interactive={vis.interactive}
                         onTap={handleBodyTap}
                       />
                     );
