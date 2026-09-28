@@ -142,33 +142,53 @@ export function computeChatLayout(
     parentId: null,
     generation: 0,
   });
-  for (let generation = 1; generation <= 4; generation += 1) {
-    const row = kids.filter((kid) => kid.generation === generation);
-    row.forEach((k, rowIndex) => {
-      const parent = slots.get(k.parentId) ?? slots.get(parentId);
-      if (!parent) return;
-      const size = k.dia / scale;
-      const spread = Math.min(stripW * 0.56, Math.max(0, (row.length - 1) * 66));
-      const screenX = sx - spread / 2 + (row.length <= 1 ? 0 : (spread * rowIndex) / (row.length - 1));
-      const screenY = sy - k.rho * generation;
-      const parentScreenX = sx + (parent.x - anchor.x) * scale;
-      const parentScreenY = sy + (parent.y - anchor.y) * scale;
-      const dx = screenX - parentScreenX;
-      const dy = screenY - parentScreenY;
-      const radius = Math.hypot(dx, dy) / scale;
-      const angle = Math.atan2(dy, dx);
-      slots.set(k.id, {
-        x: anchor.x + (screenX - sx) / scale,
-        y: anchor.y + (screenY - sy) / scale,
-        size,
-        angle,
-        radius,
-        labelBoost: k.font / (planetLabelSize(size, k.name) * scale),
-        parentId: k.parentId,
-        generation,
-      });
-    });
+  // The original chat idea: ONE vertical lineup rising above the subject.
+  // Genealogy is kept inside the lineup — rows run in family order (each
+  // child directly above its parent's row, before the next sibling), with a
+  // small per-generation step sideways and a jaunty alternating tilt.
+  const byParent = new Map<string, KidPlan[]>();
+  for (const k of kids) {
+    const list = byParent.get(k.parentId) ?? [];
+    list.push(k);
+    byParent.set(k.parentId, list);
   }
+  const ordered: KidPlan[] = [];
+  const walk = (pid: string) => {
+    for (const k of byParent.get(pid) ?? []) {
+      ordered.push(k);
+      walk(k.id);
+    }
+  };
+  walk(parentId);
+  for (const k of kids) if (!ordered.includes(k)) ordered.push(k);
+  const top = 26;
+  const bottom = sy - r0 * 0.62 - 14;
+  const pitch = ordered.length ? Math.max(24, (bottom - top) / ordered.length) : 0;
+  const indent = Math.min(26, stripW * 0.07);
+  let y = bottom;
+  ordered.forEach((k, i) => {
+    const parent = slots.get(k.parentId) ?? slots.get(parentId)!;
+    const dia = Math.min(k.dia, pitch * 0.62);
+    const size = dia / scale;
+    const tilt = (i % 2 === 0 ? -1 : 1) * stripW * 0.1;
+    const screenX = clamp(sx + tilt + (k.generation - 1) * indent, dia, stripW - dia);
+    const screenY = y - pitch / 2;
+    y -= pitch;
+    const parentScreenX = sx + (parent.x - anchor.x) * scale;
+    const parentScreenY = sy + (parent.y - anchor.y) * scale;
+    const dx = screenX - parentScreenX;
+    const dy = screenY - parentScreenY;
+    slots.set(k.id, {
+      x: anchor.x + (screenX - sx) / scale,
+      y: anchor.y + (screenY - sy) / scale,
+      size,
+      angle: Math.atan2(dy, dx),
+      radius: Math.hypot(dx, dy) / scale,
+      labelBoost: Math.max(13, Math.min(k.font, pitch * 0.45)) / (planetLabelSize(size, k.name) * scale),
+      parentId: k.parentId,
+      generation: k.generation,
+    });
+  });
 
   return {
     parentId,
