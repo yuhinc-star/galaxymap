@@ -579,7 +579,14 @@ export function GeneratorSystem() {
       high scale and reads as violent camera shake. */
   const chatUserZoom = () => {
     if (chatMixRef.current > 0.9) chatGlideRef.current = false;
+    // A zoom gesture owns the camera outright: the follow loop stops writing
+    // until the gesture has been quiet for a moment, then eases the focused
+    // body back to center at the user's new scale. Two owners writing in the
+    // same frames is what produced the shake, worst on deep fast moons.
+    gestureUntilRef.current = performance.now() + 260;
+    relockRef.current = true;
   };
+
 
   /** Open chat mode: the rocket decides who we chat with. A zoomed body
       summons the rocket over first; with nothing zoomed we chat with the
