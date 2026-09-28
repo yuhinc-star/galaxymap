@@ -204,7 +204,7 @@ export function GeneratorSystem() {
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
-  const [, setCameraFrame] = useState(0);
+  const [cameraFrame, setCameraFrame] = useState(0);
   /** React state updates only when zoom meaningfully changes; orbit ticks do not drive it. */
   const [viewScale, setViewScale] = useState(0.36);
   const viewScaleRef = useRef(0.36);
@@ -1197,7 +1197,7 @@ export function GeneratorSystem() {
       f.from.y + (ty - f.from.y) * e,
       s,
     );
-  }, [t, chatActive]);
+  }, [t, cameraFrame, chatActive]);
 
 
   // Chat-mode camera: while chat is open the camera chases the fan
