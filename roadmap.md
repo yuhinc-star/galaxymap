@@ -17,3 +17,4 @@
 - [x] Restore five visibly distinct parent-to-child levels in Chat Mode and verify the deep genealogy.
 - [x] Give the zoom gesture sole ownership of the camera, then re-lock the focused star, ending deep-zoom shake (verified on the smallest star, Speck).
 - [ ] Replace competing camera writers with one explicit camera controller and re-test Speck at maximum depth.
+- [ ] Freeze deep-family orbital movement while a tiny descendant is focused, so extreme zoom remains calm.
