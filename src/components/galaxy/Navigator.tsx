@@ -137,6 +137,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
   const renderEntry = (
     entry: NavigatorEntry,
     depth: number,
+    parentName: string | null,
     hasChildren: boolean,
     expanded: boolean,
     forcedOpen: boolean,
@@ -201,13 +202,23 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
           />
           {/* Long catalog names truncate to one line — the full name is
               a hover title away, and the info panel shows it in full. */}
-          <span
-            title={entry.name}
-            className={`min-w-0 flex-1 truncate font-hand font-bold uppercase leading-none tracking-wider ${
-              focused ? "text-star" : "text-white"
-            } ${nameSize}`}
-          >
-            &ldquo;{entry.name}&rdquo;
+          <span className="flex min-w-0 flex-1 flex-col justify-center">
+            <span
+              title={entry.name}
+              className={`truncate font-hand font-bold uppercase leading-none tracking-wider ${
+                focused ? "text-star" : "text-white"
+              } ${nameSize}`}
+            >
+              &ldquo;{entry.name}&rdquo;
+            </span>
+            {parentName && (
+              <span
+                title={`Orbits ${parentName}`}
+                className="mt-0.5 truncate font-display text-[9px] font-semibold uppercase leading-none text-white/45"
+              >
+                orbits {parentName}
+              </span>
+            )}
           </span>
           {focused && (
             <Sparkle
@@ -262,12 +273,15 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
 
   /** Flatten the visible tree so indentation never compounds past the width
       of the panel. True depth is retained for ancestry and generation cues. */
-  const renderItem = (item: NavigatorEntry, depth: number) => {
+  const renderItem = (item: NavigatorEntry, depth: number, parentName: string | null) => {
     const children = item.moons ?? [];
     const forcedOpen = children.some((child) => subtreeContainsTarget(child));
+    // The star is the permanent root of the genealogy. Its direct orbiters
+    // remain visible; deeper families progressively fold beneath them.
+    const rootOpen = depth === 0 && children.length > 0;
     const expanded =
       children.length > 0 &&
-      (forcedOpen || pathTargets.has(item.id) || expandedBranches.has(item.id));
+      (rootOpen || forcedOpen || pathTargets.has(item.id) || expandedBranches.has(item.id));
     const delay = Math.min(cascade++, 14) * 42;
     const cappedDepth = Math.min(depth, 2);
     const rows = [
@@ -280,16 +294,22 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
         }}
       >
         {depth > 0 && (
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -left-1 top-1/2 h-px w-2 -translate-y-1/2 border-t border-dashed border-white/35"
-          />
+          <>
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -left-1 -top-1/2 bottom-1/2 border-l border-dashed border-white/45"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -left-1 top-1/2 h-px w-3 -translate-y-1/2 border-t border-dashed border-white/45"
+            />
+          </>
         )}
-        {renderEntry(item, depth, children.length > 0, expanded, forcedOpen)}
+        {renderEntry(item, depth, parentName, children.length > 0, expanded, forcedOpen || rootOpen)}
       </li>,
     ];
     if (expanded) {
-      for (const child of children) rows.push(...renderItem(child, depth + 1));
+      for (const child of children) rows.push(...renderItem(child, depth + 1, item.name));
     } else if (children.length > 0) {
       const hidden = descendantCount(item);
       rows.push(
@@ -311,7 +331,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
               <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </span>
             <span className="min-w-0 truncate font-hand text-base font-bold uppercase leading-none">
-              {hidden} {hidden === 1 ? "star" : "stars"} tucked away
+              {hidden} {hidden === 1 ? "descendant" : "descendants"} orbiting {item.name}
             </span>
           </button>
         </li>,
@@ -357,7 +377,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
         </div>
       </div>
       <ul className="flex flex-col gap-0.5 overflow-x-hidden overflow-y-auto px-2 pb-3">
-        {items.flatMap((item) => renderItem(item, 0))}
+        {items.flatMap((item) => renderItem(item, 0, null))}
       </ul>
     </nav>
   );

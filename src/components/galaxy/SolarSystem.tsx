@@ -362,16 +362,20 @@ export function SolarSystem() {
 
   /** Navigator entries: the Sun, then every planet (Earth carries the Moon). */
   const navItems: NavigatorEntry[] = [
-    { id: SUN.id, name: SUN.name, img: SUN.img },
-    ...PLANETS.map((p) => ({
-      id: p.id,
-      name: p.name,
-      img: p.img,
-      moons:
-        p.id === "earth"
-          ? [{ id: MOON.id, name: MOON.name, img: MOON.img }]
-          : undefined,
-    })),
+    {
+      id: SUN.id,
+      name: SUN.name,
+      img: SUN.img,
+      moons: PLANETS.map((p) => ({
+        id: p.id,
+        name: p.name,
+        img: p.img,
+        moons:
+          p.id === "earth"
+            ? [{ id: MOON.id, name: MOON.name, img: MOON.img }]
+            : undefined,
+      })),
+    },
   ];
 
   // Orbit math: every planet advances along its ring at its own speed.
@@ -677,7 +681,7 @@ export function SolarSystem() {
     if (!id) return navItems;
     if (id === SUN.id) return navItems; // the whole system is on screen
     if (id === MOON.id) return [{ id: MOON.id, name: MOON.name, img: MOON.img }];
-    const entry = navItems.find((e) => e.id === id);
+    const entry = navItems[0]?.moons?.find((e) => e.id === id);
     return entry ? [entry] : navItems;
   })();
 
