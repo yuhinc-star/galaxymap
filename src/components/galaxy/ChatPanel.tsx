@@ -93,7 +93,7 @@ export function ChatPanel({ subject, onClose, waiting = false }: ChatPanelProps)
   return (
     <aside
       aria-label={`Chat with ${subject.name}`}
-      className="fixed inset-0 z-50 flex flex-col bg-space-deep sm:static sm:inset-auto sm:z-auto sm:h-full sm:min-w-0 sm:flex-1 sm:border-l sm:border-white/20 sm:bg-space-deep/95 sm:backdrop-blur-sm"
+      className="fixed inset-x-0 bottom-0 top-[34%] z-50 flex flex-col border-t border-white/20 bg-space-deep/95 backdrop-blur-sm sm:static sm:inset-auto sm:z-auto sm:h-full sm:min-w-0 sm:flex-1 sm:border-l sm:border-t-0"
     >
       {/* Header: who's talking */}
       <div className="flex items-center gap-3 border-b border-white/15 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
