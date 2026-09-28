@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -744,7 +745,7 @@ export function SolarSystem() {
   // state captured at click time toward the body's *current* position, so
   // the glide bends with the moving body and lands exactly on it — no
   // end-of-glide snap. After the glide the body stays pinned to center.
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Chat mode owns the camera while the column is up.
     if (chatMixRef.current > 0.004) return;
     const f = followRef.current;
