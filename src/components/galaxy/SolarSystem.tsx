@@ -769,29 +769,36 @@ export function SolarSystem() {
     // Chat mode owns the camera while the column is up.
     if (chatMixRef.current > 0.004) return;
     const f = followRef.current;
-    const apply = setTransformRef.current;
-    if (!f || !apply) return;
+    if (!f || !setTransformRef.current) return;
     const q = bodyPos(f.id);
     if (!q) {
       followRef.current = null;
       return;
     }
-    const tx = window.innerWidth / 2 - q.x * f.scale;
-    const ty = window.innerHeight / 2 - q.y * f.scale;
     const p = Math.min(1, (performance.now() - f.startAt) / 650);
     if (p >= 1) {
-      apply(tx, ty, f.scale, 0);
+      // Glide finished: the zoom level is the user's from here on. Forcing
+      // the captured scale back every frame fought the wheel gesture.
+      const live = stateRef.current?.scale ?? f.scale;
+      writeCamera(
+        window.innerWidth / 2 - q.x * live,
+        window.innerHeight / 2 - q.y * live,
+        live,
+      );
       return;
     }
     // easeInOutCubic
     const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-    apply(
+    const s = f.from.scale + (f.scale - f.from.scale) * e;
+    const tx = window.innerWidth / 2 - q.x * s;
+    const ty = window.innerHeight / 2 - q.y * s;
+    writeCamera(
       f.from.x + (tx - f.from.x) * e,
       f.from.y + (ty - f.from.y) * e,
-      f.from.scale + (f.scale - f.from.scale) * e,
-      0,
+      s,
     );
   }, [t]);
+
 
   // Chat-mode camera: while chat is open the camera chases the fan
   // framing inside the sky strip; while it closes it glides back to the
