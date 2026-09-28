@@ -717,3 +717,40 @@ export function renameBodyInSystem(
   });
   return changedAny ? { ...system, planets } : system;
 }
+
+/** Set bedtime for the sun, a planet, or a moon at any depth. */
+export function setBodyAsleepInSystem(
+  system: SystemConfig,
+  id: string,
+  asleep: boolean,
+): SystemConfig {
+  if (system.sun.id === id) {
+    return { ...system, sun: { ...system.sun, asleep } };
+  }
+  const updateMoons = (moons: GeneratedMoon[]): GeneratedMoon[] | null => {
+    let changed = false;
+    const next = moons.map((moon) => {
+      if (moon.id === id) {
+        changed = true;
+        return { ...moon, asleep };
+      }
+      const children = updateMoons(moon.moons);
+      if (!children) return moon;
+      changed = true;
+      return { ...moon, moons: children };
+    });
+    return changed ? next : null;
+  };
+  let changed = false;
+  const planets = system.planets.map((planet) => {
+    if (planet.id === id) {
+      changed = true;
+      return { ...planet, asleep };
+    }
+    const moons = updateMoons(planet.moons);
+    if (!moons) return planet;
+    changed = true;
+    return { ...planet, moons };
+  });
+  return changed ? { ...system, planets } : system;
+}

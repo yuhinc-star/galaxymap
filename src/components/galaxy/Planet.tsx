@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import type { BodyDef } from "./planets";
 import { SpeechBubble } from "./SpeechBubble";
+import { sleepingSpriteFor } from "./sleepSprites";
 
 /** Hand-wobbled closed ring (r≈68 in a 160 viewBox) for the navigator
     highlight — deliberately imperfect so it reads as drawn, not orbital. */
@@ -48,6 +49,7 @@ interface PlanetProps {
   visualScale?: number;
   labelOpacity?: number;
   interactive?: boolean;
+  asleep?: boolean;
 }
 
 /**
@@ -65,7 +67,7 @@ export function planetLabelSize(size: number, name: string): number {
  * A celestial body floating in the world: sprite, name label, tap
  * reaction. Position comes from the parent's orbit math.
  */
-export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true }: PlanetProps) {
+export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true, asleep = def.asleep ?? false }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
   const longName = def.name.length > 16;
 
@@ -114,7 +116,7 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
         }}
       >
         <img
-          src={def.img}
+          src={asleep ? sleepingSpriteFor(def.img) : def.img}
           alt=""
           width={def.size}
           height={def.size}
@@ -122,6 +124,11 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
           className="h-full w-full object-contain"
           style={{ animation }}
         />
+        {asleep && (
+          <span className="sleep-zzz pointer-events-none absolute -right-[8%] top-[3%] font-hand font-bold uppercase text-star" aria-hidden>
+            <span>Z</span><span>Z</span><span>Z</span>
+          </span>
+        )}
         {/* Newborn celebration: sparkle crosses bursting outward. */}
         {newborn &&
           [0, 60, 120, 180, 240, 300].map((a) => {

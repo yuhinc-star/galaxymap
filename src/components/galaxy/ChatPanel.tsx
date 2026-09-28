@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, X } from "lucide-react";
+import { Moon, Send, Sun, X } from "lucide-react";
 import heroRocketImg from "@/assets/planets/hero-rocket.png";
+import { sleepingSpriteFor } from "./sleepSprites";
 
 export interface ChatSubjectInfo {
   id: string;
@@ -8,6 +9,7 @@ export interface ChatSubjectInfo {
   img: string;
   line: string;
   kindLabel: string;
+  asleep?: boolean;
 }
 
 interface ChatMessage {
@@ -41,6 +43,7 @@ interface ChatPanelProps {
   /** The rocket is still flying to this subject — the conversation (and
       its suggestions) only begin once it lands. */
   waiting?: boolean;
+  onToggleSleep?: (() => void) | undefined;
 }
 
 /**
@@ -49,7 +52,7 @@ interface ChatPanelProps {
  * into a strip beside it). Styled like the Navigator and info panel —
  * hand-lettered Amatic names, golden accents, dashed-star charm.
  */
-export function ChatPanel({ subject, onClose, waiting = false }: ChatPanelProps) {
+export function ChatPanel({ subject, onClose, waiting = false, onToggleSleep }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
@@ -98,7 +101,7 @@ export function ChatPanel({ subject, onClose, waiting = false }: ChatPanelProps)
       {/* Header: who's talking */}
       <div className="flex items-center gap-3 border-b border-white/15 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <img
-          src={subject.img}
+          src={subject.asleep ? sleepingSpriteFor(subject.img) : subject.img}
           alt=""
           draggable={false}
           className="h-12 w-12 shrink-0 select-none rounded-full bg-space/60 object-contain p-1 ring-2 ring-star/70"
@@ -111,6 +114,15 @@ export function ChatPanel({ subject, onClose, waiting = false }: ChatPanelProps)
             {subject.name}
           </h2>
         </div>
+        <button
+          type="button"
+          aria-label={subject.asleep ? `Wake ${subject.name}` : `Let ${subject.name} sleep`}
+          title={subject.asleep ? "Wake up" : "Sleep mode"}
+          onClick={onToggleSleep}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-orbit-label/30 text-orbit-label transition-transform hover:scale-105 active:scale-95"
+        >
+          {subject.asleep ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
         <button
           type="button"
           aria-label="Close chat"
@@ -142,7 +154,7 @@ export function ChatPanel({ subject, onClose, waiting = false }: ChatPanelProps)
         /* Empty state: big portrait + conversation starters */
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <img
-            src={subject.img}
+            src={subject.asleep ? sleepingSpriteFor(subject.img) : subject.img}
             alt=""
             draggable={false}
             className="h-28 w-28 select-none rounded-full bg-space/60 object-contain p-2 ring-2 ring-star/50"
@@ -182,7 +194,7 @@ export function ChatPanel({ subject, onClose, waiting = false }: ChatPanelProps)
             ) : (
               <div key={i} className="flex items-end gap-2">
                 <img
-                  src={subject.img}
+                  src={subject.asleep ? sleepingSpriteFor(subject.img) : subject.img}
                   alt=""
                   draggable={false}
                   className="h-8 w-8 shrink-0 select-none rounded-full bg-space/60 object-contain p-0.5 ring-1 ring-star/50"
@@ -196,7 +208,7 @@ export function ChatPanel({ subject, onClose, waiting = false }: ChatPanelProps)
           {typing && (
             <div className="flex items-end gap-2">
               <img
-                src={subject.img}
+                src={subject.asleep ? sleepingSpriteFor(subject.img) : subject.img}
                 alt=""
                 draggable={false}
                 className="h-8 w-8 shrink-0 select-none rounded-full bg-space/60 object-contain p-0.5 ring-1 ring-star/50"

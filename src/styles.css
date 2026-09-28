@@ -186,6 +186,37 @@
   }
 }
 
+@keyframes sleep-zzz-drift {
+  0% { opacity: 0; transform: translate(0, 10px) rotate(-7deg) scale(0.72); }
+  18% { opacity: 1; }
+  72% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate(16px, -28px) rotate(8deg) scale(1.18); }
+}
+
+.sleep-zzz {
+  width: 42%;
+  height: 42%;
+  filter: drop-shadow(0 2px 0 var(--color-space-deep));
+}
+
+.sleep-zzz span {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  font-size: clamp(16px, 0.24em, 34px);
+  line-height: 1;
+  animation: sleep-zzz-drift 2.7s ease-out infinite;
+}
+
+.sleep-zzz span:nth-child(2) { animation-delay: 0.9s; }
+.sleep-zzz span:nth-child(3) { animation-delay: 1.8s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sleep-zzz span { animation: none; opacity: 0.9; }
+  .sleep-zzz span:nth-child(2) { transform: translate(9px, -10px) scale(0.85); }
+  .sleep-zzz span:nth-child(3) { transform: translate(18px, -22px); }
+}
+
 @keyframes bubble-pop {
   from {
     opacity: 0;
