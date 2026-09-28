@@ -1391,9 +1391,10 @@ export function SolarSystem() {
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
-        wheel={{ step: 0.15 }}
+        wheel={{ step: 0.0015 }}
         panning={{ velocityDisabled: true, disabled: chatActive }}
         onPanningStart={stopFollow}
+        onWheelStart={chatUserZoom}
         onWheel={chatUserZoom}
         onPinchStart={chatUserZoom}
       >

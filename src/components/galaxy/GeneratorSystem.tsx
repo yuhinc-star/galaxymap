@@ -2067,9 +2067,15 @@ export function GeneratorSystem() {
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
-        wheel={{ step: 0.15 }}
+        // `smooth` mode multiplies this by the wheel delta. Keeping the old
+        // 0.15 here made a single trackpad flick jump dozens of zoom levels,
+        // where the moving deep-family camera looked like a continuous shake.
+        wheel={{ step: 0.0015 }}
         panning={{ velocityDisabled: true, disabled: dragActive || chatActive }}
-        onPanning={stopFollow}
+        onPanningStart={stopFollow}
+        // Release the orbit-follow camera before the library applies the first
+        // wheel frame, so two camera owners never alternate during a gesture.
+        onWheelStart={chatUserZoom}
         onWheel={chatUserZoom}
         onPinchStart={chatUserZoom}
         onTransform={(_, next) => {
