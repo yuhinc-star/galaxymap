@@ -377,7 +377,7 @@ export function GeneratorSystem() {
   const protectedBodies = new Set([
     focusForVisibility,
     rocketHostId,
-    ...(chatActive && chatTalkId ? [chatTalkId] : []),
+    ...(chatOpen && chatTalkId ? [chatTalkId] : []),
     ...(flight ? [flight.toId] : []),
     ...(rocketInboundId ? [rocketInboundId] : []),
   ]);
