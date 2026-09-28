@@ -33,6 +33,8 @@ export interface BodyDef {
   /** Idle breathing animation timing (seconds). */
   breathe: number;
   delay: number;
+  /** User-controlled bedtime; orbit motion continues while the face sleeps. */
+  asleep?: boolean;
 }
 
 export interface PlanetDef extends BodyDef {

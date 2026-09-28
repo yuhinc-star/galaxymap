@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Pencil, Plus, Rocket, Trash2, X } from "lucide-react";
+import { Check, Moon, Pencil, Plus, Rocket, Sun, Trash2, X } from "lucide-react";
 import { MAX_BODY_NAME } from "./systemGenerator";
 
 export interface BodyPanelChild {
@@ -33,6 +33,7 @@ export interface BodyPanelInfo {
   childrenCap: number;
   children: BodyPanelChild[];
   add: BodyPanelAdd;
+  asleep?: boolean;
 }
 
 interface BodyInfoPanelProps {
@@ -49,6 +50,7 @@ interface BodyInfoPanelProps {
   onDelete?: (() => void) | undefined;
   /** Pencil by the name: hand the body a new one (capped, never empty). */
   onRename?: ((name: string) => void) | undefined;
+  onToggleSleep?: (() => void) | undefined;
 }
 
 /**
@@ -67,6 +69,7 @@ export function BodyInfoPanel({
   chatMode = false,
   onDelete,
   onRename,
+  onToggleSleep,
 }: BodyInfoPanelProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -190,6 +193,17 @@ export function BodyInfoPanel({
           <p className="rounded-2xl border-2 border-dashed border-white/25 px-3 py-2 font-hand text-xl font-bold leading-snug text-white/90">
             &ldquo;{info.line}&rdquo;
           </p>
+        )}
+
+        {onToggleSleep && (
+          <button
+            type="button"
+            onClick={onToggleSleep}
+            className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-dashed border-orbit-label/60 bg-space/45 px-4 py-2 font-hand text-2xl font-bold uppercase leading-none tracking-wider text-orbit-label transition-transform hover:scale-[1.03] active:scale-95"
+          >
+            {info.asleep ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            {info.asleep ? `Wake ${info.name}` : `Let ${info.name} sleep`}
+          </button>
         )}
 
         <section>

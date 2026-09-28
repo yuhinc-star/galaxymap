@@ -191,6 +191,8 @@ export function SolarSystem() {
   const [infoId, setInfoId] = useState<string | null>(null);
   /** Chat mode: the family lines up in a sky strip beside the chat panel. */
   const [chatOpen, setChatOpen] = useState(false);
+  /** Classic bodies are immutable definitions; bedtime is lightweight view state. */
+  const [asleepIds, setAsleepIds] = useState<Set<string>>(() => new Set());
   /** Phone shrink for the rocket's fixed on-screen size — decided after
       mount so SSR and hydration render identical park positions. */
   const [rocketShrink, setRocketShrink] = useState(1);
@@ -1227,6 +1229,7 @@ export function SolarSystem() {
         childrenCap: PLANETS.length,
         children: PLANETS.map((p) => ({ id: p.id, name: p.name, img: p.img })),
         add,
+        asleep: asleepIds.has(id),
       };
     }
     if (id === MOON.id) {
@@ -1240,6 +1243,7 @@ export function SolarSystem() {
         childrenCap: 2,
         children: [],
         add,
+        asleep: asleepIds.has(id),
       };
     }
     const p = PLANETS.find((pp) => pp.id === id);
@@ -1257,7 +1261,18 @@ export function SolarSystem() {
         ? [{ id: MOON.id, name: MOON.name, img: MOON.img }]
         : [],
       add,
+      asleep: asleepIds.has(id),
     };
+  };
+
+  const handleToggleSleep = (id: string) => {
+    setAsleepIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    recordCrashEvent("body-sleep", { id, asleep: !asleepIds.has(id) });
   };
 
   // --- Hero rocket pose ---------------------------------------------------
@@ -1286,6 +1301,7 @@ export function SolarSystem() {
         img: talkPanel.img,
         kindLabel: talkPanel.kindLabel,
         line: talkPanel.line ?? "",
+        asleep: asleepIds.has(talkPanel.id),
       }
     : (chatSubj?.info ?? null);
 
@@ -1583,6 +1599,7 @@ export function SolarSystem() {
                   x={CENTER}
                   y={CENTER}
                   active={activeId === SUN.id}
+                  asleep={asleepIds.has(SUN.id)}
                   jumping={jumpId === SUN.id}
                   highlighted={
                     highlightId === SUN.id ||
@@ -1612,6 +1629,7 @@ export function SolarSystem() {
                         y={q.y}
                         labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
                         active={activeId === p.id}
+                        asleep={asleepIds.has(p.id)}
                         jumping={jumpId === p.id}
                         highlighted={
                           highlightId === p.id ||
@@ -1636,6 +1654,7 @@ export function SolarSystem() {
                   y={moonPos.y}
                   labelBoost={fanSubj?.layout.slots.get(MOON.id)?.labelBoost ?? 1}
                   active={activeId === MOON.id}
+                  asleep={asleepIds.has(MOON.id)}
                   jumping={jumpId === MOON.id}
                   highlighted={
                     highlightId === MOON.id ||
@@ -1717,6 +1736,7 @@ export function SolarSystem() {
                 onAdd={() => {}}
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
+                onToggleSleep={() => handleToggleSleep(panelInfo.id)}
                 rocket={{
                   here: (flight ? flight.toId : rocketHostId) === panelInfo.id,
                   flying: flight !== null,
@@ -1891,6 +1911,7 @@ export function SolarSystem() {
           // Wait only while the rocket is on its way to the star we're
           // chatting with — flights to other stars don't interrupt us.
           waiting={!!flight && flight.toId === talkInfo.id}
+          onToggleSleep={() => handleToggleSleep(talkInfo.id)}
           onClose={closeChat}
         />
       )}

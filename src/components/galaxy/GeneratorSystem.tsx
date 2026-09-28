@@ -39,6 +39,7 @@ import {
   generateSystem,
   removeBodyFromSystem,
   renameBodyInSystem,
+  setBodyAsleepInSystem,
   MAX_MOONS_PER_BODY,
   MAX_SYSTEM_PLANETS,
   MIN_MOON_PARENT_SIZE,
@@ -1824,6 +1825,14 @@ export function GeneratorSystem() {
     setExtras(renameBodyInSystem(config, id, name));
   };
 
+  const handleToggleSleep = (id: string) => {
+    const body = getPanelInfo(id);
+    if (!body) return;
+    recordCrashEvent("body-sleep", { id, asleep: !body.asleep });
+    captureUndo();
+    setExtras(setBodyAsleepInSystem(config, id, !body.asleep));
+  };
+
   /** Everything the information panel shows about a body. */
   const getPanelInfo = (id: string): BodyPanelInfo | null => {
     const add = getAddMenuInfo(id);
@@ -1843,6 +1852,7 @@ export function GeneratorSystem() {
           img: p.img,
         })),
         add,
+        asleep: config.sun.asleep ?? false,
       };
     }
     const p = config.planets.find((pp) => pp.id === id);
@@ -1857,6 +1867,7 @@ export function GeneratorSystem() {
         childrenCap: MAX_MOONS_PER_BODY,
         children: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
         add,
+        asleep: p.asleep ?? false,
       };
     }
     const m = findMoonById(config.planets, id);
@@ -1874,6 +1885,7 @@ export function GeneratorSystem() {
         childrenCap: MAX_MOONS_PER_BODY,
         children: m.moons.map((c) => ({ id: c.id, name: c.name, img: c.img })),
         add,
+        asleep: m.asleep ?? false,
       };
     }
     return null;
@@ -1905,6 +1917,7 @@ export function GeneratorSystem() {
         img: talkPanel.img,
         kindLabel: talkPanel.kindLabel,
         line: talkPanel.line ?? "",
+        asleep: talkPanel.asleep ?? false,
       }
     : (chatSubj?.info ?? null);
 
@@ -2463,6 +2476,7 @@ export function GeneratorSystem() {
                 onSelect={handleInfoSelect}
                 onClose={() => setInfoId(null)}
                 onRename={(name) => handleRenameBody(panelInfo.id, name)}
+                onToggleSleep={() => handleToggleSleep(panelInfo.id)}
                 onDelete={
                   panelInfo.id === config.sun.id ||
                   departingIds.length > 0 ||
@@ -2708,6 +2722,7 @@ export function GeneratorSystem() {
           // Wait only while the rocket is on its way to the star we're
           // chatting with — flights to other stars don't interrupt us.
           waiting={!!flight && flight.toId === talkInfo.id}
+          onToggleSleep={() => handleToggleSleep(talkInfo.id)}
           onClose={closeChat}
         />
       )}
