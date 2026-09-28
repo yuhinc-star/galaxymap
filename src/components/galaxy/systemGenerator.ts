@@ -541,9 +541,15 @@ export function addMoonToSystem(
     isPlanet: boolean,
   ): GeneratedMoon => {
     const sprite = pickRandom(MOON_SPRITES);
-    const size = isPlanet
-      ? Math.min(44 + Math.random() * 26, parentSize * 0.55)
-      : parentSize * (0.45 + Math.random() * 0.15);
+    // Hard invariant: every child is smaller than its parent. The formulas
+    // below already aim for that, but the final clamp guarantees it no
+    // matter how the tuning changes later.
+    const size = Math.min(
+      isPlanet
+        ? 44 + Math.random() * 26
+        : parentSize * (0.45 + Math.random() * 0.15),
+      parentSize * 0.55,
+    );
     const orbitR = isPlanet
       ? parentSize * 0.72 + 50 + siblingCount * 62
       : parentSize * 0.85 + 34 + siblingCount * 40;
