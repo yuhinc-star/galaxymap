@@ -343,18 +343,19 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
         >
           {rails(depth + 1, true)}
 
+          {/* Compact "+N" chip — the count lives in the accessible label,
+              not on screen, so deep families stay scannable. */}
           <button
             type="button"
             onClick={() => toggleBranch(item.id)}
-            className="group flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-star/80 transition-colors hover:bg-star/15 hover:text-star"
+            className="group flex items-center gap-1.5 rounded-xl py-1 pl-1 pr-2.5 text-left text-star/80 transition-colors hover:bg-star/15 hover:text-star"
             aria-label={`Show ${hidden} tucked-away ${hidden === 1 ? "star" : "stars"} orbiting ${item.name}`}
+            title={`Show ${hidden} more orbiting ${item.name}`}
           >
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-star/55">
               <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </span>
-            <span className="min-w-0 truncate font-hand text-base font-bold uppercase leading-none">
-              {hidden} {hidden === 1 ? "descendant" : "descendants"} orbiting {item.name}
-            </span>
+            <span className="font-hand text-lg font-bold uppercase leading-none">+{hidden}</span>
           </button>
         </li>,
       );
