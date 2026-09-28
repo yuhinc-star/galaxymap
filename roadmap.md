@@ -14,3 +14,4 @@
 - [x] Synchronize orbit motion and camera tracking before paint to eliminate residual deep-focus shake.
 - [x] Keep selected-body tracking active through wheel and pinch zoom; release it only on deliberate panning.
 - [x] Expand Chat Mode's visible family window from three to five generations without changing the galaxy tree.
+- [x] Restore five visibly distinct parent-to-child levels in Chat Mode and verify the deep genealogy.

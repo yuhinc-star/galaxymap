@@ -678,6 +678,26 @@ export function GeneratorSystem() {
     return m ? m.size : null;
   };
 
+  /** Five-level chat genealogy: every slot retains its actual parent. */
+  const chatFamily = (rootId: string, cfg: typeof config): ChatChildInput[] => {
+    const childrenOf = (id: string): Array<{ id: string; size: number; name: string; moons: GeneratedMoon[] }> => {
+      if (id === cfg.sun.id) return cfg.planets;
+      const planet = cfg.planets.find((candidate) => candidate.id === id);
+      if (planet) return planet.moons;
+      return findMoonById(cfg.planets, id)?.moons ?? [];
+    };
+    const result: ChatChildInput[] = [];
+    const walk = (parentId: string, generation: number) => {
+      if (generation > 4) return;
+      for (const child of childrenOf(parentId)) {
+        result.push({ id: child.id, size: child.size, name: child.name, parentId, generation });
+        walk(child.id, generation + 1);
+      }
+    };
+    walk(rootId, 1);
+    return result;
+  };
+
   // --- Chat mode: line the family up in the sky strip -------------------
   // The mix ramps 0→1 while chat opens and back when it closes; bodies in
   // the chat set chase a blend of their live orbit pose and their column
@@ -868,7 +888,7 @@ export function GeneratorSystem() {
           p.id,
           anchor,
           p.size,
-          p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name })),
+          chatFamily(p.id, config),
           stripSize().w,
           stripSize().h,
         ),
@@ -890,7 +910,7 @@ export function GeneratorSystem() {
           m.id,
           anchor,
           m.size,
-          m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name })),
+          chatFamily(m.id, config),
           stripSize().w,
           stripSize().h,
         ),
@@ -909,7 +929,7 @@ export function GeneratorSystem() {
           config.sun.id,
           { x: CENTER, y: CENTER },
           config.sun.size,
-          config.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
+          chatFamily(config.sun.id, config),
           stripSize().w,
           stripSize().h,
         ),
@@ -1519,7 +1539,7 @@ export function GeneratorSystem() {
         id,
         anchor,
         cfg.sun.size,
-        cfg.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name })),
+        chatFamily(id, cfg),
         strip.w,
         strip.h,
       );
@@ -1531,7 +1551,7 @@ export function GeneratorSystem() {
         id,
         anchor,
         p.size,
-        p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name })),
+        chatFamily(id, cfg),
         strip.w,
         strip.h,
       );
@@ -1543,7 +1563,7 @@ export function GeneratorSystem() {
         id,
         anchor,
         m.size,
-        m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name })),
+        chatFamily(id, cfg),
         strip.w,
         strip.h,
       );
@@ -1563,17 +1583,17 @@ export function GeneratorSystem() {
     let kids: ChatChildInput[] = [];
     if (id === config.sun.id) {
       size = config.sun.size;
-      kids = config.planets.map((pp) => ({ id: pp.id, size: pp.size, name: pp.name }));
+      kids = chatFamily(id, config);
     } else {
       const p = config.planets.find((pp) => pp.id === id);
       if (p) {
         size = p.size;
-        kids = p.moons.map((mm) => ({ id: mm.id, size: mm.size, name: mm.name }));
+        kids = chatFamily(id, config);
       } else {
         const m = findMoonById(config.planets, id);
         if (!m) return;
         size = m.size;
-        kids = m.moons.map((c) => ({ id: c.id, size: c.size, name: c.name }));
+        kids = chatFamily(id, config);
       }
     }
     fanSubjectRef.current = {

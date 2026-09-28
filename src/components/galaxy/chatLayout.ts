@@ -16,6 +16,10 @@ export interface ChatChildInput {
   id: string;
   size: number;
   name: string;
+  /** Actual parent in the visible genealogy. Defaults to the layout root. */
+  parentId?: string;
+  /** 1–4 below the layout root. */
+  generation?: number;
 }
 
 export interface ChatSlot {
@@ -28,6 +32,8 @@ export interface ChatSlot {
   radius: number;
   /** Per-body label scale so the hand-lettered name fits the fan. */
   labelBoost: number;
+  parentId: string | null;
+  generation: number;
 }
 
 export interface ChatLayout {
@@ -56,13 +62,15 @@ export const shortAngle = (from: number, to: number) =>
 interface KidPlan {
   id: string;
   name: string;
+  parentId: string;
+  generation: number;
   /** Screen diameter in the fan. */
   dia: number;
   /** Screen font size for the hand-lettered name. */
   font: number;
   /** Vertical room reserved below the body (its hanging name). */
   gap: number;
-  /** Arc radius from the subject's center (screen px). */
+  /** Orbit radius from this body's actual parent (screen px). */
   rho: number;
   /** Final angle, straight up plus a staggered tilt. */
   angle: number;
@@ -88,64 +96,40 @@ export function computeChatLayout(
   const sx = stripW * 0.5;
   const sy = stripH * 0.94;
 
-  // Children compressed toward a friendly portrait range — biggest kids
-  // stay biggest, but the spread reads as family, not size chart.
+  // Every depth gets its own horizontal band. This makes a recursive chain
+  // read as genealogy instead of several tiny moons sharing one loose cloud.
   const maxC = Math.max(1, ...children.map((c) => c.size));
   const plan = (): KidPlan[] => {
-    let rho = r0 * 0.85;
+    const maxGeneration = Math.max(1, ...children.map((c) => c.generation ?? 1));
+    const available = Math.max(180, sy - r0 * 0.58 - 22);
+    const band = available / maxGeneration;
     return children.map((c, i) => {
+      const generation = clamp(c.generation ?? 1, 1, 4);
       const dia = clamp(
-        stripW * 0.34 * Math.pow(c.size / maxC, 0.45),
-        46,
-        stripW * 0.38,
+        stripW * 0.3 * Math.pow(c.size / maxC, 0.42) * Math.pow(0.88, generation - 1),
+        30,
+        stripW * 0.34,
       );
       const longName = c.name.length > 16;
       const font = longName
         ? clamp(dia * 0.2, 11, 20)
         : clamp(dia * 0.28, 14, 30);
-      const gap = font * (longName ? 2.3 : 1.2) + 10 + Math.max(16, dia * 0.22);
-      rho += gap + dia / 2;
-      const kid: KidPlan = { id: c.id, name: c.name, dia, font, gap, rho, angle: -Math.PI / 2 };
-      rho += dia / 2;
-      // Staggered tilt, alternating sides like the poster's cascade —
-      // clamped so the disc AND its hanging name never leave the strip.
-      // The name is centered under the disc, so its half-width counts:
-      // short names are one nowrap line (~0.68em per glyph with the
-      // hand-lettered tracking); long names wrap at the 380px world cap.
-      const nameHalfW = longName
-        ? Math.min(190 * scale, c.name.length * font * 0.34)
-        : (c.name.length * font * 0.68) / 2;
-      const deg = 12 + ((i * 37) % 10);
-      const maxSin = clamp(
-        (stripW * 0.5 - 10 - Math.max(dia / 2, nameHalfW)) / rho,
-        0,
-        0.45,
-      );
-      const tilt = Math.min((deg * Math.PI) / 180, Math.asin(maxSin));
-      kid.angle = -Math.PI / 2 + (i % 2 === 0 ? -tilt : tilt);
-      return kid;
+      const gap = font * (longName ? 2 : 1.1) + 8;
+      return {
+        id: c.id,
+        name: c.name,
+        parentId: c.parentId ?? parentId,
+        generation,
+        dia,
+        font,
+        gap,
+        rho: band,
+        angle: -Math.PI / 2,
+      };
     });
   };
 
   let kids = plan();
-  // Vertical fit: the topmost child (with its name) must clear the
-  // strip's top edge — shrink the children first, the subject last.
-  const topNeed = () =>
-    kids.length > 0 ? kids[kids.length - 1]!.rho + kids[kids.length - 1]!.dia / 2 : 0;
-  if (topNeed() > sy - 12 && kids.length > 0) {
-    const f = clamp((sy - 12) / topNeed(), 0.42, 1);
-    children = children.map((c) => ({ ...c, size: c.size * f * f }));
-    const saved = kids;
-    kids = plan();
-    if (topNeed() > sy - 12) {
-      // Extreme case (many kids, short strip): shrink the subject too.
-      const f2 = clamp((sy - 12) / topNeed(), 0.55, 1);
-      scale = clamp(scale * Math.max(f, f2), 0.12, 2.0);
-      r0 = (parentSize * scale) / 2;
-      kids = plan();
-    }
-    void saved;
-  }
 
   const slots = new Map<string, ChatSlot>();
   slots.set(parentId, {
@@ -155,27 +139,34 @@ export function computeChatLayout(
     angle: -Math.PI / 2,
     radius: 0,
     labelBoost: 1,
+    parentId: null,
+    generation: 0,
   });
-  for (const k of kids) {
-    const radius = k.rho / scale;
-    const size = k.dia / scale;
-    // Belt and braces: whatever the wobble shapes and chase do, the
-    // settled disc and its hanging name must end up inside the strip.
-    const longName = k.name.length > 16;
-    const nameHalfW = longName
-      ? Math.min(190 * scale, k.name.length * k.font * 0.34)
-      : (k.name.length * k.font * 0.68) / 2;
-    const maxOff = Math.max(0, stripW * 0.5 - 8 - Math.max(k.dia / 2, nameHalfW));
-    const off = k.rho * Math.cos(k.angle);
-    const clampedOff = Math.abs(off) > maxOff ? Math.sign(off) * maxOff : off;
-    const yOff = k.rho * Math.sin(k.angle);
-    slots.set(k.id, {
-      x: anchor.x + clampedOff / scale,
-      y: anchor.y + yOff / scale,
-      size,
-      angle: Math.atan2(yOff, clampedOff),
-      radius: Math.hypot(clampedOff, yOff) / scale,
-      labelBoost: k.font / (planetLabelSize(size, k.name) * scale),
+  for (let generation = 1; generation <= 4; generation += 1) {
+    const row = kids.filter((kid) => kid.generation === generation);
+    row.forEach((k, rowIndex) => {
+      const parent = slots.get(k.parentId) ?? slots.get(parentId);
+      if (!parent) return;
+      const size = k.dia / scale;
+      const spread = Math.min(stripW * 0.56, Math.max(0, (row.length - 1) * 66));
+      const screenX = sx - spread / 2 + (row.length <= 1 ? 0 : (spread * rowIndex) / (row.length - 1));
+      const screenY = sy - k.rho * generation;
+      const parentScreenX = sx + (parent.x - anchor.x) * scale;
+      const parentScreenY = sy + (parent.y - anchor.y) * scale;
+      const dx = screenX - parentScreenX;
+      const dy = screenY - parentScreenY;
+      const radius = Math.hypot(dx, dy) / scale;
+      const angle = Math.atan2(dy, dx);
+      slots.set(k.id, {
+        x: anchor.x + (screenX - sx) / scale,
+        y: anchor.y + (screenY - sy) / scale,
+        size,
+        angle,
+        radius,
+        labelBoost: k.font / (planetLabelSize(size, k.name) * scale),
+        parentId: k.parentId,
+        generation,
+      });
     });
   }
 
