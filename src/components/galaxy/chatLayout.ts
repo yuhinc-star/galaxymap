@@ -104,7 +104,10 @@ export function computeChatLayout(
       // Keep the body's real proportion to the subject. The previous
       // sibling-normalised formula and per-row cap made a Sun's differently
       // sized planets converge on the same tiny diameter.
-      const dia = clamp(c.size * scale, 12, stripW * 0.34);
+      // Only protect the tiniest mark from disappearing. A shared fit below
+      // handles oversized lineups, so there is no per-body maximum that can
+      // flatten several large planets to one diameter.
+      const dia = Math.max(8, c.size * scale);
       const longName = c.name.length > 16;
       const font = longName
         ? clamp(dia * 0.2, 11, 20)
