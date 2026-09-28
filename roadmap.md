@@ -12,4 +12,4 @@
 - [x] Keep deep branches compact without flattening siblings or hiding active ancestry.
 - [x] Verify tree expansion and focus behavior at the current screen size and on mobile.
 - [x] Synchronize orbit motion and camera tracking before paint to eliminate residual deep-focus shake.
-- [ ] Keep selected-body tracking active through wheel and pinch zoom; release it only on deliberate panning.
+- [x] Keep selected-body tracking active through wheel and pinch zoom; release it only on deliberate panning.
