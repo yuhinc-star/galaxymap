@@ -203,13 +203,22 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
           {/* Long catalog names truncate to one line — the full name is
               a hover title away, and the info panel shows it in full. */}
           <span className="flex min-w-0 flex-1 flex-col justify-center">
-            <span
-              title={entry.name}
-              className={`truncate font-hand font-bold uppercase leading-none tracking-wider ${
-                focused ? "text-star" : "text-white"
-              } ${nameSize}`}
-            >
-              &ldquo;{entry.name}&rdquo;
+            <span className="flex min-w-0 items-baseline gap-1.5">
+              {/* Deep chains only: a tiny generation number keeps the
+                  staircase readable without a badge on every row. */}
+              {depth > 1 && (
+                <span className="shrink-0 font-display text-[9px] font-semibold uppercase leading-none text-star/70">
+                  g{depth}
+                </span>
+              )}
+              <span
+                title={entry.name}
+                className={`truncate font-hand font-bold uppercase leading-none tracking-wider ${
+                  focused ? "text-star" : "text-white"
+                } ${nameSize}`}
+              >
+                &ldquo;{entry.name}&rdquo;
+              </span>
             </span>
             {parentName && (
               <span
@@ -316,14 +325,6 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
         }}
       >
         {rails(depth, true)}
-        {depth > 0 && (
-          <span
-            aria-hidden
-            className="pointer-events-none absolute right-1 top-0.5 z-10 rounded-full bg-white/10 px-1.5 font-display text-[8px] font-semibold uppercase leading-[14px] text-white/55"
-          >
-            gen {depth}
-          </span>
-        )}
         {renderEntry(item, depth, parentName, children.length > 0, expanded, forcedOpen || rootOpen)}
       </li>,
     ];
@@ -342,18 +343,19 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
         >
           {rails(depth + 1, true)}
 
+          {/* Compact "+N" chip — the count lives in the accessible label,
+              not on screen, so deep families stay scannable. */}
           <button
             type="button"
             onClick={() => toggleBranch(item.id)}
-            className="group flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-star/80 transition-colors hover:bg-star/15 hover:text-star"
+            className="group flex items-center gap-1.5 rounded-xl py-1 pl-1 pr-2.5 text-left text-star/80 transition-colors hover:bg-star/15 hover:text-star"
             aria-label={`Show ${hidden} tucked-away ${hidden === 1 ? "star" : "stars"} orbiting ${item.name}`}
+            title={`Show ${hidden} more orbiting ${item.name}`}
           >
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-star/55">
               <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </span>
-            <span className="min-w-0 truncate font-hand text-base font-bold uppercase leading-none">
-              {hidden} {hidden === 1 ? "descendant" : "descendants"} orbiting {item.name}
-            </span>
+            <span className="font-hand text-lg font-bold uppercase leading-none">+{hidden}</span>
           </button>
         </li>,
       );
