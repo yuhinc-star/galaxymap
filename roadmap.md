@@ -7,4 +7,4 @@
 - [x] Fold deep Navigator branches without hiding the active family path.
 - [x] Verify deep navigation, rocket targeting, long names, and Chat Mode across compact, desktop, and phone views.
 - [x] Stop infinite camera shaking during deep zoom without weakening semantic zoom.
-- [ ] Verify wheel, button, and focused-body zoom at the current viewport and on mobile.
+- [x] Verify wheel, button, and focused-body zoom at the current viewport and on mobile.
