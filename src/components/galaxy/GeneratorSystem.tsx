@@ -28,6 +28,7 @@ import {
   addMoonToSystem,
   addPlanetToSystem,
   collectSystemSpriteUrls,
+  createDeepSystem,
   findMoonById,
   findMoonParent,
   generateSystem,
@@ -267,6 +268,8 @@ export function GeneratorSystem() {
   const stripRef = useRef<HTMLDivElement>(null);
 
   const baseConfig = useMemo(() => generateSystem(seed, planetCount), [seed, planetCount]);
+  const deepSystem = useMemo(() => createDeepSystem(baseConfig), [baseConfig]);
+  const [showDeepSystem, setShowDeepSystem] = useState(true);
 
   // Warm every sprite and sky in the background right after mount, so a later
   // "New system" warp or palette switch never waits on image loads.
@@ -293,7 +296,7 @@ export function GeneratorSystem() {
       0,
     );
   }, [seed, planetCount]);
-  const config = extras ?? baseConfig;
+  const config = extras ?? (showDeepSystem ? deepSystem.config : baseConfig);
   useEffect(() => {
     const query = window.matchMedia("(max-width: 639px)");
     const sync = () => setIsMobileView(query.matches);
@@ -459,6 +462,7 @@ export function GeneratorSystem() {
     setHighlightId(null);
     setFocusedId(null);
     setExtras(null);
+    setShowDeepSystem(false);
     setInfoId(null);
     setNewbornId(null);
     window.clearTimeout(departTimer.current);
@@ -1402,6 +1406,24 @@ export function GeneratorSystem() {
     }
   };
 
+  // Open this requested showcase already centered several levels down. The
+  // complete family remains in the navigator, while the sky shows only the
+  // local three-generation window around the selected moon.
+  const deepShowcaseOpened = useRef(false);
+  useEffect(() => {
+    if (!showDeepSystem || deepShowcaseOpened.current) return;
+    deepShowcaseOpened.current = true;
+    const timer = window.setTimeout(() => handleNavigate("deep-moon-5"), 450);
+    return () => window.clearTimeout(timer);
+  }, [showDeepSystem]);
+
+  const showDeepDemo = () => {
+    setExtras(null);
+    setShowDeepSystem(true);
+    deepShowcaseOpened.current = true;
+    window.setTimeout(() => handleNavigate(deepSystem.deepestId), 80);
+  };
+
   /** Double-tap on the focused body: open its information panel. */
   const openInfo = (id: string) => {
     window.clearTimeout(hideTimer.current);
@@ -2343,6 +2365,16 @@ export function GeneratorSystem() {
                 />
                 New system
               </button>
+              {!showDeepSystem && (
+                <button
+                  type="button"
+                  onClick={showDeepDemo}
+                  className="flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2.5 font-display text-sm font-semibold text-card-foreground shadow-lg transition-all hover:scale-105 active:scale-95"
+                >
+                  <Sparkle className="h-4 w-4 text-star" />
+                  Deep system
+                </button>
+              )}
               <p className="pointer-events-none text-center font-display text-xs text-star/70">
                 seed #{seed}
               </p>

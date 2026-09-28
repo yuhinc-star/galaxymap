@@ -280,6 +280,73 @@ export const MAX_MOONS_PER_BODY = 2;
 /** A moon smaller than this can't host a mini-moon of its own. */
 export const MIN_MOON_PARENT_SIZE = 46;
 
+/**
+ * A deterministic, presentation-ready deep family used to demonstrate
+ * semantic zoom. It adds a seven-generation moon branch without changing
+ * the ordinary random generator or creating anything in response to zoom.
+ */
+export function createDeepSystem(system: SystemConfig): {
+  config: SystemConfig;
+  deepestId: string;
+} {
+  const planet = system.planets[0];
+  if (!planet) return { config: system, deepestId: system.sun.id };
+
+  const buildBranch = (depth: number, parentSize: number): GeneratedMoon[] => {
+    if (depth > 7) return [];
+    const sprite = MOON_SPRITES[(depth * 3) % MOON_SPRITES.length]!;
+    const size = Math.max(18, Math.min(parentSize * 0.58, 66 - depth * 5));
+    const orbitR = Math.max(42, parentSize * 0.72 + 24);
+    const id = `deep-moon-${depth}`;
+    const main: GeneratedMoon = {
+      id,
+      name: ["Wisp", "Petal", "Pebble", "Mote", "Pip", "Dot", "Speck"][depth - 1] ?? `Moon ${depth}`,
+      img: sprite.img,
+      size,
+      orbitR,
+      period: 68 + depth * 17,
+      startAngle: depth * 1.17,
+      ringD: makeOrbitShape("ring", orbitR, 88000 + depth * 997, 10).d,
+      line: `I'm generation ${depth} of the deep family!`,
+      breathe: 3 + depth * 0.17,
+      delay: depth * 0.13,
+      moons: buildBranch(depth + 1, size),
+    };
+    // A few side moons make each local three-generation window read as a
+    // family, rather than one mechanical chain.
+    if (depth <= 5) {
+      const sideSprite = MOON_SPRITES[(depth * 3 + 1) % MOON_SPRITES.length]!;
+      main.moons.push({
+        id: `deep-side-${depth}`,
+        name: `Little ${["Moss", "Rose", "Cloud", "Clay", "Berry"][depth - 1]}`,
+        img: sideSprite.img,
+        size: Math.max(16, size * 0.48),
+        orbitR: orbitR + 34,
+        period: 92 + depth * 19,
+        startAngle: depth * 0.83 + 2.1,
+        ringD: makeOrbitShape("ring", orbitR + 34, 99000 + depth * 991, 10).d,
+        line: "I keep the deep branch company.",
+        breathe: 3.4,
+        delay: depth * 0.19,
+        moons: [],
+      });
+    }
+    return [main];
+  };
+
+  const deepRoot = buildBranch(1, planet.size);
+  const nextPlanet = { ...planet, moons: deepRoot };
+  return {
+    config: {
+      ...system,
+      planets: system.planets.map((candidate, index) =>
+        index === 0 ? nextPlanet : candidate,
+      ),
+    },
+    deepestId: "deep-moon-7",
+  };
+}
+
 const ADDED_MOON_LINES = [
   "I'm a little moon, short and stout.",
   "I'm the tiniest moon around!",
