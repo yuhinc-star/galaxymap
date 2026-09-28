@@ -158,7 +158,7 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
               className="h-5 w-5 shrink-0 animate-pulse text-star"
               aria-hidden
             />
-            <p className={`min-w-0 flex-1 font-hand font-bold uppercase leading-tight tracking-wider text-foreground ${docked ? "basis-[calc(100%-2rem)] text-lg" : "text-xl"}`}>
+            <p className={`min-w-0 flex-1 font-hand font-bold uppercase leading-tight tracking-wider text-white ${docked ? "basis-[calc(100%-2rem)] text-lg" : "text-xl"}`}>
               {currentHint.text}
             </p>
             {queueTotal > 1 && (
