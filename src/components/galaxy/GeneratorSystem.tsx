@@ -242,6 +242,28 @@ export function GeneratorSystem() {
   } | null>(null);
   const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
   const resetTransformRef = useRef<(() => void) | null>(null);
+  /** Last camera values we wrote straight to the DOM. The follow loop writes
+      the transform in the very frame the bodies were laid out (the library's
+      own state update lands a frame later, which is what made a deep,
+      fast-moving moon read as a shake), then mirrors the same numbers into
+      the library so wheel/pinch math stays correct. */
+  const camWriteRef = useRef<{ x: number; y: number; s: number } | null>(null);
+  const writeCamera = (x: number, y: number, s: number) => {
+    const prev = camWriteRef.current;
+    if (
+      prev &&
+      Math.abs(prev.x - x) < 0.25 &&
+      Math.abs(prev.y - y) < 0.25 &&
+      Math.abs(prev.s - s) < 1e-6
+    ) {
+      return;
+    }
+    camWriteRef.current = { x, y, s };
+    const el = stripRef.current?.querySelector<HTMLElement>(".react-transform-component");
+    if (el) el.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+    setTransformRef.current?.(x, y, s, 0);
+  };
+
   /** Latest camera state, so a glide eases from exactly where the camera
       is now — even mid-flight from a previous pick. */
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
