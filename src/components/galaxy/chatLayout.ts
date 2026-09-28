@@ -184,7 +184,7 @@ export function computeChatLayout(
       size,
       angle: Math.atan2(dy, dx),
       radius: Math.hypot(dx, dy) / scale,
-      labelBoost: Math.min(k.font, pitch * 0.34) / (planetLabelSize(size, k.name) * scale),
+      labelBoost: Math.max(13, Math.min(k.font, pitch * 0.45)) / (planetLabelSize(size, k.name) * scale),
       parentId: k.parentId,
       generation: k.generation,
     });
