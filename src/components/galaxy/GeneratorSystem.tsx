@@ -738,6 +738,18 @@ export function GeneratorSystem() {
       return findMoonById(cfg.planets, id)?.moons ?? [];
     };
     const result: ChatChildInput[] = [];
+    // The Sun's immediate planets are the readable overview. Pulling every
+    // descendant into that one strip forced all planets to become uniformly
+    // tiny; selecting a planet still reveals its full five-generation line.
+    if (rootId === cfg.sun.id) {
+      return cfg.planets.map((planet) => ({
+        id: planet.id,
+        size: planet.size,
+        name: planet.name,
+        parentId: rootId,
+        generation: 1,
+      }));
+    }
     const walk = (parentId: string, generation: number) => {
       if (generation > 4) return;
       for (const child of childrenOf(parentId)) {

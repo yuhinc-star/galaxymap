@@ -18,3 +18,4 @@
 - [x] Give the zoom gesture sole ownership of the camera, then re-lock the focused star, ending deep-zoom shake (verified on the smallest star, Speck).
 - [x] Replace competing camera writers with one explicit camera controller and re-test deep focus at maximum magnification.
 - [x] Freeze deep-family orbital movement while a tiny descendant is focused, so extreme zoom remains calm.
+- [x] Restore proportional planet sizes in Sun Chat Mode without crowding its overview with deep descendants.

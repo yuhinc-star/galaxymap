@@ -98,18 +98,16 @@ export function computeChatLayout(
 
   // Every depth gets its own horizontal band. This makes a recursive chain
   // read as genealogy instead of several tiny moons sharing one loose cloud.
-  const maxC = Math.max(1, ...children.map((c) => c.size));
   const plan = (): KidPlan[] => {
-    const maxGeneration = Math.max(1, ...children.map((c) => c.generation ?? 1));
-    const available = Math.max(180, sy - r0 * 0.58 - 22);
-    const band = available / maxGeneration;
-    return children.map((c, i) => {
+    return children.map((c) => {
       const generation = clamp(c.generation ?? 1, 1, 4);
-      const dia = clamp(
-        stripW * 0.3 * Math.pow(c.size / maxC, 0.42) * Math.pow(0.88, generation - 1),
-        30,
-        stripW * 0.34,
-      );
+      // Keep the body's real proportion to the subject. The previous
+      // sibling-normalised formula and per-row cap made a Sun's differently
+      // sized planets converge on the same tiny diameter.
+      // Only protect the tiniest mark from disappearing. A shared fit below
+      // handles oversized lineups, so there is no per-body maximum that can
+      // flatten several large planets to one diameter.
+      const dia = Math.max(8, c.size * scale);
       const longName = c.name.length > 16;
       const font = longName
         ? clamp(dia * 0.2, 11, 20)
@@ -123,7 +121,7 @@ export function computeChatLayout(
         dia,
         font,
         gap,
-        rho: band,
+        rho: 0,
         angle: -Math.PI / 2,
       };
     });
@@ -163,17 +161,23 @@ export function computeChatLayout(
   for (const k of kids) if (!ordered.includes(k)) ordered.push(k);
   const top = 26;
   const bottom = sy - r0 * 0.62 - 14;
-  const pitch = ordered.length ? Math.max(24, (bottom - top) / ordered.length) : 0;
+  const available = Math.max(1, bottom - top);
+  // Fit the complete lineup with one shared multiplier. This preserves all
+  // sibling and generation size ratios instead of independently clipping
+  // every body to the same row height.
+  const naturalHeight = ordered.reduce((sum, k) => sum + k.dia + k.gap, 0);
+  const fit = naturalHeight > available ? available / naturalHeight : 1;
   const indent = Math.min(26, stripW * 0.07);
   let y = bottom;
   ordered.forEach((k, i) => {
     const parent = slots.get(k.parentId) ?? slots.get(parentId)!;
-    const dia = Math.min(k.dia, pitch * 0.62);
+    const dia = k.dia * fit;
+    const gap = k.gap * fit;
     const size = dia / scale;
     const tilt = (i % 2 === 0 ? -1 : 1) * stripW * 0.1;
     const screenX = clamp(sx + tilt + (k.generation - 1) * indent, dia, stripW - dia);
-    const screenY = y - pitch / 2;
-    y -= pitch;
+    const screenY = y - dia / 2;
+    y -= dia + gap;
     const parentScreenX = sx + (parent.x - anchor.x) * scale;
     const parentScreenY = sy + (parent.y - anchor.y) * scale;
     const dx = screenX - parentScreenX;
@@ -184,7 +188,7 @@ export function computeChatLayout(
       size,
       angle: Math.atan2(dy, dx),
       radius: Math.hypot(dx, dy) / scale,
-      labelBoost: Math.max(13, Math.min(k.font, pitch * 0.45)) / (planetLabelSize(size, k.name) * scale),
+      labelBoost: Math.max(10, k.font * fit) / (planetLabelSize(size, k.name) * scale),
       parentId: k.parentId,
       generation: k.generation,
     });
