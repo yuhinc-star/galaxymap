@@ -7,7 +7,11 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Link } from "@tanstack/react-router";
-import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
+import {
+  TransformComponent,
+  TransformWrapper,
+  type ReactZoomPanPinchRef,
+} from "react-zoom-pan-pinch";
 import { Dices, MessagesSquare, Minus, Palette, Plus, RotateCcw, Sparkle, Undo } from "lucide-react";
 import heroRocketImg from "@/assets/planets/hero-rocket.png";
 import { BACKGROUNDS } from "./backgrounds";
@@ -211,13 +215,11 @@ export function SolarSystem() {
   } | null>(null);
   const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
   const resetTransformRef = useRef<(() => void) | null>(null);
-  /** Last camera values written straight to the DOM, so the follow loop
-      positions the view in the same frame the bodies were laid out instead
-      of a frame later (the lag read as a shake when zoomed deep). */
+  const cameraRef = useRef<ReactZoomPanPinchRef | null>(null);
+  /** Last camera values written through the zoom controller's synchronous
+      state path, keeping its model and visible transform on one clock. */
   const camWriteRef = useRef<{ x: number; y: number; s: number } | null>(null);
-  /** While a wheel/pinch gesture is live (plus a short tail) the zoom library
-      is the only camera owner; the follow loop re-locks afterwards. */
-  const gestureUntilRef = useRef(0);
+  const zoomGestureRef = useRef(false);
   const relockRef = useRef(false);
 
   const writeCamera = (x: number, y: number, s: number) => {
@@ -231,9 +233,8 @@ export function SolarSystem() {
       return;
     }
     camWriteRef.current = { x, y, s };
-    const el = stripRef.current?.querySelector<HTMLElement>(".react-transform-component");
-    if (el) el.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
-    setTransformRef.current?.(x, y, s, 0);
+    const controller = cameraRef.current?.instance;
+    if (controller) controller.setState(s, x, y);
   };
 
   /** Latest camera state, so a glide eases from exactly where the camera
@@ -342,12 +343,19 @@ export function SolarSystem() {
   /** Wheel/pinch/zoom-button: in chat mode the user takes the zoom over
       from the fan's camera glide once the fan has settled. In galaxy mode,
       zooming keeps the selected-body follow lock; only panning releases it. */
-  const chatUserZoom = () => {
+  const beginUserZoom = () => {
     if (chatMixRef.current > 0.9) chatGlideRef.current = false;
-    // A zoom gesture owns the camera outright; the follow loop re-locks once
-    // the gesture is quiet. Two owners writing the same frames was the shake.
-    gestureUntilRef.current = performance.now() + 260;
+    zoomGestureRef.current = true;
     relockRef.current = true;
+  };
+
+  const endUserZoom = () => {
+    zoomGestureRef.current = false;
+  };
+
+  const chatUserZoom = () => {
+    beginUserZoom();
+    requestAnimationFrame(endUserZoom);
   };
 
 
@@ -777,12 +785,11 @@ export function SolarSystem() {
   // end-of-glide snap. After the glide the body stays pinned to center.
   useLayoutEffect(() => {
     // Chat mode owns the camera while the column is up.
-    if (chatMixRef.current > 0.004) return;
+    if (chatActive) return;
     const f = followRef.current;
     if (!f || !setTransformRef.current) return;
     const now = performance.now();
-    // Hands off while the user's zoom gesture is running.
-    if (now < gestureUntilRef.current) {
+    if (zoomGestureRef.current) {
       camWriteRef.current = null;
       return;
     }
@@ -830,7 +837,7 @@ export function SolarSystem() {
       f.from.y + (ty - f.from.y) * e,
       s,
     );
-  }, [t]);
+  }, [t, chatActive]);
 
 
   // Chat-mode camera: while chat is open the camera chases the fan
@@ -842,9 +849,8 @@ export function SolarSystem() {
   useEffect(() => {
     if (!chatActive) return;
     const fan = fanSubjectRef.current;
-    const apply = setTransformRef.current;
     const st = stateRef.current;
-    if (!fan || !apply || !st) return;
+    if (!fan || !cameraRef.current || !st || zoomGestureRef.current) return;
     let target: { posX: number; posY: number; scale: number } | null = null;
     if (chatOpen) {
       const rect = stripRef.current?.getBoundingClientRect();
@@ -876,11 +882,10 @@ export function SolarSystem() {
     const dy = target.posY - st.positionY;
     const ds = target.scale - st.scale;
     if (Math.abs(dx) + Math.abs(dy) > 0.5 || Math.abs(ds) > 0.001) {
-      apply(
+      writeCamera(
         st.positionX + dx * 0.14,
         st.positionY + dy * 0.14,
         st.scale + ds * 0.14,
-        0,
       );
     } else if (chatOpen) {
       // Arrived — from here the user may zoom in; the fan waits below.
@@ -1450,6 +1455,7 @@ export function SolarSystem() {
         className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
       />
       <TransformWrapper
+        ref={cameraRef}
         initialScale={0.36}
         minScale={chatOpen && fanSubj ? fanSubj.layout.camera.scale : 0.12}
         maxScale={2.5}
@@ -1459,9 +1465,14 @@ export function SolarSystem() {
         wheel={{ step: 0.0015 }}
         panning={{ velocityDisabled: true, disabled: chatActive }}
         onPanningStart={stopFollow}
-        onWheelStart={chatUserZoom}
-        onWheel={chatUserZoom}
-        onPinchStart={chatUserZoom}
+        onWheelStart={beginUserZoom}
+        onWheelStop={endUserZoom}
+        onPinchStart={beginUserZoom}
+        onPinchStop={endUserZoom}
+        onTransform={(_, next) => {
+          stateRef.current = { ...next };
+          camWriteRef.current = { x: next.positionX, y: next.positionY, s: next.scale };
+        }}
       >
         {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;

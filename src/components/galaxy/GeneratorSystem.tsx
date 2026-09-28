@@ -10,7 +10,11 @@ import {
   type ReactNode,
 } from "react";
 import { Link } from "@tanstack/react-router";
-import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
+import {
+  TransformComponent,
+  TransformWrapper,
+  type ReactZoomPanPinchRef,
+} from "react-zoom-pan-pinch";
 import {
   Dices,
   Home,
@@ -200,6 +204,7 @@ export function GeneratorSystem() {
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
+  const [cameraFrame, setCameraFrame] = useState(0);
   /** React state updates only when zoom meaningfully changes; orbit ticks do not drive it. */
   const [viewScale, setViewScale] = useState(0.36);
   const viewScaleRef = useRef(0.36);
@@ -242,15 +247,11 @@ export function GeneratorSystem() {
   } | null>(null);
   const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
   const resetTransformRef = useRef<(() => void) | null>(null);
-  /** Last camera values we wrote straight to the DOM. The follow loop writes
-      the transform in the very frame the bodies were laid out (the library's
-      own state update lands a frame later, which is what made a deep,
-      fast-moving moon read as a shake), then mirrors the same numbers into
-      the library so wheel/pinch math stays correct. */
+  const cameraRef = useRef<ReactZoomPanPinchRef | null>(null);
+  /** Last camera values written through the zoom controller's synchronous
+      state path. One owner updates both its model and the visible transform. */
   const camWriteRef = useRef<{ x: number; y: number; s: number } | null>(null);
-  /** While a wheel/pinch gesture is live (plus a short tail) the zoom library
-      is the only camera owner; the follow loop re-locks afterwards. */
-  const gestureUntilRef = useRef(0);
+  const zoomGestureRef = useRef(false);
   const relockRef = useRef(false);
 
   const writeCamera = (x: number, y: number, s: number) => {
@@ -264,9 +265,8 @@ export function GeneratorSystem() {
       return;
     }
     camWriteRef.current = { x, y, s };
-    const el = stripRef.current?.querySelector<HTMLElement>(".react-transform-component");
-    if (el) el.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
-    setTransformRef.current?.(x, y, s, 0);
+    const controller = cameraRef.current?.instance;
+    if (controller) controller.setState(s, x, y);
   };
 
   /** Latest camera state, so a glide eases from exactly where the camera
@@ -404,6 +404,11 @@ export function GeneratorSystem() {
     if (depth >= focusDepth) return opacity;
     return opacity * (depth === focusDepth - 1 ? 0.24 : 0.08);
   };
+  /** At tiny descendant scale, motion adds no useful information and every
+      sub-pixel orbit becomes magnified. Hold the whole family tableau still
+      while deeply focused; time resumes continuously when focus is released. */
+  const freezeDeepMotionRef = useRef(false);
+  freezeDeepMotionRef.current = !chatOpen && focusedId !== null && focusDepth >= 5;
 
   // Flight recorder: keep the last-known world state in the heartbeat, so a
   // killed phone tab still tells us which system it was showing.
@@ -422,15 +427,20 @@ export function GeneratorSystem() {
 
   useEffect(() => {
     let raf = 0;
-    const t0 = performance.now();
+    let lastNow = performance.now();
+    let elapsed = 0;
     // Phones get a 30fps clock — the ultra-slow orbits look identical and
     // the main thread does half the React work.
     const mobile = window.matchMedia("(max-width: 639px)").matches;
     let lastSet = 0;
     const loop = (now: number) => {
+      const dt = Math.min(50, now - lastNow);
+      lastNow = now;
+      if (!freezeDeepMotionRef.current) elapsed += dt;
       if (!mobile || now - lastSet >= 33) {
         lastSet = now;
-        setT((now - t0) / 1000);
+        if (freezeDeepMotionRef.current) setCameraFrame((frame) => frame + 1);
+        else setT(elapsed / 1000);
       }
       raf = requestAnimationFrame(loop);
     };
@@ -582,14 +592,19 @@ export function GeneratorSystem() {
       zooming keeps the selected-body follow lock; only panning releases it.
       Otherwise a tiny deep moon immediately sweeps across the viewport at
       high scale and reads as violent camera shake. */
-  const chatUserZoom = () => {
+  const beginUserZoom = () => {
     if (chatMixRef.current > 0.9) chatGlideRef.current = false;
-    // A zoom gesture owns the camera outright: the follow loop stops writing
-    // until the gesture has been quiet for a moment, then eases the focused
-    // body back to center at the user's new scale. Two owners writing in the
-    // same frames is what produced the shake, worst on deep fast moons.
-    gestureUntilRef.current = performance.now() + 260;
+    zoomGestureRef.current = true;
     relockRef.current = true;
+  };
+
+  const endUserZoom = () => {
+    zoomGestureRef.current = false;
+  };
+
+  const chatUserZoom = () => {
+    beginUserZoom();
+    requestAnimationFrame(endUserZoom);
   };
 
 
@@ -1128,12 +1143,11 @@ export function GeneratorSystem() {
   // end-of-glide snap. After the glide the body stays pinned to center.
   useLayoutEffect(() => {
     // Chat mode owns the camera while the column is up.
-    if (chatMixRef.current > 0.004) return;
+    if (chatActive) return;
     const f = followRef.current;
     if (!f || !setTransformRef.current) return;
     const now = performance.now();
-    // Hands off while the user's zoom gesture is running.
-    if (now < gestureUntilRef.current) {
+    if (zoomGestureRef.current) {
       camWriteRef.current = null;
       return;
     }
@@ -1183,7 +1197,7 @@ export function GeneratorSystem() {
       f.from.y + (ty - f.from.y) * e,
       s,
     );
-  }, [t]);
+  }, [t, cameraFrame, chatActive]);
 
 
   // Chat-mode camera: while chat is open the camera chases the fan
@@ -1195,9 +1209,8 @@ export function GeneratorSystem() {
   useEffect(() => {
     if (!chatActive) return;
     const fan = fanSubjectRef.current;
-    const apply = setTransformRef.current;
     const st = stateRef.current;
-    if (!fan || !apply || !st) return;
+    if (!fan || !cameraRef.current || !st || zoomGestureRef.current) return;
     let target: { posX: number; posY: number; scale: number } | null = null;
     if (chatOpen) {
       const rect = stripRef.current?.getBoundingClientRect();
@@ -1229,11 +1242,10 @@ export function GeneratorSystem() {
     const dy = target.posY - st.positionY;
     const ds = target.scale - st.scale;
     if (Math.abs(dx) + Math.abs(dy) > 0.5 || Math.abs(ds) > 0.001) {
-      apply(
+      writeCamera(
         st.positionX + dx * 0.14,
         st.positionY + dy * 0.14,
         st.scale + ds * 0.14,
-        0,
       );
     } else if (chatOpen) {
       // Arrived — from here the user may zoom in; the fan waits below.
@@ -2154,6 +2166,7 @@ export function GeneratorSystem() {
         className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
       />
       <TransformWrapper
+        ref={cameraRef}
         key={`${seed}-${planetCount}`}
         initialScale={0.36}
         minScale={chatOpen && fanSubj ? Math.min(fanSubj.layout.camera.scale, 0.002) : 0.002}
@@ -2169,10 +2182,13 @@ export function GeneratorSystem() {
         onPanningStart={stopFollow}
         // Wheel/pinch preserve the focused body's follow lock. Panning is the
         // explicit gesture for releasing it and exploring freely.
-        onWheelStart={chatUserZoom}
-        onWheel={chatUserZoom}
-        onPinchStart={chatUserZoom}
+        onWheelStart={beginUserZoom}
+        onWheelStop={endUserZoom}
+        onPinchStart={beginUserZoom}
+        onPinchStop={endUserZoom}
         onTransform={(_, next) => {
+          stateRef.current = { ...next };
+          camWriteRef.current = { x: next.positionX, y: next.positionY, s: next.scale };
           viewScaleRef.current = next.scale;
           setViewScale((current) => Math.abs(current - next.scale) > Math.max(0.018, current * 0.055) ? next.scale : current);
         }}

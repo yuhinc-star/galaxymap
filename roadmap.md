@@ -16,4 +16,5 @@
 - [x] Expand Chat Mode's visible family window from three to five generations without changing the galaxy tree.
 - [x] Restore five visibly distinct parent-to-child levels in Chat Mode and verify the deep genealogy.
 - [x] Give the zoom gesture sole ownership of the camera, then re-lock the focused star, ending deep-zoom shake (verified on the smallest star, Speck).
-- [ ] Replace competing camera writers with one explicit camera controller and re-test Speck at maximum depth.
+- [x] Replace competing camera writers with one explicit camera controller and re-test deep focus at maximum magnification.
+- [x] Freeze deep-family orbital movement while a tiny descendant is focused, so extreme zoom remains calm.
