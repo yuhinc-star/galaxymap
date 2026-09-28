@@ -125,7 +125,14 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
           style={{ animation }}
         />
         {asleep && (
-          <span className="sleep-zzz pointer-events-none absolute -right-[8%] top-[3%] font-hand font-bold uppercase text-star" aria-hidden>
+          <span
+            className="sleep-zzz pointer-events-none absolute -right-[8%] top-[3%] font-hand font-bold uppercase text-star"
+            style={{
+              transform: `scale(${1 / labelCounterScale})`,
+              transformOrigin: "left bottom",
+            }}
+            aria-hidden
+          >
             <span>Z</span><span>Z</span><span>Z</span>
           </span>
         )}
