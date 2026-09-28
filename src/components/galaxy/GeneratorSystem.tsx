@@ -1131,6 +1131,30 @@ export function GeneratorSystem() {
     if (chatMixRef.current > 0.004) return;
     const f = followRef.current;
     if (!f || !setTransformRef.current) return;
+    const now = performance.now();
+    // Hands off while the user's zoom gesture is running.
+    if (now < gestureUntilRef.current) {
+      camWriteRef.current = null;
+      return;
+    }
+    // Gesture finished: ease the body back to center at the scale the user
+    // just chose, starting from wherever the gesture left the camera.
+    if (relockRef.current) {
+      relockRef.current = false;
+      const st = stateRef.current;
+      const live = st?.scale ?? viewScaleRef.current ?? f.scale;
+      followRef.current = {
+        id: f.id,
+        scale: live,
+        from: st
+          ? { x: st.positionX, y: st.positionY, scale: live }
+          : { x: 0, y: 0, scale: live },
+        startAt: now,
+      };
+      camWriteRef.current = null;
+      return;
+    }
+
     const q = bodyPos(f.id);
     if (!q) {
       followRef.current = null;
