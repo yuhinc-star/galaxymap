@@ -1563,6 +1563,7 @@ export function GeneratorSystem() {
    * still does its usual happy jump — the panel simply replaces it.
    */
   const handleBodyTap = (id: string) => {
+    console.warn("DBGTAP", id, focusedId, chatOpen);
     const now = Date.now();
     const last = lastTapRef.current;
     lastTapRef.current = { id, t: now };
