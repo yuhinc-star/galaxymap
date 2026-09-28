@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Semantic zoom is presentation-only: derive a three-generation visibility window from focus and apparent size; never mutate or regenerate bodies when zoom changes.
+- Recursive moon geometry stays proportional: every child is smaller than its parent, and orbit clearance scales from both bodies without a fixed radius floor.

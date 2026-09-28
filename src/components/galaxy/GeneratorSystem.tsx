@@ -367,6 +367,14 @@ export function GeneratorSystem() {
       mobile: isMobileView,
     });
   };
+  /** A parent's own route belongs to the previous family view. Keep the
+      parent body as epic context, but quiet that enclosing orbit so the
+      selected body's local rings remain the clearest geometry. */
+  const localRingOpacity = (id: string, opacity: number) => {
+    const depth = bodyMeta.get(id)?.depth ?? focusDepth;
+    if (depth >= focusDepth) return opacity;
+    return opacity * (depth === focusDepth - 1 ? 0.24 : 0.08);
+  };
 
   // Flight recorder: keep the last-known world state in the heartbeat, so a
   // killed phone tab still tells us which system it was showing.
@@ -1018,10 +1026,10 @@ export function GeneratorSystem() {
   };
 
   /**
-   * World-pixel radius the camera should frame for a navigator pick:
-   * the sun gets every planet ring (asymmetric — use the shape's maxR),
-   * a planet gets its outermost moon ring (or just its own disc when
-   * it has no moons), a moon its own disc.
+   * World-pixel radius the camera should frame for a navigator pick.
+   * Only the selected body's immediate family sets the frame; semantic
+   * context may still peek in, but distant descendants cannot make a tiny
+   * local view mostly empty space.
    */
   const frameRadius = (id: string): number => {
     if (id === config.sun.id) {
@@ -1036,7 +1044,7 @@ export function GeneratorSystem() {
       const own = p.size * 1.15;
       if (p.moons.length === 0) return own;
       const moonEdge =
-        Math.max(...p.moons.map((m) => m.orbitR + m.size / 2)) + 60;
+        Math.max(...p.moons.map((m) => m.orbitR + m.size / 2)) + p.size * 0.22;
       return Math.max(own, moonEdge);
     }
     const m = findMoonById(config.planets, id);
@@ -1046,7 +1054,7 @@ export function GeneratorSystem() {
       // Frame the moon together with its own mini-moon rings.
       return Math.max(
         own,
-        Math.max(...m.moons.map((c) => c.orbitR + c.size / 2)) + 40,
+        Math.max(...m.moons.map((c) => c.orbitR + c.size / 2)) + m.size * 0.22,
       );
     }
     return 200;
@@ -1182,10 +1190,15 @@ export function GeneratorSystem() {
   const focusCamera = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
-    const fit =
-      (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
-      (2 * frameRadius(id));
-    const s = Math.min(Math.max(fit, 0.16), 1.35);
+    const viewport = Math.min(window.innerWidth, window.innerHeight);
+    const size = bodySize(id) ?? 1;
+    const familyFit = (viewport * (isMobileView ? 0.7 : 0.76)) / (2 * frameRadius(id));
+    // The hero rocket is a fixed screen-space character when close. Make
+    // its host read as a destination rather than a speck beneath it. Large
+    // bodies naturally need less magnification; tiny descendants get more.
+    const desiredBodyPx = Math.min(isMobileView ? 138 : 178, viewport * 0.23);
+    const bodyFit = desiredBodyPx / size;
+    const s = Math.min(Math.max(Math.min(familyFit, bodyFit), 0.16), 96);
     const st = stateRef.current;
     followRef.current = {
       id,
@@ -1939,6 +1952,7 @@ export function GeneratorSystem() {
       // rides it into the lineup.
       const pose = chatPoseMoon(m, px, py, a, parentId);
       const s = ringScaleRef.current.get(m.id) ?? 1;
+      const lineScale = Math.max(1, viewScale);
       const vis = visibilityFor(m.id, pose.size);
       if (vis.detail === "hidden") {
         return (
@@ -1951,17 +1965,17 @@ export function GeneratorSystem() {
         <Fragment key={m.id}>
           {/* Position lives on the <g> so the path's own CSS transform
               stays free for the appear/disappear animation */}
-          <g className="semantic-orbit" opacity={vis.ringOpacity} transform={`translate(${px} ${py}) scale(${s})`}>
+          <g className="semantic-orbit" opacity={localRingOpacity(m.id, vis.ringOpacity)} transform={`translate(${px} ${py}) scale(${s})`}>
             <path
               d={m.ringD}
               fill="none"
               stroke="white"
               strokeOpacity={0.72}
-              strokeWidth={(depth === 0 ? 6.5 : 5) / s}
+              strokeWidth={(depth === 0 ? 6.5 : 5) / (s * lineScale)}
               strokeDasharray={
                 depth === 0
-                  ? `${(22 / s).toFixed(1)} ${(17 / s).toFixed(1)}`
-                  : `${(16 / s).toFixed(1)} ${(13 / s).toFixed(1)}`
+                  ? `${(22 / (s * lineScale)).toFixed(1)} ${(17 / (s * lineScale)).toFixed(1)}`
+                  : `${(16 / (s * lineScale)).toFixed(1)} ${(13 / (s * lineScale)).toFixed(1)}`
               }
               strokeLinecap="round"
               className={
@@ -2004,6 +2018,7 @@ export function GeneratorSystem() {
             x={r.x}
             y={r.y}
             labelBoost={fanSubj?.layout.slots.get(m.id)?.labelBoost ?? 1}
+            cameraScale={viewScale}
             active={activeId === m.id}
             jumping={jumpId === m.id}
             highlighted={
@@ -2090,13 +2105,14 @@ export function GeneratorSystem() {
                     // In chat mode each ring breathes toward its fan-arc
                     // radius, carrying its planet along with it.
                     const s = ringScaleRef.current.get(p.id) ?? 1;
+                    const lineScale = Math.max(1, viewScale);
                     const vis = visibilityFor(p.id);
                     if (vis.detail === "hidden") return null;
                     return (
                       <g
                         key={p.id}
                         className="semantic-orbit"
-                        opacity={vis.ringOpacity}
+                        opacity={localRingOpacity(p.id, vis.ringOpacity)}
                         transform={`translate(${CENTER} ${CENTER}) scale(${s})`}
                       >
                         <path
@@ -2104,10 +2120,10 @@ export function GeneratorSystem() {
                           fill="none"
                           stroke="white"
                           strokeOpacity={p.ringOpacity}
-                          strokeWidth={p.ringWidth / s}
+                          strokeWidth={p.ringWidth / (s * lineScale)}
                           strokeDasharray={p.dash
                             .split(" ")
-                            .map((v) => (+v / s).toFixed(1))
+                            .map((v) => (+v / (s * lineScale)).toFixed(1))
                             .join(" ")}
                           strokeLinecap="round"
                           className={
@@ -2158,6 +2174,7 @@ export function GeneratorSystem() {
                   x={CENTER}
                   y={CENTER}
                   active={activeId === config.sun.id}
+                  cameraScale={viewScale}
                   jumping={jumpId === config.sun.id}
                   newborn={newbornId === config.sun.id}
                   highlighted={
@@ -2194,6 +2211,7 @@ export function GeneratorSystem() {
                         x={q.x}
                         y={q.y}
                         labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
+                        cameraScale={viewScale}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         newborn={newbornId === p.id}
