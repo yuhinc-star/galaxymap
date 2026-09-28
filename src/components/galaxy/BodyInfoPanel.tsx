@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Moon, Pencil, Plus, Rocket, Sun, Trash2, X } from "lucide-react";
 import { MAX_BODY_NAME } from "./systemGenerator";
+import { sleepingSpriteFor } from "./sleepSprites";
 
 export interface BodyPanelChild {
   id: string;
@@ -104,7 +105,7 @@ export function BodyInfoPanel({
     >
       <div className="flex items-start gap-3 px-4 pb-2 pt-3">
         <img
-          src={info.img}
+          src={info.asleep ? sleepingSpriteFor(info.img) : info.img}
           alt=""
           draggable={false}
           className="h-14 w-14 shrink-0 select-none rounded-full bg-space/60 object-contain p-1 ring-2 ring-star/70"

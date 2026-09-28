@@ -114,15 +114,17 @@ export function ChatPanel({ subject, onClose, waiting = false, onToggleSleep }: 
             {subject.name}
           </h2>
         </div>
-        <button
-          type="button"
-          aria-label={subject.asleep ? `Wake ${subject.name}` : `Let ${subject.name} sleep`}
-          title={subject.asleep ? "Wake up" : "Sleep mode"}
-          onClick={onToggleSleep}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-orbit-label/30 text-orbit-label transition-transform hover:scale-105 active:scale-95"
-        >
-          {subject.asleep ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </button>
+        {onToggleSleep && (
+          <button
+            type="button"
+            aria-label={subject.asleep ? `Wake ${subject.name}` : `Let ${subject.name} sleep`}
+            title={subject.asleep ? "Wake up" : "Sleep mode"}
+            onClick={onToggleSleep}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-orbit-label/30 text-orbit-label transition-transform hover:scale-105 active:scale-95"
+          >
+            {subject.asleep ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
+        )}
         <button
           type="button"
           aria-label="Close chat"

@@ -21,5 +21,5 @@
 - [x] Restore proportional planet sizes in Sun Chat Mode without crowding its overview with deep descendants.
 - [x] Add controllable sleep/wake state to every sun, planet, and moon.
 - [x] Give every sleeping body closed eyes and vivid drifting “zzz” marks.
-- [ ] Refine every sleeping face as a genuinely drowsy hand-painted expression, never a generic closed-eye smile.
+- [x] Refine every sleeping face as a genuinely drowsy hand-painted expression, never a generic closed-eye smile.
 - [x] Verify sleep controls in storybook cards and Chat Mode on desktop and phone.
