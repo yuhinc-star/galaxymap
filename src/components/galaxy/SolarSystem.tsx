@@ -344,7 +344,12 @@ export function SolarSystem() {
       zooming keeps the selected-body follow lock; only panning releases it. */
   const chatUserZoom = () => {
     if (chatMixRef.current > 0.9) chatGlideRef.current = false;
+    // A zoom gesture owns the camera outright; the follow loop re-locks once
+    // the gesture is quiet. Two owners writing the same frames was the shake.
+    gestureUntilRef.current = performance.now() + 260;
+    relockRef.current = true;
   };
+
 
   /** Open chat mode: the rocket decides who we chat with. A zoomed body
       summons the rocket over first; with nothing zoomed we chat with the
