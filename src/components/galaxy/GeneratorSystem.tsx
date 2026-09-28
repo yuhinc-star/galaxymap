@@ -407,7 +407,7 @@ export function GeneratorSystem() {
       sub-pixel orbit becomes magnified. Hold the whole family tableau still
       while deeply focused; time resumes continuously when focus is released. */
   const freezeDeepMotionRef = useRef(false);
-  freezeDeepMotionRef.current = !chatActive && focusedId !== null && focusDepth >= 5;
+  freezeDeepMotionRef.current = !chatOpen && focusedId !== null && focusDepth >= 5;
 
   // Flight recorder: keep the last-known world state in the heartbeat, so a
   // killed phone tab still tells us which system it was showing.
