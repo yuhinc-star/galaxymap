@@ -17,3 +17,4 @@
 - Chat Mode presents five progressively quieter family generations in its tall strip; Galaxy Mode retains the concise three-generation window.
 - Sun Chat Mode shows proportionally sized direct planets; selecting a planet reveals its five-generation lineage, preventing overview crowding.
 - A wheel/pinch gesture owns the camera exclusively (260ms tail); the focused-body follow loop pauses during it and eases back to center at the user's new scale — two camera owners in the same frame caused amplified deep-zoom shake.
+- Sleep is per-body presentation state: bodies keep orbiting and chatting, while their artwork switches to a closed-eye edition with animated “zzz” marks.
