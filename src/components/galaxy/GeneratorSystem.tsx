@@ -2,6 +2,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -549,9 +550,11 @@ export function GeneratorSystem() {
   }, []);
 
   /** Wheel/pinch/zoom-button: in chat mode the user takes the zoom over
-      from the fan's camera glide once the fan has settled. */
+      from the fan's camera glide once the fan has settled. In galaxy mode,
+      zooming keeps the selected-body follow lock; only panning releases it.
+      Otherwise a tiny deep moon immediately sweeps across the viewport at
+      high scale and reads as violent camera shake. */
   const chatUserZoom = () => {
-    stopFollow();
     if (chatMixRef.current > 0.9) chatGlideRef.current = false;
   };
 
@@ -1068,7 +1071,7 @@ export function GeneratorSystem() {
   // state captured at click time toward the body's *current* position, so
   // the glide bends with the moving body and lands exactly on it — no
   // end-of-glide snap. After the glide the body stays pinned to center.
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Chat mode owns the camera while the column is up.
     if (chatMixRef.current > 0.004) return;
     const f = followRef.current;
@@ -2077,8 +2080,8 @@ export function GeneratorSystem() {
         wheel={{ step: 0.0015 }}
         panning={{ velocityDisabled: true, disabled: dragActive || chatActive }}
         onPanningStart={stopFollow}
-        // Release the orbit-follow camera before the library applies the first
-        // wheel frame, so two camera owners never alternate during a gesture.
+        // Wheel/pinch preserve the focused body's follow lock. Panning is the
+        // explicit gesture for releasing it and exploring freely.
         onWheelStart={chatUserZoom}
         onWheel={chatUserZoom}
         onPinchStart={chatUserZoom}

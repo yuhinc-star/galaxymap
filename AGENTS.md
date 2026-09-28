@@ -12,3 +12,4 @@
 - Semantic zoom is presentation-only: derive a three-generation visibility window from focus and apparent size; never mutate or regenerate bodies when zoom changes.
 - Recursive moon geometry stays proportional: every child is smaller than its parent, and orbit clearance scales from both bodies without a fixed radius floor.
 - Deep Navigator trees use capped visual indentation and progressive disclosure while always opening the focused or rocket-host ancestry, preventing unreachable bodies and horizontal collapse.
+- Focused-body camera tracking runs before paint and survives wheel/pinch zoom; only deliberate panning releases it, preventing amplified deep-orbit jitter.

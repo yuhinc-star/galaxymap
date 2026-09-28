@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -314,9 +315,9 @@ export function SolarSystem() {
   }, []);
 
   /** Wheel/pinch/zoom-button: in chat mode the user takes the zoom over
-      from the fan's camera glide once the fan has settled. */
+      from the fan's camera glide once the fan has settled. In galaxy mode,
+      zooming keeps the selected-body follow lock; only panning releases it. */
   const chatUserZoom = () => {
-    stopFollow();
     if (chatMixRef.current > 0.9) chatGlideRef.current = false;
   };
 
@@ -744,7 +745,7 @@ export function SolarSystem() {
   // state captured at click time toward the body's *current* position, so
   // the glide bends with the moving body and lands exactly on it — no
   // end-of-glide snap. After the glide the body stays pinned to center.
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Chat mode owns the camera while the column is up.
     if (chatMixRef.current > 0.004) return;
     const f = followRef.current;
