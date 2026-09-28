@@ -19,6 +19,6 @@
 - [x] Replace competing camera writers with one explicit camera controller and re-test deep focus at maximum magnification.
 - [x] Freeze deep-family orbital movement while a tiny descendant is focused, so extreme zoom remains calm.
 - [x] Restore proportional planet sizes in Sun Chat Mode without crowding its overview with deep descendants.
-- [ ] Add controllable sleep/wake state to every sun, planet, and moon.
-- [ ] Give every sleeping body closed eyes and vivid drifting “zzz” marks.
-- [ ] Verify sleep controls in storybook cards and Chat Mode on desktop and phone.
+- [x] Add controllable sleep/wake state to every sun, planet, and moon.
+- [x] Give every sleeping body closed eyes and vivid drifting “zzz” marks.
+- [x] Verify sleep controls in storybook cards and Chat Mode on desktop and phone.
