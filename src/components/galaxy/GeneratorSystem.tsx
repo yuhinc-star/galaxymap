@@ -403,6 +403,11 @@ export function GeneratorSystem() {
     if (depth >= focusDepth) return opacity;
     return opacity * (depth === focusDepth - 1 ? 0.24 : 0.08);
   };
+  /** At tiny descendant scale, motion adds no useful information and every
+      sub-pixel orbit becomes magnified. Hold the whole family tableau still
+      while deeply focused; time resumes continuously when focus is released. */
+  const freezeDeepMotionRef = useRef(false);
+  freezeDeepMotionRef.current = !chatActive && focusedId !== null && focusDepth >= 5;
 
   // Flight recorder: keep the last-known world state in the heartbeat, so a
   // killed phone tab still tells us which system it was showing.
@@ -421,15 +426,19 @@ export function GeneratorSystem() {
 
   useEffect(() => {
     let raf = 0;
-    const t0 = performance.now();
+    let lastNow = performance.now();
+    let elapsed = 0;
     // Phones get a 30fps clock — the ultra-slow orbits look identical and
     // the main thread does half the React work.
     const mobile = window.matchMedia("(max-width: 639px)").matches;
     let lastSet = 0;
     const loop = (now: number) => {
+      const dt = Math.min(50, now - lastNow);
+      lastNow = now;
+      if (!freezeDeepMotionRef.current) elapsed += dt;
       if (!mobile || now - lastSet >= 33) {
         lastSet = now;
-        setT((now - t0) / 1000);
+        setT(elapsed / 1000);
       }
       raf = requestAnimationFrame(loop);
     };
