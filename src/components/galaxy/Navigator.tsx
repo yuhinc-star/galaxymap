@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, List, Sparkle, X } from "lucide-react";
 
 export interface NavigatorEntry {
@@ -61,6 +61,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
   const [expandedBranches, setExpandedBranches] = useState<Set<string>>(
     () => new Set(),
   );
+  const navRef = useRef<HTMLElement>(null);
 
   // Chat mode enters with the navigator folded away — the lined-up
   // family keeps the strip; one tap on the list button brings it back.
@@ -68,6 +69,19 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
     setOpen(window.matchMedia("(min-width: 640px)").matches && !chatMode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** Deep focus can reveal another row below the panel's fold. Bring the
+      selected destination into view after React opens its ancestry. */
+  useEffect(() => {
+    if (!open || !focusedId) return;
+    const frame = window.requestAnimationFrame(() => {
+      const row = navRef.current?.querySelector<HTMLElement>(
+        `[data-nav-id="${CSS.escape(focusedId)}"]`,
+      );
+      row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusedId, open]);
 
   /** Fold the menu away first, then swap to the round list button. */
   const collapse = () => {
@@ -154,6 +168,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
       <div className="relative">
         <button
           type="button"
+          data-nav-id={entry.id}
           onClick={handleClick}
           onDoubleClick={() => {
             // Move mode owns clicks — a double-click there picks the
@@ -307,6 +322,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
 
   return (
     <nav
+      ref={navRef}
       aria-label="System navigator"
       className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 ${chatMode ? "hidden sm:flex" : "flex"} max-h-[62vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm ${
         chatMode
