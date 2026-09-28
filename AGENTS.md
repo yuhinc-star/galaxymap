@@ -14,3 +14,4 @@
 - Deep Navigator trees use capped visual indentation and progressive disclosure while always opening the focused or rocket-host ancestry, preventing unreachable bodies and horizontal collapse.
 - Focused-body camera tracking runs before paint and survives wheel/pinch zoom; only deliberate panning releases it, preventing amplified deep-orbit jitter.
 - Chat Mode presents five progressively quieter family generations in its tall strip; Galaxy Mode retains the concise three-generation window.
+- A wheel/pinch gesture owns the camera exclusively (260ms tail); the focused-body follow loop pauses during it and eases back to center at the user's new scale — two camera owners in the same frame caused amplified deep-zoom shake.
