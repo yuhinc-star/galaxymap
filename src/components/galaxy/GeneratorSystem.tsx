@@ -1190,7 +1190,7 @@ export function GeneratorSystem() {
     // bodies naturally need less magnification; tiny descendants get more.
     const desiredBodyPx = Math.min(isMobileView ? 138 : 178, viewport * 0.23);
     const bodyFit = desiredBodyPx / size;
-    const s = Math.min(Math.max(Math.min(familyFit, bodyFit), 0.16), 24);
+    const s = Math.min(Math.max(Math.min(familyFit, bodyFit), 0.16), 96);
     const st = stateRef.current;
     followRef.current = {
       id,
@@ -1944,6 +1944,7 @@ export function GeneratorSystem() {
       // rides it into the lineup.
       const pose = chatPoseMoon(m, px, py, a, parentId);
       const s = ringScaleRef.current.get(m.id) ?? 1;
+      const lineScale = Math.max(1, viewScale);
       const vis = visibilityFor(m.id, pose.size);
       if (vis.detail === "hidden") {
         return (
@@ -1962,11 +1963,11 @@ export function GeneratorSystem() {
               fill="none"
               stroke="white"
               strokeOpacity={0.72}
-              strokeWidth={(depth === 0 ? 6.5 : 5) / s}
+              strokeWidth={(depth === 0 ? 6.5 : 5) / (s * lineScale)}
               strokeDasharray={
                 depth === 0
-                  ? `${(22 / s).toFixed(1)} ${(17 / s).toFixed(1)}`
-                  : `${(16 / s).toFixed(1)} ${(13 / s).toFixed(1)}`
+                  ? `${(22 / (s * lineScale)).toFixed(1)} ${(17 / (s * lineScale)).toFixed(1)}`
+                  : `${(16 / (s * lineScale)).toFixed(1)} ${(13 / (s * lineScale)).toFixed(1)}`
               }
               strokeLinecap="round"
               className={
@@ -2009,6 +2010,7 @@ export function GeneratorSystem() {
             x={r.x}
             y={r.y}
             labelBoost={fanSubj?.layout.slots.get(m.id)?.labelBoost ?? 1}
+            cameraScale={viewScale}
             active={activeId === m.id}
             jumping={jumpId === m.id}
             highlighted={
@@ -2095,6 +2097,7 @@ export function GeneratorSystem() {
                     // In chat mode each ring breathes toward its fan-arc
                     // radius, carrying its planet along with it.
                     const s = ringScaleRef.current.get(p.id) ?? 1;
+                    const lineScale = Math.max(1, viewScale);
                     const vis = visibilityFor(p.id);
                     if (vis.detail === "hidden") return null;
                     return (
@@ -2109,10 +2112,10 @@ export function GeneratorSystem() {
                           fill="none"
                           stroke="white"
                           strokeOpacity={p.ringOpacity}
-                          strokeWidth={p.ringWidth / s}
+                          strokeWidth={p.ringWidth / (s * lineScale)}
                           strokeDasharray={p.dash
                             .split(" ")
-                            .map((v) => (+v / s).toFixed(1))
+                            .map((v) => (+v / (s * lineScale)).toFixed(1))
                             .join(" ")}
                           strokeLinecap="round"
                           className={
@@ -2163,6 +2166,7 @@ export function GeneratorSystem() {
                   x={CENTER}
                   y={CENTER}
                   active={activeId === config.sun.id}
+                  cameraScale={viewScale}
                   jumping={jumpId === config.sun.id}
                   newborn={newbornId === config.sun.id}
                   highlighted={
@@ -2199,6 +2203,7 @@ export function GeneratorSystem() {
                         x={q.x}
                         y={q.y}
                         labelBoost={fanSubj?.layout.slots.get(p.id)?.labelBoost ?? 1}
+                        cameraScale={viewScale}
                         active={activeId === p.id}
                         jumping={jumpId === p.id}
                         newborn={newbornId === p.id}

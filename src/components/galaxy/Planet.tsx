@@ -40,6 +40,9 @@ interface PlanetProps {
   /** Chat mode: scale the name label up so it stays readable while the
       camera zooms the family column out. */
   labelBoost?: number;
+  /** Current camera scale. Labels counter-scale above 1x so a deep close-up
+      enlarges the painted body, not its caption into a wall of letters. */
+  cameraScale?: number;
   /** Semantic zoom presentation. The body remains in the system tree. */
   visualOpacity?: number;
   visualScale?: number;
@@ -62,7 +65,7 @@ export function planetLabelSize(size: number, name: string): number {
  * A celestial body floating in the world: sprite, name label, tap
  * reaction. Position comes from the parent's orbit math.
  */
-export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true }: PlanetProps) {
+export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
   const longName = def.name.length > 16;
 
@@ -80,6 +83,7 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
   }
 
   const labelSize = planetLabelSize(def.size, def.name);
+  const labelCounterScale = Math.max(1, cameraScale);
 
   return (
     <div
@@ -196,7 +200,8 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
           longName ? "w-max max-w-[380px] whitespace-normal text-center leading-none [overflow-wrap:anywhere]" : "whitespace-nowrap"
         }`}
         style={{
-          fontSize: labelSize * labelBoost,
+          fontSize: (labelSize * labelBoost) / labelCounterScale,
+          maxWidth: 380 / labelCounterScale,
           opacity: departing ? 0 : labelOpacity,
           textShadow: "0 2px 10px rgba(10, 6, 30, 0.9)",
         }}
