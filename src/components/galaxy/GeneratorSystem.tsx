@@ -1036,7 +1036,7 @@ export function GeneratorSystem() {
       const own = p.size * 1.15;
       if (p.moons.length === 0) return own;
       const moonEdge =
-        Math.max(...p.moons.map((m) => m.orbitR + m.size / 2)) + 60;
+        Math.max(...p.moons.map((m) => m.orbitR + m.size / 2)) + p.size * 0.22;
       return Math.max(own, moonEdge);
     }
     const m = findMoonById(config.planets, id);
@@ -1046,7 +1046,7 @@ export function GeneratorSystem() {
       // Frame the moon together with its own mini-moon rings.
       return Math.max(
         own,
-        Math.max(...m.moons.map((c) => c.orbitR + c.size / 2)) + 40,
+        Math.max(...m.moons.map((c) => c.orbitR + c.size / 2)) + m.size * 0.22,
       );
     }
     return 200;
