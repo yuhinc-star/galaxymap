@@ -367,6 +367,14 @@ export function GeneratorSystem() {
       mobile: isMobileView,
     });
   };
+  /** A parent's own route belongs to the previous family view. Keep the
+      parent body as epic context, but quiet that enclosing orbit so the
+      selected body's local rings remain the clearest geometry. */
+  const localRingOpacity = (id: string, opacity: number) => {
+    const depth = bodyMeta.get(id)?.depth ?? focusDepth;
+    if (depth >= focusDepth) return opacity;
+    return opacity * (depth === focusDepth - 1 ? 0.24 : 0.08);
+  };
 
   // Flight recorder: keep the last-known world state in the heartbeat, so a
   // killed phone tab still tells us which system it was showing.
@@ -1957,7 +1965,7 @@ export function GeneratorSystem() {
         <Fragment key={m.id}>
           {/* Position lives on the <g> so the path's own CSS transform
               stays free for the appear/disappear animation */}
-          <g className="semantic-orbit" opacity={vis.ringOpacity} transform={`translate(${px} ${py}) scale(${s})`}>
+          <g className="semantic-orbit" opacity={localRingOpacity(m.id, vis.ringOpacity)} transform={`translate(${px} ${py}) scale(${s})`}>
             <path
               d={m.ringD}
               fill="none"
@@ -2104,7 +2112,7 @@ export function GeneratorSystem() {
                       <g
                         key={p.id}
                         className="semantic-orbit"
-                        opacity={vis.ringOpacity}
+                        opacity={localRingOpacity(p.id, vis.ringOpacity)}
                         transform={`translate(${CENTER} ${CENTER}) scale(${s})`}
                       >
                         <path

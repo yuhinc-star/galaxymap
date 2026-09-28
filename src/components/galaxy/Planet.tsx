@@ -202,8 +202,9 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
         style={{
           fontSize: (labelSize * labelBoost) / labelCounterScale,
           maxWidth: 380 / labelCounterScale,
+          marginTop: 4 / labelCounterScale,
           opacity: departing ? 0 : labelOpacity,
-          textShadow: "0 2px 10px rgba(10, 6, 30, 0.9)",
+          textShadow: `0 ${2 / labelCounterScale}px ${10 / labelCounterScale}px rgba(10, 6, 30, 0.9)`,
         }}
       >
         {def.name}
