@@ -315,9 +315,9 @@ export function SolarSystem() {
   }, []);
 
   /** Wheel/pinch/zoom-button: in chat mode the user takes the zoom over
-      from the fan's camera glide once the fan has settled. */
+      from the fan's camera glide once the fan has settled. In galaxy mode,
+      zooming keeps the selected-body follow lock; only panning releases it. */
   const chatUserZoom = () => {
-    stopFollow();
     if (chatMixRef.current > 0.9) chatGlideRef.current = false;
   };
 
