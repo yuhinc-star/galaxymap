@@ -1566,9 +1566,10 @@ export function GeneratorSystem() {
     const now = Date.now();
     const last = lastTapRef.current;
     lastTapRef.current = { id, t: now };
-    // In chat mode there is no camera focus, so a quick second tap on any
-    // lined-up body opens its page. Outside chat the body must hold focus.
-    if (last?.id === id && now - last.t < 450 && (chatOpen || focusedId === id)) {
+    // A quick second tap on the same body opens its page. (Focus is not
+    // required: pressing the sky briefly releases focus, which used to
+    // swallow every double-click.)
+    if (last?.id === id && now - last.t < 500) {
       lastTapRef.current = null;
       openInfo(id);
       return;
