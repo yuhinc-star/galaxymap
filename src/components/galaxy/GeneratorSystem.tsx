@@ -248,6 +248,11 @@ export function GeneratorSystem() {
       fast-moving moon read as a shake), then mirrors the same numbers into
       the library so wheel/pinch math stays correct. */
   const camWriteRef = useRef<{ x: number; y: number; s: number } | null>(null);
+  /** While a wheel/pinch gesture is live (plus a short tail) the zoom library
+      is the only camera owner; the follow loop re-locks afterwards. */
+  const gestureUntilRef = useRef(0);
+  const relockRef = useRef(false);
+
   const writeCamera = (x: number, y: number, s: number) => {
     const prev = camWriteRef.current;
     if (
