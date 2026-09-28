@@ -614,13 +614,17 @@ export function GeneratorSystem() {
     moons: m.moons.length > 0 ? m.moons.map(moonEntry) : undefined,
   });
   const navItems: NavigatorEntry[] = [
-    { id: config.sun.id, name: config.sun.name, img: config.sun.img },
-    ...config.planets.map((p) => ({
-      id: p.id,
-      name: p.name,
-      img: p.img,
-      moons: p.moons.length > 0 ? p.moons.map(moonEntry) : undefined,
-    })),
+    {
+      id: config.sun.id,
+      name: config.sun.name,
+      img: config.sun.img,
+      moons: config.planets.map((p) => ({
+        id: p.id,
+        name: p.name,
+        img: p.img,
+        moons: p.moons.length > 0 ? p.moons.map(moonEntry) : undefined,
+      })),
+    },
   ];
 
   /** Recursive moon position: mini-moons ride on their parent moon.
