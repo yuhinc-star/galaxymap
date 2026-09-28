@@ -332,6 +332,7 @@ export function SolarSystem() {
   }, []);
 
   /** Any manual camera move takes control back from the follow mode. */
+  const panStartRef = useRef<{ x: number; y: number } | null>(null);
   const stopFollow = useCallback(() => {
     followRef.current = null;
     // In chat mode the focus marker belongs to the fan — zooming around
@@ -1464,7 +1465,19 @@ export function SolarSystem() {
         doubleClick={{ disabled: true }}
         wheel={{ step: 0.0015 }}
         panning={{ velocityDisabled: true, disabled: chatActive }}
-        onPanningStart={stopFollow}
+        onPanningStart={(_, e) => {
+          const pt = "touches" in e ? e.touches[0] : e;
+          panStartRef.current = pt ? { x: pt.clientX, y: pt.clientY } : null;
+        }}
+        onPanning={(_, e) => {
+          const st = panStartRef.current;
+          const pt = "touches" in e ? e.touches[0] : e;
+          if (!st || !pt) return;
+          if (Math.hypot(pt.clientX - st.x, pt.clientY - st.y) > 8) {
+            panStartRef.current = null;
+            stopFollow();
+          }
+        }}
         onWheelStart={beginUserZoom}
         onWheelStop={endUserZoom}
         onPinchStart={beginUserZoom}
