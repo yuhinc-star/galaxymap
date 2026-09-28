@@ -203,13 +203,22 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
           {/* Long catalog names truncate to one line — the full name is
               a hover title away, and the info panel shows it in full. */}
           <span className="flex min-w-0 flex-1 flex-col justify-center">
-            <span
-              title={entry.name}
-              className={`truncate font-hand font-bold uppercase leading-none tracking-wider ${
-                focused ? "text-star" : "text-white"
-              } ${nameSize}`}
-            >
-              &ldquo;{entry.name}&rdquo;
+            <span className="flex min-w-0 items-baseline gap-1.5">
+              {/* Deep chains only: a tiny generation number keeps the
+                  staircase readable without a badge on every row. */}
+              {depth > 1 && (
+                <span className="shrink-0 font-display text-[9px] font-semibold uppercase leading-none text-star/70">
+                  g{depth}
+                </span>
+              )}
+              <span
+                title={entry.name}
+                className={`truncate font-hand font-bold uppercase leading-none tracking-wider ${
+                  focused ? "text-star" : "text-white"
+                } ${nameSize}`}
+              >
+                &ldquo;{entry.name}&rdquo;
+              </span>
             </span>
             {parentName && (
               <span
@@ -316,14 +325,6 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
         }}
       >
         {rails(depth, true)}
-        {depth > 0 && (
-          <span
-            aria-hidden
-            className="pointer-events-none absolute right-1 top-0.5 z-10 rounded-full bg-white/10 px-1.5 font-display text-[8px] font-semibold uppercase leading-[14px] text-white/55"
-          >
-            gen {depth}
-          </span>
-        )}
         {renderEntry(item, depth, parentName, children.length > 0, expanded, forcedOpen || rootOpen)}
       </li>,
     ];
