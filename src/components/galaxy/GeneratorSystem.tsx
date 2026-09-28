@@ -377,6 +377,7 @@ export function GeneratorSystem() {
   const protectedBodies = new Set([
     focusForVisibility,
     rocketHostId,
+    ...(chatOpen && chatTalkId ? [chatTalkId] : []),
     ...(flight ? [flight.toId] : []),
     ...(rocketInboundId ? [rocketInboundId] : []),
   ]);
@@ -2595,6 +2596,18 @@ export function GeneratorSystem() {
                   onClick={() =>
                     zoomOutTarget && handleZoomOut(zoomOutTarget.id)
                   }
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
+                >
+                  <Minus className="h-5 w-5" />
+                </button>
+              ) : null}
+              {chatActive ? (
+                <button
+                  type="button"
+                  aria-label="Reverse last step"
+                  title="Reverse last step"
+                  disabled={!undoState}
+                  onClick={restoreUndo}
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
                 >
                   <Undo className="h-5 w-5" />
