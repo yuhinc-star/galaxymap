@@ -149,16 +149,16 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
             docked
               ? // Chat mode: dock to the bottom of the galaxy strip, desktop
                 // only — phones run chat fullscreen and rest the chrome.
-                "animate-panel-in fixed bottom-5 left-[calc(clamp(290px,33vw,460px)/2)] z-30 hidden w-[24rem] max-w-[calc(clamp(290px,33vw,460px)-1rem)] -translate-x-1/2 sm:block"
+                "animate-panel-in fixed top-28 left-[calc(clamp(290px,33vw,460px)/2)] z-30 hidden w-[24rem] max-w-[calc(clamp(290px,33vw,460px)-1rem)] -translate-x-1/2 sm:block"
               : "animate-panel-in fixed left-1/2 top-[max(7rem,calc(env(safe-area-inset-top)+6rem))] z-30 w-[26rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 sm:bottom-5 sm:top-auto"
           }
         >
-          <div className="flex items-center gap-3 rounded-3xl border-2 border-dashed border-star/70 bg-space-deep/90 px-4 py-2.5 shadow-xl backdrop-blur-sm">
+          <div className={`flex items-center rounded-3xl border-2 border-dashed border-star/70 bg-space-deep/90 px-4 py-2.5 shadow-xl backdrop-blur-sm ${docked ? "flex-wrap gap-2" : "gap-3"}`}>
             <Sparkle
               className="h-5 w-5 shrink-0 animate-pulse text-star"
               aria-hidden
             />
-            <p className="flex-1 font-hand text-xl font-bold uppercase leading-tight tracking-wider text-white">
+            <p className={`min-w-0 flex-1 font-hand ${docked ? "basis-[calc(100%-2rem)] text-lg" : "text-xl"}`} data-x=" font-bold uppercase leading-tight tracking-wider text-white">
               {currentHint.text}
             </p>
             {queueTotal > 1 && (
