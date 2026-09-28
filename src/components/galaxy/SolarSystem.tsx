@@ -211,6 +211,26 @@ export function SolarSystem() {
   } | null>(null);
   const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
   const resetTransformRef = useRef<(() => void) | null>(null);
+  /** Last camera values written straight to the DOM, so the follow loop
+      positions the view in the same frame the bodies were laid out instead
+      of a frame later (the lag read as a shake when zoomed deep). */
+  const camWriteRef = useRef<{ x: number; y: number; s: number } | null>(null);
+  const writeCamera = (x: number, y: number, s: number) => {
+    const prev = camWriteRef.current;
+    if (
+      prev &&
+      Math.abs(prev.x - x) < 0.25 &&
+      Math.abs(prev.y - y) < 0.25 &&
+      Math.abs(prev.s - s) < 1e-6
+    ) {
+      return;
+    }
+    camWriteRef.current = { x, y, s };
+    const el = stripRef.current?.querySelector<HTMLElement>(".react-transform-component");
+    if (el) el.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+    setTransformRef.current?.(x, y, s, 0);
+  };
+
   /** Latest camera state, so a glide eases from exactly where the camera
       is now — even mid-flight from a previous pick. */
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
