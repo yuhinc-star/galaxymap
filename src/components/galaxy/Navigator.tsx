@@ -267,7 +267,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
     const forcedOpen = children.some((child) => subtreeContainsTarget(child));
     const expanded =
       children.length > 0 &&
-      (depth === 0 || forcedOpen || pathTargets.has(item.id) || expandedBranches.has(item.id));
+      (forcedOpen || pathTargets.has(item.id) || expandedBranches.has(item.id));
     const delay = Math.min(cascade++, 14) * 42;
     const cappedDepth = Math.min(depth, 2);
     const rows = [
