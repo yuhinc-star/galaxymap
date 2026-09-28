@@ -211,6 +211,31 @@ export function SolarSystem() {
   } | null>(null);
   const setTransformRef = useRef<((x: number, y: number, s: number, ms?: number) => void) | null>(null);
   const resetTransformRef = useRef<(() => void) | null>(null);
+  /** Last camera values written straight to the DOM, so the follow loop
+      positions the view in the same frame the bodies were laid out instead
+      of a frame later (the lag read as a shake when zoomed deep). */
+  const camWriteRef = useRef<{ x: number; y: number; s: number } | null>(null);
+  /** While a wheel/pinch gesture is live (plus a short tail) the zoom library
+      is the only camera owner; the follow loop re-locks afterwards. */
+  const gestureUntilRef = useRef(0);
+  const relockRef = useRef(false);
+
+  const writeCamera = (x: number, y: number, s: number) => {
+    const prev = camWriteRef.current;
+    if (
+      prev &&
+      Math.abs(prev.x - x) < 0.25 &&
+      Math.abs(prev.y - y) < 0.25 &&
+      Math.abs(prev.s - s) < 1e-6
+    ) {
+      return;
+    }
+    camWriteRef.current = { x, y, s };
+    const el = stripRef.current?.querySelector<HTMLElement>(".react-transform-component");
+    if (el) el.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+    setTransformRef.current?.(x, y, s, 0);
+  };
+
   /** Latest camera state, so a glide eases from exactly where the camera
       is now — even mid-flight from a previous pick. */
   const stateRef = useRef<{ positionX: number; positionY: number; scale: number } | null>(null);
@@ -319,7 +344,12 @@ export function SolarSystem() {
       zooming keeps the selected-body follow lock; only panning releases it. */
   const chatUserZoom = () => {
     if (chatMixRef.current > 0.9) chatGlideRef.current = false;
+    // A zoom gesture owns the camera outright; the follow loop re-locks once
+    // the gesture is quiet. Two owners writing the same frames was the shake.
+    gestureUntilRef.current = performance.now() + 260;
+    relockRef.current = true;
   };
+
 
   /** Open chat mode: the rocket decides who we chat with. A zoomed body
       summons the rocket over first; with nothing zoomed we chat with the
@@ -749,29 +779,59 @@ export function SolarSystem() {
     // Chat mode owns the camera while the column is up.
     if (chatMixRef.current > 0.004) return;
     const f = followRef.current;
-    const apply = setTransformRef.current;
-    if (!f || !apply) return;
+    if (!f || !setTransformRef.current) return;
+    const now = performance.now();
+    // Hands off while the user's zoom gesture is running.
+    if (now < gestureUntilRef.current) {
+      camWriteRef.current = null;
+      return;
+    }
+    // Gesture finished: ease the body back to center at the user's new scale.
+    if (relockRef.current) {
+      relockRef.current = false;
+      const st = stateRef.current;
+      const live = st?.scale ?? f.scale;
+      followRef.current = {
+        id: f.id,
+        scale: live,
+        from: st
+          ? { x: st.positionX, y: st.positionY, scale: live }
+          : { x: 0, y: 0, scale: live },
+        startAt: now,
+      };
+      camWriteRef.current = null;
+      return;
+    }
+
     const q = bodyPos(f.id);
     if (!q) {
       followRef.current = null;
       return;
     }
-    const tx = window.innerWidth / 2 - q.x * f.scale;
-    const ty = window.innerHeight / 2 - q.y * f.scale;
     const p = Math.min(1, (performance.now() - f.startAt) / 650);
     if (p >= 1) {
-      apply(tx, ty, f.scale, 0);
+      // Glide finished: the zoom level is the user's from here on. Forcing
+      // the captured scale back every frame fought the wheel gesture.
+      const live = stateRef.current?.scale ?? f.scale;
+      writeCamera(
+        window.innerWidth / 2 - q.x * live,
+        window.innerHeight / 2 - q.y * live,
+        live,
+      );
       return;
     }
     // easeInOutCubic
     const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-    apply(
+    const s = f.from.scale + (f.scale - f.from.scale) * e;
+    const tx = window.innerWidth / 2 - q.x * s;
+    const ty = window.innerHeight / 2 - q.y * s;
+    writeCamera(
       f.from.x + (tx - f.from.x) * e,
       f.from.y + (ty - f.from.y) * e,
-      f.from.scale + (f.scale - f.from.scale) * e,
-      0,
+      s,
     );
   }, [t]);
+
 
   // Chat-mode camera: while chat is open the camera chases the fan
   // framing inside the sky strip; while it closes it glides back to the

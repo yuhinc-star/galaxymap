@@ -15,3 +15,4 @@
 - [x] Keep selected-body tracking active through wheel and pinch zoom; release it only on deliberate panning.
 - [x] Expand Chat Mode's visible family window from three to five generations without changing the galaxy tree.
 - [x] Restore five visibly distinct parent-to-child levels in Chat Mode and verify the deep genealogy.
+- [x] Give the zoom gesture sole ownership of the camera, then re-lock the focused star, ending deep-zoom shake (verified on the smallest star, Speck).
