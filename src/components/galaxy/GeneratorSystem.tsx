@@ -204,6 +204,7 @@ export function GeneratorSystem() {
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [planetCount, setPlanetCount] = useState(DEFAULT_COUNT);
   const [t, setT] = useState(0);
+  const [, setCameraFrame] = useState(0);
   /** React state updates only when zoom meaningfully changes; orbit ticks do not drive it. */
   const [viewScale, setViewScale] = useState(0.36);
   const viewScaleRef = useRef(0.36);
@@ -438,7 +439,8 @@ export function GeneratorSystem() {
       if (!freezeDeepMotionRef.current) elapsed += dt;
       if (!mobile || now - lastSet >= 33) {
         lastSet = now;
-        setT(elapsed / 1000);
+        if (freezeDeepMotionRef.current) setCameraFrame((frame) => frame + 1);
+        else setT(elapsed / 1000);
       }
       raf = requestAnimationFrame(loop);
     };
