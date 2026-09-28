@@ -215,6 +215,11 @@ export function SolarSystem() {
       positions the view in the same frame the bodies were laid out instead
       of a frame later (the lag read as a shake when zoomed deep). */
   const camWriteRef = useRef<{ x: number; y: number; s: number } | null>(null);
+  /** While a wheel/pinch gesture is live (plus a short tail) the zoom library
+      is the only camera owner; the follow loop re-locks afterwards. */
+  const gestureUntilRef = useRef(0);
+  const relockRef = useRef(false);
+
   const writeCamera = (x: number, y: number, s: number) => {
     const prev = camWriteRef.current;
     if (
