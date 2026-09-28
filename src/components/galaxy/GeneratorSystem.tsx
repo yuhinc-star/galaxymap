@@ -366,6 +366,7 @@ export function GeneratorSystem() {
       familyDistance: familyDistance(focusForVisibility, id),
       protected: protectedBodies.has(id),
       mobile: isMobileView,
+      generationWindow: chatActive ? 5 : 3,
     });
   };
   /** A parent's own route belongs to the previous family view. Keep the
