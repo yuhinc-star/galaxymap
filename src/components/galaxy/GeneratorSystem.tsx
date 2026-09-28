@@ -1018,10 +1018,10 @@ export function GeneratorSystem() {
   };
 
   /**
-   * World-pixel radius the camera should frame for a navigator pick:
-   * the sun gets every planet ring (asymmetric — use the shape's maxR),
-   * a planet gets its outermost moon ring (or just its own disc when
-   * it has no moons), a moon its own disc.
+   * World-pixel radius the camera should frame for a navigator pick.
+   * Only the selected body's immediate family sets the frame; semantic
+   * context may still peek in, but distant descendants cannot make a tiny
+   * local view mostly empty space.
    */
   const frameRadius = (id: string): number => {
     if (id === config.sun.id) {
@@ -1182,10 +1182,15 @@ export function GeneratorSystem() {
   const focusCamera = (id: string) => {
     const q = bodyPos(id);
     if (!q) return;
-    const fit =
-      (Math.min(window.innerWidth, window.innerHeight) * 0.82) /
-      (2 * frameRadius(id));
-    const s = Math.min(Math.max(fit, 0.16), 1.35);
+    const viewport = Math.min(window.innerWidth, window.innerHeight);
+    const size = bodySize(id) ?? 1;
+    const familyFit = (viewport * (isMobileView ? 0.7 : 0.76)) / (2 * frameRadius(id));
+    // The hero rocket is a fixed screen-space character when close. Make
+    // its host read as a destination rather than a speck beneath it. Large
+    // bodies naturally need less magnification; tiny descendants get more.
+    const desiredBodyPx = Math.min(isMobileView ? 138 : 178, viewport * 0.23);
+    const bodyFit = desiredBodyPx / size;
+    const s = Math.min(Math.max(Math.min(familyFit, bodyFit), 0.16), 24);
     const st = stateRef.current;
     followRef.current = {
       id,

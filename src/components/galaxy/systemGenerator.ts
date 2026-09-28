@@ -281,6 +281,23 @@ export const MAX_MOONS_PER_BODY = 2;
 export const MIN_MOON_PARENT_SIZE = 46;
 
 /**
+ * Center-to-center spacing for a small body's orbit. Clearance is derived
+ * from both painted discs, then given a little storybook breathing room.
+ * There is deliberately no absolute radius floor: one would make the orbit
+ * loom larger and larger as an infinite branch gets smaller.
+ */
+export const proportionalMoonOrbit = (
+  parentSize: number,
+  childSize: number,
+  siblingIndex = 0,
+) => {
+  const clearance = parentSize / 2 + childSize / 2;
+  const breathingRoom = Math.max(parentSize * 0.1, childSize * 0.22);
+  const siblingStep = siblingIndex * Math.max(childSize * 0.72, parentSize * 0.16);
+  return clearance + breathingRoom + siblingStep;
+};
+
+/**
  * A deterministic, presentation-ready deep family used to demonstrate
  * semantic zoom. It adds a seven-generation moon branch without changing
  * the ordinary random generator or creating anything in response to zoom.
@@ -295,8 +312,11 @@ export function createDeepSystem(system: SystemConfig): {
   const buildBranch = (depth: number, parentSize: number): GeneratedMoon[] => {
     if (depth > 7) return [];
     const sprite = MOON_SPRITES[(depth * 3) % MOON_SPRITES.length]!;
-    const size = Math.max(18, Math.min(parentSize * 0.58, 66 - depth * 5));
-    const orbitR = Math.max(42, parentSize * 0.72 + 24);
+    // Every generation is genuinely smaller than its parent. Apparent size
+    // is recovered by the camera, never by flattening deep descendants to a
+    // shared minimum that can accidentally make children look larger.
+    const size = Math.min(parentSize * 0.58, 66 - depth * 5);
+    const orbitR = proportionalMoonOrbit(parentSize, size);
     const id = `deep-moon-${depth}`;
     const main: GeneratedMoon = {
       id,
@@ -316,15 +336,17 @@ export function createDeepSystem(system: SystemConfig): {
     // family, rather than one mechanical chain.
     if (depth <= 5) {
       const sideSprite = MOON_SPRITES[(depth * 3 + 1) % MOON_SPRITES.length]!;
+      const sideSize = size * 0.48;
+      const sideOrbitR = proportionalMoonOrbit(size, sideSize, 1);
       main.moons.push({
         id: `deep-side-${depth}`,
         name: `Little ${["Moss", "Rose", "Cloud", "Clay", "Berry"][depth - 1]}`,
         img: sideSprite.img,
-        size: Math.max(16, size * 0.48),
-        orbitR: orbitR + 34,
+        size: sideSize,
+        orbitR: sideOrbitR,
         period: 92 + depth * 19,
         startAngle: depth * 0.83 + 2.1,
-        ringD: makeOrbitShape("ring", orbitR + 34, 99000 + depth * 991, 10).d,
+        ringD: makeOrbitShape("ring", sideOrbitR, 99000 + depth * 991, 10).d,
         line: "I keep the deep branch company.",
         breathe: 3.4,
         delay: depth * 0.19,
