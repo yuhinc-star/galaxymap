@@ -283,27 +283,46 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
       children.length > 0 &&
       (rootOpen || forcedOpen || pathTargets.has(item.id) || expandedBranches.has(item.id));
     const delay = Math.min(cascade++, 14) * 42;
-    const cappedDepth = Math.min(depth, 2);
+    // Every generation gets its own step and its own guide rail, so depth
+    // reads as a true family tree. The step shrinks on deep chains so the
+    // name column never collapses.
+    const step = depth > 5 ? 8 : 11;
+    const indent = (d: number) => Math.min(d, 9) * step;
+    const rails = (d: number, elbow: boolean) =>
+      Array.from({ length: Math.min(d, 9) }, (_, i) => {
+        const last = i === Math.min(d, 9) - 1;
+        return (
+          <span key={`r${i}`} aria-hidden>
+            <span
+              className={`pointer-events-none absolute border-l border-dashed ${last ? "border-white/55" : "border-white/20"}`}
+              style={{ left: `${i * step + 5}px`, top: 0, bottom: last && elbow ? "50%" : 0 }}
+            />
+            {last && elbow && (
+              <span
+                className="pointer-events-none absolute top-1/2 border-t border-dashed border-white/55"
+                style={{ left: `${i * step + 5}px`, width: `${step - 2}px` }}
+              />
+            )}
+          </span>
+        );
+      });
     const rows = [
       <li
         key={item.id}
         className="nav-item-in relative"
         style={{
           animationDelay: `${delay}ms`,
-          marginLeft: `${cappedDepth * 12}px`,
+          paddingLeft: `${indent(depth)}px`,
         }}
       >
+        {rails(depth, true)}
         {depth > 0 && (
-          <>
-            <span
-              aria-hidden
-              className="pointer-events-none absolute -left-1 -top-1/2 bottom-1/2 border-l border-dashed border-white/45"
-            />
-            <span
-              aria-hidden
-              className="pointer-events-none absolute -left-1 top-1/2 h-px w-3 -translate-y-1/2 border-t border-dashed border-white/45"
-            />
-          </>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute right-1 top-0.5 z-10 rounded-full bg-white/10 px-1.5 font-display text-[8px] font-semibold uppercase leading-[14px] text-white/55"
+          >
+            gen {depth}
+          </span>
         )}
         {renderEntry(item, depth, parentName, children.length > 0, expanded, forcedOpen || rootOpen)}
       </li>,
@@ -315,12 +334,14 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
       rows.push(
         <li
           key={`${item.id}-fold`}
-          className="nav-item-in"
+          className="nav-item-in relative"
           style={{
             animationDelay: `${Math.min(cascade++, 14) * 42}ms`,
-            marginLeft: `${Math.min(depth + 1, 2) * 12}px`,
+            paddingLeft: `${indent(depth + 1)}px`,
           }}
         >
+          {rails(depth + 1, true)}
+
           <button
             type="button"
             onClick={() => toggleBranch(item.id)}
