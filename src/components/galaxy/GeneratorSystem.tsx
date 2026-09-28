@@ -579,6 +579,7 @@ export function GeneratorSystem() {
 
 
   /** Any manual camera move takes control back from the follow mode. */
+  const panStartRef = useRef<{ x: number; y: number } | null>(null);
   const stopFollow = useCallback(() => {
     followRef.current = null;
     // In chat mode the focus marker belongs to the fan — zooming around
@@ -1563,7 +1564,6 @@ export function GeneratorSystem() {
    * still does its usual happy jump — the panel simply replaces it.
    */
   const handleBodyTap = (id: string) => {
-    console.warn("DBGTAP", id, focusedId, chatOpen);
     const now = Date.now();
     const last = lastTapRef.current;
     lastTapRef.current = { id, t: now };
@@ -2182,7 +2182,22 @@ export function GeneratorSystem() {
         // where the moving deep-family camera looked like a continuous shake.
         wheel={{ step: 0.0015 }}
         panning={{ velocityDisabled: true, disabled: dragActive || chatActive }}
-        onPanningStart={stopFollow}
+        // Release focus only once the press really moves: a plain tap or
+        // double-click on a star must not unfocus it (that hid deep stars
+        // mid-click and swallowed every double-click).
+        onPanningStart={(_, e) => {
+          const pt = "touches" in e ? e.touches[0] : e;
+          panStartRef.current = pt ? { x: pt.clientX, y: pt.clientY } : null;
+        }}
+        onPanning={(_, e) => {
+          const st = panStartRef.current;
+          const pt = "touches" in e ? e.touches[0] : e;
+          if (!st || !pt) return;
+          if (Math.hypot(pt.clientX - st.x, pt.clientY - st.y) > 8) {
+            panStartRef.current = null;
+            stopFollow();
+          }
+        }}
         // Wheel/pinch preserve the focused body's follow lock. Panning is the
         // explicit gesture for releasing it and exploring freely.
         onWheelStart={beginUserZoom}
