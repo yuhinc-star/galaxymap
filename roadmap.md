@@ -10,4 +10,4 @@
 - [x] Verify wheel, button, and focused-body zoom at the current viewport and on mobile.
 - [x] Restore an unmistakable parent-to-child genealogy in the deep Navigator.
 - [x] Keep deep branches compact without flattening siblings or hiding active ancestry.
-- [ ] Verify tree expansion and focus behavior at the current screen size and on mobile.
+- [x] Verify tree expansion and focus behavior at the current screen size and on mobile.
