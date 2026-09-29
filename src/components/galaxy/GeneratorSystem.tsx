@@ -2303,7 +2303,7 @@ export function GeneratorSystem() {
                   height={WORLD}
                   viewBox={`0 0 ${WORLD} ${WORLD}`}
                   className="pointer-events-none absolute inset-0"
-                  overflow="visible"
+                  style={{ overflow: "visible" }}
                   aria-hidden
                 >
                   {config.planets.map((p) => {
