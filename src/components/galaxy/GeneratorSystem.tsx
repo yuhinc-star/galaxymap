@@ -157,6 +157,9 @@ const countMoons = (ms: GeneratedMoon[]): number =>
  * world from the sprite pool — a random sun, random planets on asymmetric
  * hand-drawn orbits, 0–2 moons each, and a few drifting friends.
  */
+/** Apparent on-screen speed the study aims for at any zoom level (px/s). */
+const MOTION_TARGET_PX_PER_SEC = 26;
+
 export function GeneratorSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   /** Body the camera is currently locked onto (navigator "you are here"). */
@@ -183,6 +186,8 @@ export function GeneratorSystem() {
   const [bgIndex, setBgIndex] = useState(0);
   /** The generator is permanently presented as an ink-on-paper orbit study. */
   const minimal = true;
+  const minimalRef = useRef(minimal);
+  minimalRef.current = minimal;
   /** Runtime-grown system: once the user adds bodies by double-clicking,
       this replaces the seeded config (regenerating resets it). */
   const [extras, setExtras] = useState<SystemConfig | null>(null);
@@ -269,10 +274,24 @@ export function GeneratorSystem() {
     ) {
       return;
     }
+    // Track how fast the camera itself is travelling (px/s, smoothed). Pinning
+    // a deep node magnifies every ancestor's orbit, so this is the only honest
+    // measure of how violent the view feels.
+    if (prev) {
+      const now = performance.now();
+      const dt = Math.max(8, now - (camWriteAtRef.current || now));
+      camWriteAtRef.current = now;
+      const v = (Math.hypot(x - prev.x, y - prev.y) / dt) * 1000;
+      camSpeedRef.current = camSpeedRef.current * 0.82 + v * 0.18;
+    } else {
+      camWriteAtRef.current = performance.now();
+    }
     camWriteRef.current = { x, y, s };
     const controller = cameraRef.current?.instance;
     if (controller) controller.setState(s, x, y);
   };
+  const camSpeedRef = useRef(0);
+  const camWriteAtRef = useRef(0);
 
   /** Latest camera state, so a glide eases from exactly where the camera
       is now — even mid-flight from a previous pick. */
@@ -423,7 +442,9 @@ export function GeneratorSystem() {
       sub-pixel orbit becomes magnified. Hold the whole family tableau still
       while deeply focused; time resumes continuously when focus is released. */
   const freezeDeepMotionRef = useRef(false);
-  freezeDeepMotionRef.current = !chatOpen && focusedId !== null && focusDepth >= 3;
+  // Minimalist mode keeps moving at every depth: its zoom-relative clock keeps
+  // apparent speed steady, so deep focus no longer magnifies jitter.
+  freezeDeepMotionRef.current = !minimal && !chatOpen && focusedId !== null && focusDepth >= 6;
 
   // Flight recorder: keep the last-known world state in the heartbeat, so a
   // killed phone tab still tells us which system it was showing.
@@ -444,6 +465,7 @@ export function GeneratorSystem() {
     let raf = 0;
     let lastNow = performance.now();
     let elapsed = 0;
+    let rate = 1;
     // Phones get a 30fps clock — the ultra-slow orbits look identical and
     // the main thread does half the React work.
     const mobile = window.matchMedia("(max-width: 639px)").matches;
@@ -451,7 +473,35 @@ export function GeneratorSystem() {
     const loop = (now: number) => {
       const dt = Math.min(50, now - lastNow);
       lastNow = now;
-      if (!freezeDeepMotionRef.current) elapsed += dt;
+      // Ease the clock rate towards the zoom-relative target so changing zoom
+      // or focus never snaps the phase of an orbit.
+      let want = desiredMotionRateRef.current;
+      // Closed loop: the camera itself must never travel faster than the
+      // target apparent speed. When a deep node is pinned, its ancestors'
+      // orbits are magnified by the scale and would sling the view around.
+      if (minimalRef.current) {
+        const v = camSpeedRef.current;
+        if (v > 1) {
+          const correction = Math.max(0.08, Math.min(2.4, MOTION_TARGET_PX_PER_SEC / v));
+          want = Math.max(0.0005, Math.min(want, rate * correction));
+        }
+      }
+      // Brake fast, recover gently: a sudden zoom must not let the view lurch.
+      const ease = want < rate ? Math.min(1, dt / 90) : Math.min(1, dt / 520);
+      rate += (want - rate) * ease;
+      if (!freezeDeepMotionRef.current) elapsed += dt * rate;
+      // Per-ring phases: each orbit advances at its own eased rate.
+      if (!freezeDeepMotionRef.current && minimalRef.current) {
+        const phases = bodyPhaseRef.current;
+        const live = liveRateRef.current;
+        for (const [id, target] of bodyRateRef.current) {
+          const prev = live.get(id) ?? target;
+          const step = target < prev ? Math.min(1, dt / 120) : Math.min(1, dt / 480);
+          const r = prev + (target - prev) * step;
+          live.set(id, r);
+          phases.set(id, (phases.get(id) ?? 0) + (dt / 1000) * r);
+        }
+      }
       if (!mobile || now - lastSet >= 33) {
         lastSet = now;
         if (freezeDeepMotionRef.current) setCameraFrame((frame) => frame + 1);
@@ -636,8 +686,20 @@ export function GeneratorSystem() {
     const sy = point ? window.innerHeight / 2 : anchor?.y ?? window.innerHeight / 2;
     const worldX = point?.x ?? (sx - st.positionX) / st.scale;
     const worldY = point?.y ?? (sy - st.positionY) / st.scale;
-    if (focused) focused.scale = nextScale;
-    writeCamera(sx - worldX * nextScale, sy - worldY * nextScale, nextScale);
+    if (focused) {
+      focused.scale = nextScale;
+      focused.from = { x: sx - worldX * nextScale, y: sy - worldY * nextScale, scale: nextScale };
+    }
+    const nx = sx - worldX * nextScale;
+    const ny = sy - worldY * nextScale;
+    // The follow loop reads the live scale from these refs each frame; if they
+    // still held the old scale the button's zoom was reverted on the next tick.
+    viewScaleRef.current = nextScale;
+    stateRef.current = { positionX: nx, positionY: ny, scale: nextScale };
+    writeCamera(nx, ny, nextScale);
+    setViewScale((current) =>
+      Math.abs(current - nextScale) > Math.max(0.018, current * 0.055) ? nextScale : current,
+    );
   };
   const nudgeRef = useRef(nudgeCameraZoom);
   nudgeRef.current = nudgeCameraZoom;
@@ -831,10 +893,85 @@ export function GeneratorSystem() {
     studyPath(minimalLayout.shapeOf.get(m.id) ?? moonStudyShape(m.id), minimalLayout.ring.get(m.id) ?? m.orbitR);
   const minimalBoundaryPath = (id: string) => studyPath(moonStudyShape(id), minimalLayout.reach.get(id) ?? 0);
 
+  /**
+   * Zoom-relative motion (presentation-only): the study should read as alive
+   * at every zoom level. Bodies keep their own geometry and relative periods;
+   * only the shared clock rate changes, derived from how many screen pixels
+   * per second the family currently in view would otherwise travel.
+   */
+  const familyIndex = useMemo(() => {
+    const moonById = new Map<string, GeneratedMoon>();
+    const kids = new Map<string, string[]>();
+    const walk = (moons: GeneratedMoon[], parentId: string) => {
+      kids.set(
+        parentId,
+        moons.map((m) => m.id),
+      );
+      for (const m of moons) {
+        moonById.set(m.id, m);
+        walk(m.moons, m.id);
+      }
+    };
+    kids.set(config.sun.id, config.planets.map((p) => p.id));
+    for (const p of config.planets) walk(p.moons, p.id);
+    return { moonById, kids };
+  }, [config]);
+
+  /** Screen-space orbital speed (px/s) a body would have at clock rate 1. */
+  const screenOrbitSpeed = (id: string): number | null => {
+    const moon = familyIndex.moonById.get(id);
+    if (moon) {
+      const r = minimal ? minimalLayout.ring.get(id) ?? moon.orbitR : moon.orbitR;
+      return moon.period > 0 ? (TAU * r * viewScale) / moon.period : null;
+    }
+    const planet = config.planets.find((p) => p.id === id);
+    if (planet) {
+      const shape = (minimal ? nestedOrbits.get(id) : planet.orbit) ?? planet.orbit;
+      return planet.period > 0 ? (TAU * shape.maxR * viewScale) / planet.period : null;
+    }
+    return null;
+  };
+
+  const desiredMotionRateRef = useRef(1);
+  desiredMotionRateRef.current = 1;
+
+  /**
+   * Per-ring clock (minimalist only). Each orbit runs at its own rate so that
+   * every ring shows roughly the same apparent travel on screen: rings that
+   * are huge at the current zoom (the distant ancestors of a node you are
+   * zoomed into) slow to a near stop, while the local family stays lively.
+   * Rates are eased, and each body keeps its own accumulated phase, so
+   * changing zoom or focus never snaps an orbit.
+   */
+  const bodyRateRef = useRef(new Map<string, number>());
+  const liveRateRef = useRef(new Map<string, number>());
+  const bodyPhaseRef = useRef(new Map<string, number>());
+  const livePhase = (id: string) => bodyPhaseRef.current.get(id) ?? 0;
+  if (minimal) {
+    const rates = new Map<string, number>();
+    const rateFor = (speed: number | null) => {
+      if (!speed || speed <= 0.0001) return 1;
+      // Exponent below 1 keeps a hint of the original variety between rings
+      // instead of making every orbit crawl at exactly the same pace.
+      return Math.min(8, Math.max(0, Math.pow(MOTION_TARGET_PX_PER_SEC / speed, 0.85)));
+    };
+    for (const p of config.planets) {
+      rates.set(p.id, rateFor(screenOrbitSpeed(p.id)));
+      const walk = (moons: GeneratedMoon[]) => {
+        for (const m of moons) {
+          rates.set(m.id, rateFor(screenOrbitSpeed(m.id)));
+          walk(m.moons);
+        }
+      };
+      walk(p.moons);
+    }
+    bodyRateRef.current = rates;
+  }
+
   // Orbit math: bodies advance along their own wobbly closed curves.
   const planetPos = new Map<string, { x: number; y: number }>();
   for (const p of config.planets) {
-    const q = (minimal ? nestedOrbits.get(p.id) ?? p.orbit : p.orbit).pointAt(p.startAngle + (t * TAU) / p.period);
+    const q = (minimal ? nestedOrbits.get(p.id) ?? p.orbit : p.orbit).pointAt(p.startAngle + (livePhase(p.id) * TAU) / p.period);
     planetPos.set(p.id, { x: CENTER + q.x, y: CENTER + q.y });
   }
   const drifterPos = new Map<string, { x: number; y: number }>();
@@ -874,7 +1011,7 @@ export function GeneratorSystem() {
     py: number,
   ): { x: number; y: number } | null => {
     for (const m of moons) {
-      const a = m.startAngle + (t * TAU) / m.period;
+      const a = m.startAngle + (livePhase(m.id) * TAU) / m.period;
       const r = chatPoseMoon(m, px, py, a);
       if (m.id === id) return { x: r.x, y: r.y };
       const sub = moonWorldPos(m.moons, id, r.x, r.y);
@@ -1233,7 +1370,7 @@ export function GeneratorSystem() {
       if (!inFan && !wasSubject && !wasRiding) continue;
       const q = planetPos.get(p.id);
       if (!q) continue;
-      const a = p.startAngle + (t * TAU) / p.period;
+      const a = p.startAngle + (livePhase(p.id) * TAU) / p.period;
       let r: { x: number; y: number; size: number };
       if (inFan && p.id === fanSubj.layout.parentId) {
         r = chatAdjustSubject(p.id, q.x, q.y, p.size);
@@ -2268,7 +2405,7 @@ export function GeneratorSystem() {
     depth = 0,
   ): ReactNode =>
     moons.map((m) => {
-      const a = m.startAngle + (t * TAU) / m.period;
+      const a = m.startAngle + (livePhase(m.id) * TAU) / m.period;
       // The moon's rendered pose (frame-guarded, agrees with the moon
       // bodies) so nested rings center on where it actually is — and
       // the ring breathes toward its fan-arc radius while the moon
@@ -2339,7 +2476,7 @@ export function GeneratorSystem() {
     parentId = "",
   ): ReactNode =>
     moons.map((m) => {
-      const a = m.startAngle + (t * TAU) / m.period;
+      const a = m.startAngle + (livePhase(m.id) * TAU) / m.period;
       const r = chatPoseMoon(m, px, py, a, parentId);
       const chatSized = Math.abs(r.size - m.size) > 0.5;
       const vis = visibilityFor(m.id, r.size);

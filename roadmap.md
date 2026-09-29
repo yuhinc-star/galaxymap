@@ -14,3 +14,7 @@
 - [x] Add a visible bubbly cobalt pulse when focus moves to a node.
 - [ ] Text boxes: user rejected all proposed options (brackets, organic, leader lines) — awaiting their direction
 - [x] Clearer faded vs active node contrast (minimalist)
+
+- [ ] Minimalist: camera jumps to wrong place before settling when zooming (even between close parent/child)
+- [ ] Minimalist: zoom out breaks the view
+- [ ] Minimalist: per-ring (per-generation) motion speed — distant ancestors slow/stop when zoomed into a node
