@@ -619,7 +619,7 @@ export function GeneratorSystem() {
   const nudgeCameraZoom = (factor: number) => {
     const st = stateRef.current;
     if (!st) return;
-    const nextScale = Math.max(0.002, Math.min(96, st.scale * factor));
+    const nextScale = Math.max(0.002, Math.min(minimal ? 40000 : 96, st.scale * factor));
     const focused = followRef.current;
     const point = focused ? bodyPos(focused.id) : null;
     const worldX = point?.x ?? (window.innerWidth / 2 - st.positionX) / st.scale;
@@ -1480,7 +1480,9 @@ export function GeneratorSystem() {
     // bodies naturally need less magnification; tiny descendants get more.
     const desiredBodyPx = Math.min(isMobileView ? 138 : 178, viewport * 0.23);
     const bodyFit = desiredBodyPx / size;
-    const s = Math.min(Math.max(Math.min(familyFit, bodyFit), 0.16), 96);
+    const s = minimal
+      ? Math.min(Math.max(familyFit, 0.002), 40000)
+      : Math.min(Math.max(Math.min(familyFit, bodyFit), 0.16), 96);
     const st = stateRef.current;
     followRef.current = {
       id,
