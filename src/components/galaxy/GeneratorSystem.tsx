@@ -392,7 +392,7 @@ export function GeneratorSystem() {
     }
     const meta = bodyMeta.get(id);
     if (!meta) return { detail: "full", opacity: 1, scale: 1, labelOpacity: 1, ringOpacity: 1, interactive: true };
-    return semanticVisibility({
+    const v = semanticVisibility({
       depth: meta.depth,
       focusDepth,
       apparentSize: (renderedSize ?? meta.size) * viewScale,
@@ -401,6 +401,15 @@ export function GeneratorSystem() {
       mobile: isMobileView,
       generationWindow: chatActive ? 5 : 3,
     });
+    // Minimalist Mode reads as two clear registers: the focused family in
+    // full ink, everything else as a faint trace — no muddy middle greys.
+    if (minimal && v.detail !== "hidden") {
+      const near = familyDistance(focusForVisibility, id) <= 1 || protectedBodies.has(id);
+      return near
+        ? { ...v, opacity: Math.max(v.opacity, 0.9) >= 0.9 ? 1 : v.opacity, ringOpacity: Math.max(v.ringOpacity, 0.85) }
+        : { ...v, opacity: Math.min(v.opacity, 0.18), ringOpacity: Math.min(v.ringOpacity, 0.1), labelOpacity: 0 };
+    }
+    return v;
   };
   /** A parent's own route belongs to the previous family view. Keep the
       parent body as epic context, but quiet that enclosing orbit so the
