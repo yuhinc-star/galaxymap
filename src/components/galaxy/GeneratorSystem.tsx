@@ -49,7 +49,7 @@ import {
 import { ensureSpritesReady, warmSpritePool } from "./spritePool";
 import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 import type { OrbitShapeKind, OrbitShape } from "./orbitShapes";
-import { makeStudyShape, makeStudyOrbit, studyPath } from "./orbitShapes";
+import { makeStudyShape, makeStudyOrbit, studyPath, type StudyShape } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { ChatPanel, type ChatSubjectInfo } from "./ChatPanel";
 import {
