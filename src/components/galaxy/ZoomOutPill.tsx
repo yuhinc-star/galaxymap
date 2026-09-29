@@ -15,14 +15,9 @@ interface ZoomOutPillProps {
 
 /**
  * "Visit the parent" pill: sits at the top of the SuggestionStack whenever
- * the camera is visiting a body that has somewhere to zoom out to. It
- * shows the parent's face and hand-lettered name so the landing spot is
- * never a surprise — one tap glides up one generation with the usual
- * navigation ceremony (hop, golden ring, speech bubble). At the root sun
- * it offers the whole-sky view instead — in chat mode that final step
- * also closes the conversation, so the pill is always available there,
- * stepping the fan up past the chat's root star one generation at a
- * time. Positioning is the stack's job.
+ * the camera is visiting a body that has somewhere to zoom out to. One tap
+ * glides up one generation. Minimalist edition: a thin paper pill with a
+ * small ink marker and quiet display type.
  */
 export function ZoomOutPill({ target, onZoomOut }: ZoomOutPillProps) {
   if (!target) return null;
@@ -32,26 +27,16 @@ export function ZoomOutPill({ target, onZoomOut }: ZoomOutPillProps) {
       onClick={() => onZoomOut(target.id)}
       aria-label={`Zoom out to ${target.name}`}
       title={`Zoom out to ${target.name}`}
-      className="minimal-panel animate-pop-in flex items-center gap-2.5 border bg-space-deep/90 py-1.5 pl-2 pr-4 backdrop-blur-sm transition-opacity hover:opacity-70 active:opacity-50"
+      className="animate-pop-in flex items-center gap-2 rounded-full border border-mini-line bg-mini-paper py-1.5 pl-1.5 pr-4 transition-colors hover:border-mini-ink/60 active:scale-95"
     >
-      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-mini-line">
         {target.img ? (
-          <img
-            src={target.img}
-            alt=""
-            draggable={false}
-            className="h-9 w-9 select-none rounded-full bg-space/60 object-contain p-0.5 ring-1 ring-white/25"
-          />
+          <ArrowUp className="h-3.5 w-3.5 text-mini-ink" strokeWidth={1.5} aria-hidden />
         ) : (
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-space/60 ring-1 ring-white/25">
-            <Sparkles className="h-5 w-5 text-star" aria-hidden />
-          </span>
+          <Sparkles className="h-3.5 w-3.5 text-mini-blue" strokeWidth={1.5} aria-hidden />
         )}
-        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-star shadow">
-          <ArrowUp className="h-3 w-3 text-space-deep" strokeWidth={3} aria-hidden />
-        </span>
       </span>
-      <span className="max-w-[38vw] truncate font-hand text-2xl font-bold uppercase leading-none tracking-wider text-white sm:max-w-52">
+      <span className="max-w-[38vw] truncate font-display text-xs font-normal leading-none tracking-[0.08em] text-mini-ink sm:max-w-52">
         {target.name}
       </span>
     </button>
