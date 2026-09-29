@@ -256,7 +256,7 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
         transform: "translate(-50%, -50%)",
         zIndex: active || highlighted || chosen ? 30 : undefined,
         opacity: visualOpacity,
-        transition: "opacity 0.5s",
+        transition: "opacity 0.55s ease, transform 0.55s ease",
         ["--semantic-scale" as string]: visualScale,
       }}
     >
@@ -283,8 +283,8 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
         >
           {chosen ? (
             <>
-              <circle r={dot / 2} className="fill-mini-blue" style={{ transition: "r 0.5s" }} />
-              <circle r={dot / 2 + 5 / sc} fill="none" className="stroke-mini-blue" strokeWidth={1.5 / sc} />
+              <circle r={dot / 2} className="fill-mini-blue" style={{ transition: "r 0.55s ease, fill 0.55s ease" }} />
+              <circle r={dot / 2 + 5 / sc} fill="none" className="stroke-mini-blue" strokeWidth={1.5 / sc} style={{ transition: "r 0.55s ease, opacity 0.55s ease" }} />
             </>
           ) : (
             <circle

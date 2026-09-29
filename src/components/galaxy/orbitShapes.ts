@@ -158,17 +158,41 @@ export function makeOrbitShape(
 export interface StudyShape {
   /** Radius about the nucleus at polar angle a, for unit size. */
   unit: (a: number) => number;
+  /** Visual bounds at unit size, used to center eccentric studies correctly. */
+  bounds: { minX: number; maxX: number; minY: number; maxY: number };
 }
 
-export function makeStudyShape(seed: number, ecc = 0.55): StudyShape {
+export function makeStudyShape(seed: number, ecc = 0.44, squareness = 0): StudyShape {
   const rand = mulberry32(seed ^ 0x51ed);
   const phi = (-35 + (rand() - 0.5) * 70) * (Math.PI / 180); // nucleus leans upper-right
-  const h = 0.035 + rand() * 0.03;
+  const h = 0.025 + rand() * 0.025;
   const hp = rand() * TAU;
   const norm = 1 - ecc * ecc;
-  return {
-    unit: (a) => (norm / (1 + ecc * Math.cos(a - phi))) * (1 + h * Math.cos(2 * a + hp)),
+  const cornerPower = 2 + Math.max(0, Math.min(1, squareness)) * 2.8;
+  const cornerRotation = rand() * TAU;
+  const unit = (a: number) => {
+    const eccentric = norm / (1 + ecc * Math.cos(a - phi));
+    const ca = Math.abs(Math.cos(a - cornerRotation));
+    const sa = Math.abs(Math.sin(a - cornerRotation));
+    const roundedSquare = Math.pow(Math.pow(ca, cornerPower) + Math.pow(sa, cornerPower), -1 / cornerPower);
+    const contour = 1 + (roundedSquare - 1) * squareness;
+    return eccentric * contour * (1 + h * Math.cos(2 * a + hp));
   };
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < 360; i++) {
+    const a = (i / 360) * TAU;
+    const r = unit(a);
+    const x = r * Math.cos(a);
+    const y = r * Math.sin(a);
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+  return { unit, bounds: { minX, maxX, minY, maxY } };
 }
 
 function pathFrom(fn: (a: number) => number, N = 180) {
