@@ -451,7 +451,10 @@ export function GeneratorSystem() {
     const loop = (now: number) => {
       const dt = Math.min(50, now - lastNow);
       lastNow = now;
-      if (!freezeDeepMotionRef.current) elapsed += dt;
+      // Ease the clock rate towards the zoom-relative target so changing zoom
+      // or focus never snaps the phase of an orbit.
+      rate += (desiredMotionRateRef.current - rate) * Math.min(1, dt / 420);
+      if (!freezeDeepMotionRef.current) elapsed += dt * rate;
       if (!mobile || now - lastSet >= 33) {
         lastSet = now;
         if (freezeDeepMotionRef.current) setCameraFrame((frame) => frame + 1);
