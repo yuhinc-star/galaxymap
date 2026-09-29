@@ -2255,7 +2255,7 @@ export function GeneratorSystem() {
             transform={`translate(${px} ${py}) scale(${s})`}
           >
             <path
-              d={minimal ? studyPath(moonStudyShape(m.id), m.orbitR * 1.12) : m.ringD}
+              d={minimal ? minimalRingPath(m) : m.ringD}
               fill="none"
               stroke={minimal ? "var(--mini-line)" : "white"}
               strokeOpacity={minimal ? 0.85 : 0.72}
@@ -2278,7 +2278,7 @@ export function GeneratorSystem() {
           {minimal && !chatActive && m.moons.length > 0 && (
             <path
               transform={`translate(${pose.x} ${pose.y})`}
-              d={studyPath(moonStudyShape(m.id), m.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.12 + c.size * 0.65), 0) * 1.16)}
+              d={minimalBoundaryPath(m.id)}
               fill="none"
               stroke="var(--mini-ink)"
               strokeWidth={2.2 / Math.max(1e-4, viewScale)}
@@ -2479,8 +2479,7 @@ export function GeneratorSystem() {
                   {minimal && !chatActive && config.planets.map((p) => {
                     if (p.moons.length === 0 || visibilityFor(p.id).detail === "hidden") return null;
                     const q = planetPos.get(p.id)!;
-                    const r = p.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.12 + c.size * 0.65), 0) * 1.16;
-                    return <path key={`mb-${p.id}`} transform={`translate(${q.x} ${q.y})`} d={studyPath(moonStudyShape(p.id), r)} fill="none" stroke="var(--mini-ink)" strokeWidth={2.2 / Math.max(1e-4, viewScale)} opacity={localRingOpacity(p.id, visibilityFor(p.id).ringOpacity)} />;
+                    return <path key={`mb-${p.id}`} transform={`translate(${q.x} ${q.y})`} d={minimalBoundaryPath(p.id)} fill="none" stroke="var(--mini-ink)" strokeWidth={2.2 / Math.max(1e-4, viewScale)} opacity={localRingOpacity(p.id, visibilityFor(p.id).ringOpacity)} />;
                   })}
                   {/* Moon rings follow their parent body — planets, and
                       moons with mini-moons of their own */}

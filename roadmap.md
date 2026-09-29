@@ -12,3 +12,4 @@
 - [x] Repair the plus and minus controls so focus tracking preserves button-driven zoom.
 - [x] Remove squared and inward-pinched minimalist contours; keep child orbits smoothly convex.
 - [x] Add a visible bubbly cobalt pulse when focus moves to a node.
+- [ ] Present minimalist text-box design options (replace bracket frames)
