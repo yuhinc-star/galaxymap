@@ -406,7 +406,7 @@ export function GeneratorSystem() {
     if (minimal && v.detail !== "hidden") {
       const near = familyDistance(focusForVisibility, id) <= 1 || protectedBodies.has(id);
       return near
-        ? { ...v, opacity: Math.max(v.opacity, 0.9) >= 0.9 ? 1 : v.opacity, ringOpacity: Math.max(v.ringOpacity, 0.85) }
+        ? { ...v, opacity: v.opacity >= 0.5 ? 1 : v.opacity, ringOpacity: Math.max(v.ringOpacity, 0.85) }
         : { ...v, opacity: Math.min(v.opacity, 0.18), ringOpacity: Math.min(v.ringOpacity, 0.1), labelOpacity: 0 };
     }
     return v;
