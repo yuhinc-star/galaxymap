@@ -619,7 +619,7 @@ export function GeneratorSystem() {
   const nudgeCameraZoom = (factor: number) => {
     const st = stateRef.current;
     if (!st) return;
-    const nextScale = Math.max(0.002, Math.min(minimal ? 40000 : 96, st.scale * factor));
+    const nextScale = Math.max(0.002, Math.min(96, st.scale * factor));
     const focused = followRef.current;
     const point = focused ? bodyPos(focused.id) : null;
     const worldX = point?.x ?? (window.innerWidth / 2 - st.positionX) / st.scale;
@@ -751,6 +751,10 @@ export function GeneratorSystem() {
       const v = Math.abs(hash) % 5;
       return v === 0 ? 0.5 : v === 1 ? 0.42 : v === 2 ? 0.34 : v === 3 ? 0.28 : 0.22;
     };
+    // Family scale stays anchored to the generated sizes (so zoom depth and
+    // rendering precision are unchanged); only the arrangement is regularised.
+    const naturalReach = (b: { moons: GeneratedMoon[] }) =>
+      b.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.12 + c.size * 0.65), 0) * 1.16;
     const layFamily = (parentId: string, B: number, kids: GeneratedMoon[]) => {
       reach.set(parentId, B);
       if (kids.length === 0) return;
@@ -763,13 +767,10 @@ export function GeneratorSystem() {
         const f = fs[i]!;
         const inner = i === 0 ? f : f - fs[i - 1]!;
         const outer = i === k - 1 ? 1 - f : fs[i + 1]! - f;
-        const gap = Math.min(inner, outer) * B * minUnit(eP);
+        void inner; void outer; void eP;
         ring.set(c.id, f * B);
         shapeOf.set(c.id, shape);
-        // A steady generational ratio (0.24–0.36 of the parent) keeps every
-        // depth reading as the same study, just smaller.
-        const fit = (gap * FILL) / maxUnit(eccOf(c.id));
-        layFamily(c.id, Math.min(B * 0.36, Math.max(B * 0.24, fit)), c.moons);
+        layFamily(c.id, naturalReach(c), c.moons);
       });
     };
     const ps = [...config.planets].sort((a, b) => a.orbit.maxR - b.orbit.maxR);
@@ -785,7 +786,7 @@ export function GeneratorSystem() {
       const inner = i === 0 ? base[0]! * 0.6 : base[i]! - base[i - 1]!;
       const outer = i === n - 1 ? R - base[i]! : base[i + 1]! - base[i]!;
       const gap = Math.min(inner, outer) * minUnit(0.42);
-      layFamily(p.id, (gap * FILL) / maxUnit(eccOf(p.id)), p.moons);
+      void gap; layFamily(p.id, naturalReach(p), p.moons);
     });
     return { ring, reach, shapeOf };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1480,9 +1481,7 @@ export function GeneratorSystem() {
     // bodies naturally need less magnification; tiny descendants get more.
     const desiredBodyPx = Math.min(isMobileView ? 138 : 178, viewport * 0.23);
     const bodyFit = desiredBodyPx / size;
-    const s = minimal
-      ? Math.min(Math.max(familyFit, 0.002), 40000)
-      : Math.min(Math.max(Math.min(familyFit, bodyFit), 0.16), 96);
+    const s = Math.min(Math.max(minimal ? familyFit : Math.min(familyFit, bodyFit), minimal ? 0.002 : 0.16), 96);
     const st = stateRef.current;
     followRef.current = {
       id,
@@ -2377,7 +2376,7 @@ export function GeneratorSystem() {
         key={`${seed}-${planetCount}`}
         initialScale={0.36}
         minScale={chatOpen && fanSubj ? Math.min(fanSubj.layout.camera.scale, 0.002) : 0.002}
-        maxScale={minimal ? 40000 : 96}
+        maxScale={96}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
