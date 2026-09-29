@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { GeneratorSystem } from "@/components/galaxy/GeneratorSystem";
 
 export const Route = createFileRoute("/minimalist")({
@@ -27,5 +27,15 @@ export const Route = createFileRoute("/minimalist")({
 });
 
 function Generator() {
-  return <GeneratorSystem />;
+  return (
+    <>
+      <GeneratorSystem />
+      <Link
+        to="/generator"
+        className="fixed bottom-3 left-1/2 z-[60] -translate-x-1/2 rounded-full border border-mini-line bg-mini-paper/90 px-3 py-1 font-mini text-[11px] tracking-wide text-mini-ink hover:border-mini-ink"
+      >
+        Galaxy mode
+      </Link>
+    </>
+  );
 }
