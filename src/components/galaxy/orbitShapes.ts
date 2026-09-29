@@ -195,8 +195,9 @@ function pathFrom(fn: (a: number) => number, N = 180) {
     const a = (i / N) * TAU;
     const r = fn(a);
     // Precision follows the curve's size so tiny deep contours stay smooth.
-    const dp = Math.abs(r) < 20 ? 3 : Math.abs(r) < 200 ? 2 : 1;
-    d += `${i === 0 ? "M" : "L"}${(r * Math.cos(a)).toFixed(dp)} ${(r * Math.sin(a)).toFixed(dp)}`;
+    const x = +(r * Math.cos(a)).toPrecision(5);
+    const y = +(r * Math.sin(a)).toPrecision(5);
+    d += `${i === 0 ? "M" : "L"}${x} ${y}`;
   }
   return `${d} Z`;
 }
