@@ -111,7 +111,7 @@ export function BodyInfoPanel({
           className="h-14 w-14 shrink-0 select-none rounded-full bg-space/60 object-contain p-1 ring-2 ring-star/70"
         />
         <div className="min-w-0 flex-1">
-          <span className="font-hand text-sm font-bold uppercase tracking-[0.28em] text-white/60">
+          <span className="font-display text-sm font-bold uppercase tracking-[0.28em] text-mini-ink/60">
             {info.kindLabel}
           </span>
           {editing ? (
@@ -126,13 +126,13 @@ export function BodyInfoPanel({
                   if (e.key === "Enter") commitEdit();
                   if (e.key === "Escape") setEditing(false);
                 }}
-                className="w-full min-w-0 rounded-xl border-2 border-dashed border-star/70 bg-space/70 px-2 py-0.5 font-hand text-2xl font-bold uppercase leading-tight tracking-wider text-star outline-none placeholder:text-white/30 focus:border-star"
+                className="w-full min-w-0 rounded-lg border border-mini-line bg-mini-paper px-2 py-0.5 font-display text-base font-normal leading-tight tracking-[0.06em] text-mini-ink outline-none placeholder:text-mini-ink/30 focus:border-mini-blue"
                 placeholder="Name it…"
               />
               <div className="flex items-center gap-1.5">
                 <span
-                  className={`font-hand text-base font-bold uppercase tracking-widest ${
-                    draft.length >= MAX_BODY_NAME ? "text-star" : "text-white/45"
+                  className={`font-display text-base font-bold uppercase tracking-widest ${
+                    draft.length >= MAX_BODY_NAME ? "text-mini-blue" : "text-mini-ink/45"
                   }`}
                 >
                   {draft.length}/{MAX_BODY_NAME}
@@ -152,7 +152,7 @@ export function BodyInfoPanel({
                   aria-label="Keep the old name"
                   title="Cancel"
                   onClick={() => setEditing(false)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/20 hover:text-white"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-mini-ink/70 transition-colors hover:bg-white/20 hover:text-mini-ink"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -162,7 +162,7 @@ export function BodyInfoPanel({
             <div className="flex items-start gap-1">
               {/* Long names wrap whole words; an unbroken string still
                   breaks anywhere instead of flooding the panel. */}
-              <h2 className="min-w-0 font-hand text-3xl font-bold uppercase leading-tight tracking-wider text-star [overflow-wrap:anywhere]">
+              <h2 className="min-w-0 font-display text-3xl font-bold uppercase leading-tight tracking-wider text-mini-blue [overflow-wrap:anywhere]">
                 &ldquo;{info.name}&rdquo;
               </h2>
               {onRename && (
@@ -171,7 +171,7 @@ export function BodyInfoPanel({
                   aria-label={`Rename ${info.name}`}
                   title="Give it a new name"
                   onClick={startEdit}
-                  className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-star/20 hover:text-star"
+                  className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-mini-ink/55 transition-colors hover:bg-star/20 hover:text-mini-blue"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
@@ -183,7 +183,7 @@ export function BodyInfoPanel({
           type="button"
           aria-label="Close the info panel"
           onClick={onClose}
-          className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/20 hover:text-white sm:h-7 sm:w-7"
+          className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-mini-ink/80 transition-colors hover:bg-white/20 hover:text-white sm:h-7 sm:w-7"
         >
           <X className="h-4 w-4" />
         </button>
@@ -191,7 +191,7 @@ export function BodyInfoPanel({
 
       <div className="flex flex-col gap-3 overflow-y-auto overscroll-contain px-4 pb-4 pt-1 [touch-action:pan-y]">
         {info.line && (
-          <p className="rounded-2xl border-2 border-dashed border-white/25 px-3 py-2 font-display text-xs font-medium uppercase tracking-[0.18em] leading-snug text-white/90">
+          <p className="rounded-2xl border-2 border-dashed border-mini-line25 px-3 py-2 font-display text-xs font-medium uppercase tracking-[0.18em] leading-snug text-mini-ink/90">
             {info.line}
           </p>
         )}
@@ -208,9 +208,9 @@ export function BodyInfoPanel({
         )}
 
         <section>
-          <h3 className="font-hand text-xl font-bold uppercase tracking-[0.18em] text-white/70">
+          <h3 className="font-display text-xs font-normal tracking-[0.08em] text-mini-ink/60">
             {info.childrenLabel}
-            <span className="ml-1.5 text-star">
+            <span className="ml-1.5 text-mini-blue">
               {info.children.length}/{info.childrenCap}
             </span>
           </h3>
@@ -221,7 +221,7 @@ export function BodyInfoPanel({
                   <button
                     type="button"
                     onClick={() => onSelect(c.id)}
-                    className="flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-left transition-colors hover:bg-white/10 sm:py-1"
+                    className="flex w-full items-center gap-2.5 rounded-full px-2 py-1.5 text-left transition-colors hover:bg-mini-ink/5 sm:py-1"
                   >
                     <img
                       src={c.img}
@@ -231,7 +231,7 @@ export function BodyInfoPanel({
                     />
                     <span
                       title={c.name}
-                      className="min-w-0 flex-1 truncate font-hand text-lg font-bold uppercase leading-none tracking-wider text-white"
+                      className="min-w-0 flex-1 truncate font-display text-sm font-normal leading-none tracking-[0.06em] text-mini-ink"
                     >
                       &ldquo;{c.name}&rdquo;
                     </span>
@@ -240,7 +240,7 @@ export function BodyInfoPanel({
               ))}
             </ul>
           ) : (
-            <p className="mt-1 font-hand text-lg font-bold uppercase tracking-wider text-white/40">
+            <p className="mt-1 font-display text-xs font-normal tracking-[0.08em] text-mini-ink/40">
                No child nodes
             </p>
           )}
