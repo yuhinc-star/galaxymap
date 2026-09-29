@@ -653,10 +653,26 @@ export function GeneratorSystem() {
     recordCrashEvent("chat-close", {});
   };
 
+  // Minimalist Mode: one shared orientation per system, every planet ring a
+  // scaled copy about the nucleus, plus a confident enclosing boundary.
+  const nestedOrbits = useMemo(() => {
+    const rot = -0.55 + ((seed % 997) / 997 - 0.5) * 0.9;
+    const m = new Map<string, OrbitShape>();
+    let outer = 0;
+    for (const p of config.planets) {
+      const o = makeNestedOrbit(p.orbit.maxR * 0.86, rot);
+      m.set(p.id, o);
+      const reach = p.orbit.maxR * 0.86 + p.moons.reduce((a, mm) => Math.max(a, mm.orbitR + mm.size), 0);
+      outer = Math.max(outer, reach);
+    }
+    const boundary = makeNestedOrbit(outer * 1.12 + 60, rot, 0.035);
+    return Object.assign(m, { boundary });
+  }, [config.planets, seed]);
+
   // Orbit math: bodies advance along their own wobbly closed curves.
   const planetPos = new Map<string, { x: number; y: number }>();
   for (const p of config.planets) {
-    const q = p.orbit.pointAt(p.startAngle + (t * TAU) / p.period);
+    const q = (minimal ? nestedOrbits.get(p.id) ?? p.orbit : p.orbit).pointAt(p.startAngle + (t * TAU) / p.period);
     planetPos.set(p.id, { x: CENTER + q.x, y: CENTER + q.y });
   }
   const drifterPos = new Map<string, { x: number; y: number }>();
@@ -2104,11 +2120,11 @@ export function GeneratorSystem() {
               stays free for the appear/disappear animation */}
           <g className="semantic-orbit" opacity={localRingOpacity(m.id, vis.ringOpacity)} transform={`translate(${px} ${py}) scale(${s})`}>
             <path
-              d={m.ringD}
+              d={minimal ? `M ${m.orbitR} 0 A ${m.orbitR} ${m.orbitR} 0 1 0 ${-m.orbitR} 0 A ${m.orbitR} ${m.orbitR} 0 1 0 ${m.orbitR} 0 Z` : m.ringD}
               fill="none"
               stroke={minimal ? "var(--mini-line)" : "white"}
               strokeOpacity={minimal ? 0.85 : 0.72}
-              strokeWidth={(minimal ? (depth === 0 ? 1.8 : 1.3) : depth === 0 ? 6.5 : 5) / (s * lineScale)}
+              strokeWidth={minimal ? 1.1 / (s * Math.max(1e-4, viewScale)) : (depth === 0 ? 6.5 : 5) / (s * lineScale)}
               strokeDasharray={
                 minimal ? undefined : depth === 0
                   ? `${(22 / (s * lineScale)).toFixed(1)} ${(17 / (s * lineScale)).toFixed(1)}`
@@ -2124,6 +2140,17 @@ export function GeneratorSystem() {
               }
             />
           </g>
+          {minimal && m.moons.length > 0 && (
+            <circle
+              cx={pose.x}
+              cy={pose.y}
+              r={m.moons.reduce((a, c) => Math.max(a, c.orbitR + c.size * 0.9), 0) * 1.12}
+              fill="none"
+              stroke="var(--mini-ink)"
+              strokeWidth={2.2 / Math.max(1e-4, viewScale)}
+              opacity={localRingOpacity(m.id, vis.ringOpacity)}
+            />
+          )}
           {renderMoonRings(m.moons, pose.x, pose.y, m.id, depth + 1)}
         </Fragment>
       );
@@ -2282,11 +2309,11 @@ export function GeneratorSystem() {
                         transform={`translate(${CENTER} ${CENTER}) scale(${s})`}
                       >
                         <path
-                          d={p.orbit.d}
+                          d={minimal ? nestedOrbits.get(p.id)?.d ?? p.orbit.d : p.orbit.d}
                           fill="none"
                           stroke={minimal ? "var(--mini-line)" : "white"}
                           strokeOpacity={minimal ? 0.9 : p.ringOpacity}
-                          strokeWidth={(minimal ? 2.4 : p.ringWidth) / (s * lineScale)}
+                          strokeWidth={minimal ? 1.3 / (s * Math.max(1e-4, viewScale)) : p.ringWidth / (s * lineScale)}
                           strokeDasharray={minimal ? undefined : p.dash
                             .split(" ")
                             .map((v) => (+v / (s * lineScale)).toFixed(1))
@@ -2303,16 +2330,23 @@ export function GeneratorSystem() {
                       </g>
                     );
                   })}
-                  {/* Minimalist Mode: one confident ink boundary enclosing the system */}
-                  {minimal && config.planets.length > 0 && (() => {
-                    const outer = config.planets[config.planets.length - 1]!;
-                    const lineScale = Math.max(1, viewScale);
-                    return (
-                      <g transform={`translate(${CENTER} ${CENTER}) scale(1.16) rotate(14)`}>
-                        <path d={outer.orbit.d} fill="none" stroke="var(--mini-ink)" strokeWidth={5.5 / (1.16 * lineScale)} />
-                      </g>
-                    );
-                  })()}
+                  {/* Minimalist Mode: one confident ink boundary enclosing the system,
+                      and a miniature boundary around each planet's own family */}
+                  {minimal && (
+                    <path
+                      d={nestedOrbits.boundary.d}
+                      transform={`translate(${CENTER} ${CENTER})`}
+                      fill="none"
+                      stroke="var(--mini-ink)"
+                      strokeWidth={3 / Math.max(1e-4, viewScale)}
+                    />
+                  )}
+                  {minimal && config.planets.map((p) => {
+                    if (p.moons.length === 0 || visibilityFor(p.id).detail === "hidden") return null;
+                    const q = planetPos.get(p.id)!;
+                    const r = p.moons.reduce((a, c) => Math.max(a, c.orbitR + c.size * 0.9), 0) * 1.12;
+                    return <circle key={`mb-${p.id}`} cx={q.x} cy={q.y} r={r} fill="none" stroke="var(--mini-ink)" strokeWidth={2.2 / Math.max(1e-4, viewScale)} opacity={localRingOpacity(p.id, visibilityFor(p.id).ringOpacity)} />;
+                  })}
                   {/* Moon rings follow their parent body — planets, and
                       moons with mini-moons of their own */}
                   {config.planets.map((p) => {
