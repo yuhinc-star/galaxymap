@@ -666,7 +666,7 @@ export function GeneratorSystem() {
     const reach = outerP ? outerP.orbit.maxR + outerP.moons.reduce((a, mm) => Math.max(a, mm.orbitR * 1.5 + mm.size), outerP.size * 0.5) : 600;
     // Scale R so the boundary's *near* side still clears the outer family.
     const R = reach * 1.22;
-    const innerR = Math.max(config.sun.size * 0.9, R * 0.1);
+    const innerR = Math.max(config.sun.size * 1.1, R * 0.2);
     ps.forEach((p, i) => {
       // Gaps widen outward, like the studies' growing crescents.
       const f = Math.pow((i + 1) / (n + 0.9), 0.92);
@@ -2303,6 +2303,7 @@ export function GeneratorSystem() {
                   height={WORLD}
                   viewBox={`0 0 ${WORLD} ${WORLD}`}
                   className="pointer-events-none absolute inset-0"
+                  overflow="visible"
                   aria-hidden
                 >
                   {config.planets.map((p) => {

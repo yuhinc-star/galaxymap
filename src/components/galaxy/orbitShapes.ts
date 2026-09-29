@@ -160,7 +160,7 @@ export interface StudyShape {
   unit: (a: number) => number;
 }
 
-export function makeStudyShape(seed: number, ecc = 0.42): StudyShape {
+export function makeStudyShape(seed: number, ecc = 0.55): StudyShape {
   const rand = mulberry32(seed ^ 0x51ed);
   const phi = (-35 + (rand() - 0.5) * 70) * (Math.PI / 180); // nucleus leans upper-right
   const h = 0.035 + rand() * 0.03;
@@ -183,8 +183,8 @@ function pathFrom(fn: (a: number) => number, N = 180) {
 
 /** Orbit at fraction f (0 = hugging the nucleus, 1 = the boundary). */
 export function makeStudyOrbit(shape: StudyShape, R: number, innerR: number, f: number): OrbitShape {
-  const inner = makeStudyShape(7, 0.18);
-  const rad = (a: number) => (1 - f) * innerR * inner.unit(a) / 0.968 + f * R * shape.unit(a);
+  // The innermost ring is the same egg, smaller — the nucleus sits near its narrow end too.
+  const rad = (a: number) => ((1 - f) * innerR + f * R) * shape.unit(a) + (1 - f) * f * innerR * 0.6;
   return {
     kind: "tilt",
     d: pathFrom(rad),
