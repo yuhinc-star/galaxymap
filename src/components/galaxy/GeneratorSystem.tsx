@@ -742,7 +742,7 @@ export function GeneratorSystem() {
     const shapeOf = new Map<string, StudyShape>();
     const INNER = 0.36;
     const OUTER = 0.8;
-    const FILL = 0.44; // share of the free gap a miniature may occupy
+    const FILL = 0.82; // share of the free gap (as radius) a miniature may occupy
     const minUnit = (e: number) => (1 - e) * 0.95;
     const maxUnit = (e: number) => (1 + e) * 1.05;
     const eccOf = (id: string) => {
@@ -1276,6 +1276,12 @@ export function GeneratorSystem() {
    * local view mostly empty space.
    */
   const frameRadius = (id: string): number => {
+    // Minimalist framing follows the proportion system: a family fills the
+    // view by its boundary; a leaf keeps a calm local window around it.
+    if (minimal && id !== config.sun.id) {
+      const B = minimalLayout.reach.get(id);
+      if (B) return B * 1.25;
+    }
     if (id === config.sun.id) {
       // Every planet may have been waved goodbye — frame just the sun.
       if (config.planets.length === 0) return config.sun.size * 1.2;
