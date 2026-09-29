@@ -656,7 +656,7 @@ export function GeneratorSystem() {
   // Minimalist Mode: one shared orientation per system, every planet ring a
   // scaled copy about the nucleus, plus a confident enclosing boundary.
   const nestedOrbits = useMemo(() => {
-    const shape = makeStudyShape(seed);
+    const shape = makeStudyShape(seed, 0.42);
     const m = new Map<string, OrbitShape>();
     const ps = [...config.planets].sort((a, b) => a.orbit.maxR - b.orbit.maxR);
     const n = ps.length;
@@ -664,11 +664,12 @@ export function GeneratorSystem() {
     const outerP = ps[n - 1];
     const reach = outerP ? outerP.orbit.maxR + outerP.moons.reduce((a, mm) => Math.max(a, mm.orbitR * 1.5 + mm.size), outerP.size * 0.5) : 600;
     // Scale R so the boundary's *near* side still clears the outer family.
-    const R = reach * 1.22;
-    const innerR = Math.max(config.sun.size * 1.1, R * 0.2);
+    const R = reach * 1.14;
+    const innerR = Math.max(config.sun.size * 0.95, R * 0.15);
     ps.forEach((p, i) => {
-      // Gaps widen outward, like the studies' growing crescents.
-      const f = (i + 0.6) / (n + 0.2);
+      // Keep the inner rings legible without leaving the outer half empty.
+      const u = (i + 0.75) / (n + 0.35);
+      const f = 0.06 + 0.9 * Math.pow(u, 0.82);
       m.set(p.id, makeStudyOrbit(shape, R, innerR, f));
     });
     return Object.assign(m, { boundary: studyPath(shape, R), shape, radius: R });
@@ -679,20 +680,34 @@ export function GeneratorSystem() {
   const fitMinimalSystem = () => {
     const viewportW = stripRef.current?.clientWidth ?? window.innerWidth;
     const viewportH = stripRef.current?.clientHeight ?? window.innerHeight;
-    const boundaryExtent = nestedOrbits.radius * 1.72;
+    const b = nestedOrbits.shape.bounds;
+    const studyW = (b.maxX - b.minX) * nestedOrbits.radius;
+    const studyH = (b.maxY - b.minY) * nestedOrbits.radius;
     const s = Math.max(
       0.002,
-      Math.min(0.36, (Math.min(viewportW, viewportH) * 0.86) / (boundaryExtent * 2)),
+      Math.min(0.42, Math.min((viewportW * 0.82) / studyW, (viewportH * 0.82) / studyH)),
     );
+    const visualCx = CENTER + ((b.minX + b.maxX) / 2) * nestedOrbits.radius;
+    const visualCy = CENTER + ((b.minY + b.maxY) / 2) * nestedOrbits.radius;
     followRef.current = null;
     setFocusedId(null);
     setInfoId(null);
-    writeCamera(viewportW / 2 - CENTER * s, viewportH / 2 - CENTER * s, s);
+    writeCamera(viewportW / 2 - visualCx * s, viewportH / 2 - visualCy * s, s);
   };
 
-  /** Moon offset from its parent: a circle in storybook, the study egg in Minimalist Mode. */
+  /** Deeper contours vary between eggs and soft boxes, deterministically. */
+  const moonStudyShape = (id: string) => {
+    let hash = seed ^ 0x7f4a7c15;
+    for (let i = 0; i < id.length; i++) hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
+    const variant = Math.abs(hash) % 5;
+    const squareness = variant === 0 ? 0.78 : variant === 1 ? 0.48 : variant === 2 ? 0.24 : 0;
+    const eccentricity = variant === 3 ? 0.5 : variant === 4 ? 0.28 : 0.34;
+    return makeStudyShape(hash, eccentricity, squareness);
+  };
+
+  /** Moon offset from its parent follows that moon's own stable contour. */
   const moonOff = (m: GeneratedMoon, a: number) => {
-    const r = minimal ? m.orbitR * nestedOrbits.shape.unit(a) * 1.18 : m.orbitR;
+    const r = minimal ? m.orbitR * moonStudyShape(m.id).unit(a) * 1.12 : m.orbitR;
     return { x: r * Math.cos(a), y: r * Math.sin(a) };
   };
 
@@ -1242,7 +1257,7 @@ export function GeneratorSystem() {
       followRef.current = null;
       return;
     }
-    const p = Math.min(1, (performance.now() - f.startAt) / 650);
+    const p = Math.min(1, (performance.now() - f.startAt) / 900);
     if (p >= 1) {
       // The glide is over: the zoom level belongs entirely to the user from
       // here on. Re-imposing the captured scale each frame is what fought
@@ -1255,8 +1270,8 @@ export function GeneratorSystem() {
       );
       return;
     }
-    // easeInOutCubic
-    const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+    // Quintic easing makes focus changes deliberate without snapping midway.
+    const e = p < 0.5 ? 16 * p ** 5 : 1 - Math.pow(-2 * p + 2, 5) / 2;
     const s = f.from.scale + (f.scale - f.from.scale) * e;
     const tx = window.innerWidth / 2 - q.x * s;
     const ty = window.innerHeight / 2 - q.y * s;
@@ -2159,7 +2174,7 @@ export function GeneratorSystem() {
             transform={`translate(${px} ${py}) scale(${s})`}
           >
             <path
-              d={minimal ? studyPath(nestedOrbits.shape, m.orbitR * 1.18) : m.ringD}
+              d={minimal ? studyPath(moonStudyShape(m.id), m.orbitR * 1.12) : m.ringD}
               fill="none"
               stroke={minimal ? "var(--mini-line)" : "white"}
               strokeOpacity={minimal ? 0.85 : 0.72}
@@ -2182,7 +2197,7 @@ export function GeneratorSystem() {
           {minimal && !chatActive && m.moons.length > 0 && (
             <path
               transform={`translate(${pose.x} ${pose.y})`}
-              d={studyPath(nestedOrbits.shape, m.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.18 + c.size * 0.7), 0) * 1.22)}
+              d={studyPath(moonStudyShape(m.id), m.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.12 + c.size * 0.65), 0) * 1.16)}
               fill="none"
               stroke="var(--mini-ink)"
               strokeWidth={2.2 / Math.max(1e-4, viewScale)}
@@ -2383,8 +2398,8 @@ export function GeneratorSystem() {
                   {minimal && !chatActive && config.planets.map((p) => {
                     if (p.moons.length === 0 || visibilityFor(p.id).detail === "hidden") return null;
                     const q = planetPos.get(p.id)!;
-                    const r = p.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.18 + c.size * 0.7), 0) * 1.22;
-                    return <path key={`mb-${p.id}`} transform={`translate(${q.x} ${q.y})`} d={studyPath(nestedOrbits.shape, r)} fill="none" stroke="var(--mini-ink)" strokeWidth={2.2 / Math.max(1e-4, viewScale)} opacity={localRingOpacity(p.id, visibilityFor(p.id).ringOpacity)} />;
+                    const r = p.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.12 + c.size * 0.65), 0) * 1.16;
+                    return <path key={`mb-${p.id}`} transform={`translate(${q.x} ${q.y})`} d={studyPath(moonStudyShape(p.id), r)} fill="none" stroke="var(--mini-ink)" strokeWidth={2.2 / Math.max(1e-4, viewScale)} opacity={localRingOpacity(p.id, visibilityFor(p.id).ringOpacity)} />;
                   })}
                   {/* Moon rings follow their parent body — planets, and
                       moons with mini-moons of their own */}
