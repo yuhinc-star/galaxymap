@@ -49,7 +49,7 @@ import {
 import { ensureSpritesReady, warmSpritePool } from "./spritePool";
 import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
 import type { OrbitShapeKind, OrbitShape } from "./orbitShapes";
-import { makeNestedOrbit } from "./orbitShapes";
+import { makeStudyShape, makeStudyOrbit, studyPath } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { ChatPanel, type ChatSubjectInfo } from "./ChatPanel";
 import {
@@ -657,18 +657,29 @@ export function GeneratorSystem() {
   // Minimalist Mode: one shared orientation per system, every planet ring a
   // scaled copy about the nucleus, plus a confident enclosing boundary.
   const nestedOrbits = useMemo(() => {
-    const rot = -0.55 + ((seed % 997) / 997 - 0.5) * 0.9;
+    const shape = makeStudyShape(seed);
     const m = new Map<string, OrbitShape>();
-    let outer = 0;
-    for (const p of config.planets) {
-      const o = makeNestedOrbit(p.orbit.maxR * 0.86, rot);
-      m.set(p.id, o);
-      const reach = p.orbit.maxR * 0.86 + p.moons.reduce((a, mm) => Math.max(a, mm.orbitR + mm.size), 0);
-      outer = Math.max(outer, reach);
-    }
-    const boundary = makeNestedOrbit(outer * 1.12 + 60, rot, 0.035);
-    return Object.assign(m, { boundary });
-  }, [config.planets, seed]);
+    const ps = [...config.planets].sort((a, b) => a.orbit.maxR - b.orbit.maxR);
+    const n = ps.length;
+    // Boundary reach: the outermost planet plus its family, with a margin.
+    const outerP = ps[n - 1];
+    const reach = outerP ? outerP.orbit.maxR + outerP.moons.reduce((a, mm) => Math.max(a, mm.orbitR * 1.5 + mm.size), outerP.size * 0.5) : 600;
+    // Scale R so the boundary's *near* side still clears the outer family.
+    const R = reach * 1.22;
+    const innerR = Math.max(config.sun.size * 0.9, R * 0.1);
+    ps.forEach((p, i) => {
+      // Gaps widen outward, like the studies' growing crescents.
+      const f = Math.pow((i + 1) / (n + 0.9), 0.92);
+      m.set(p.id, makeStudyOrbit(shape, R, innerR, f));
+    });
+    return Object.assign(m, { boundary: studyPath(shape, R), shape });
+  }, [config.planets, config.sun.size, seed]);
+
+  /** Moon offset from its parent: a circle in storybook, the study egg in Minimalist Mode. */
+  const moonOff = (m: GeneratedMoon, a: number) => {
+    const r = minimal ? m.orbitR * nestedOrbits.shape.unit(a) * 1.18 : m.orbitR;
+    return { x: r * Math.cos(a), y: r * Math.sin(a) };
+  };
 
   // Orbit math: bodies advance along their own wobbly closed curves.
   const planetPos = new Map<string, { x: number; y: number }>();
@@ -889,15 +900,15 @@ export function GeneratorSystem() {
       if (m.id === subj.layout.parentId) {
         return chatAdjustSubject(
           m.id,
-          px + m.orbitR * Math.cos(a),
-          py + m.orbitR * Math.sin(a),
+          px + moonOff(m, a).x,
+          py + moonOff(m, a).y,
           m.size,
         );
       }
       if (!subj.layout.slots.has(m.id)) {
         const circ = (aa: number) => ({
-          x: m.orbitR * Math.cos(aa),
-          y: m.orbitR * Math.sin(aa),
+          x: moonOff(m, aa).x,
+          y: moonOff(m, aa).y,
         });
         // Just left the fan (the fan re-focused on another star): glide
         // home along the ring instead of snapping back onto the orbit.
@@ -918,7 +929,7 @@ export function GeneratorSystem() {
         }
         // A former fan subject glides straight back to its live pose.
         if (chatRenderRef.current.has(m.id)) {
-          const live = { x: px + m.orbitR * Math.cos(a), y: py + m.orbitR * Math.sin(a), size: m.size };
+          const live = { x: px + moonOff(m, a).x, y: py + moonOff(m, a).y, size: m.size };
           const c = chaseChatTarget(chatRenderRef.current, m.id, live, live, t);
           if (
             Math.abs(c.x - live.x) + Math.abs(c.y - live.y) < 2 &&
@@ -951,7 +962,7 @@ export function GeneratorSystem() {
       px,
       py,
       a,
-      (aa) => ({ x: m.orbitR * Math.cos(aa), y: m.orbitR * Math.sin(aa) }),
+      (aa) => moonOff(m, aa),
       m.size,
     );
   };
@@ -2121,7 +2132,7 @@ export function GeneratorSystem() {
               stays free for the appear/disappear animation */}
           <g className="semantic-orbit" opacity={localRingOpacity(m.id, vis.ringOpacity)} transform={`translate(${px} ${py}) scale(${s})`}>
             <path
-              d={minimal ? `M ${m.orbitR} 0 A ${m.orbitR} ${m.orbitR} 0 1 0 ${-m.orbitR} 0 A ${m.orbitR} ${m.orbitR} 0 1 0 ${m.orbitR} 0 Z` : m.ringD}
+              d={minimal ? studyPath(nestedOrbits.shape, m.orbitR * 1.18) : m.ringD}
               fill="none"
               stroke={minimal ? "var(--mini-line)" : "white"}
               strokeOpacity={minimal ? 0.85 : 0.72}
@@ -2142,10 +2153,9 @@ export function GeneratorSystem() {
             />
           </g>
           {minimal && m.moons.length > 0 && (
-            <circle
-              cx={pose.x}
-              cy={pose.y}
-              r={m.moons.reduce((a, c) => Math.max(a, c.orbitR + c.size * 0.9), 0) * 1.12}
+            <path
+              transform={`translate(${pose.x} ${pose.y})`}
+              d={studyPath(nestedOrbits.shape, m.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.18 + c.size * 0.7), 0) * 1.22)}
               fill="none"
               stroke="var(--mini-ink)"
               strokeWidth={2.2 / Math.max(1e-4, viewScale)}
@@ -2335,7 +2345,7 @@ export function GeneratorSystem() {
                       and a miniature boundary around each planet's own family */}
                   {minimal && (
                     <path
-                      d={nestedOrbits.boundary.d}
+                      d={nestedOrbits.boundary}
                       transform={`translate(${CENTER} ${CENTER})`}
                       fill="none"
                       stroke="var(--mini-ink)"
@@ -2345,8 +2355,8 @@ export function GeneratorSystem() {
                   {minimal && config.planets.map((p) => {
                     if (p.moons.length === 0 || visibilityFor(p.id).detail === "hidden") return null;
                     const q = planetPos.get(p.id)!;
-                    const r = p.moons.reduce((a, c) => Math.max(a, c.orbitR + c.size * 0.9), 0) * 1.12;
-                    return <circle key={`mb-${p.id}`} cx={q.x} cy={q.y} r={r} fill="none" stroke="var(--mini-ink)" strokeWidth={2.2 / Math.max(1e-4, viewScale)} opacity={localRingOpacity(p.id, visibilityFor(p.id).ringOpacity)} />;
+                    const r = p.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.18 + c.size * 0.7), 0) * 1.22;
+                    return <path key={`mb-${p.id}`} transform={`translate(${q.x} ${q.y})`} d={studyPath(nestedOrbits.shape, r)} fill="none" stroke="var(--mini-ink)" strokeWidth={2.2 / Math.max(1e-4, viewScale)} opacity={localRingOpacity(p.id, visibilityFor(p.id).ringOpacity)} />;
                   })}
                   {/* Moon rings follow their parent body — planets, and
                       moons with mini-moons of their own */}
