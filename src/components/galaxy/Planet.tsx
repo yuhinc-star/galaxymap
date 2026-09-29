@@ -248,8 +248,9 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
   // Dots are sized in screen pixels so every zoom depth reads like the
   // orbit studies: small ink beads, one confident blue focus.
   const sc = Math.max(1e-4, cameraScale);
-  const screen = Math.min(15, Math.max(6, def.size * 0.12 * sc));
-  const dot = (chosen ? 24 : screen) / sc;
+  // Three quiet bead sizes (nucleus / planet / moon) keep the page calm.
+  const tier = def.id === "sun" || def.size > 260 ? 15 : def.size > 90 ? 9 : 6.5;
+  const dot = (chosen ? 26 : tier) / sc;
   const hollow = !chosen && hashId(def.id) % 3 === 0;
   const hit = Math.max(dot * 2.4, 30 / sc);
   const stroke = 1.6 / sc;
@@ -290,7 +291,7 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
           {chosen ? (
             <>
               <circle r={dot / 2} className="fill-mini-blue" style={{ transition: "r 0.5s" }} />
-              <circle r={dot / 2 + 6 / sc} fill="none" className="stroke-mini-blue" strokeWidth={1.8 / sc} />
+              <circle r={dot / 2 + 5 / sc} fill="none" className="stroke-mini-blue" strokeWidth={1.5 / sc} />
             </>
           ) : (
             <circle
@@ -305,14 +306,15 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
         </svg>
       </button>
       <span
-        className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap font-sans font-medium uppercase tracking-[0.18em] text-mini-line"
+        className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap font-sans font-normal lowercase tracking-[0.12em] text-mini-line"
         style={{
-          fontSize: (chosen ? 13 : 11) / sc,
+          fontSize: 11 / sc,
           marginTop: 3 / sc,
           maxWidth: 260 / sc,
           overflow: "hidden",
           textOverflow: "ellipsis",
-          opacity: departing ? 0 : labelOpacity,
+          opacity: departing || !(chosen || active || highlighted) ? 0 : labelOpacity,
+          transition: "opacity 0.4s",
         }}
       >
         {def.name}

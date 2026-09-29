@@ -48,7 +48,8 @@ import {
 } from "./systemGenerator";
 import { ensureSpritesReady, warmSpritePool } from "./spritePool";
 import { recordCrashEvent, setCrashContext } from "@/lib/crash-reporter";
-import type { OrbitShapeKind } from "./orbitShapes";
+import type { OrbitShapeKind, OrbitShape } from "./orbitShapes";
+import { makeNestedOrbit } from "./orbitShapes";
 import { BodyInfoPanel, type BodyPanelInfo } from "./BodyInfoPanel";
 import { ChatPanel, type ChatSubjectInfo } from "./ChatPanel";
 import {
