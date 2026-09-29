@@ -63,6 +63,7 @@ import {
   type ChatRideState,
 } from "./chatLayout";
 import { Drifter } from "./Drifter";
+import { MinimalContext } from "./Planet";
 import { HeroRocket, ROCKET_H, rocketWorldScale } from "./HeroRocket";
 import { HintGuide, type ContextualHint } from "./HintGuide";
 import { Navigator, type NavigatorEntry } from "./Navigator";
@@ -179,6 +180,8 @@ export function GeneratorSystem() {
       elsewhere never hijacks the ongoing conversation. */
   const [chatTalkId, setChatTalkId] = useState<string | null>(null);
   const [bgIndex, setBgIndex] = useState(0);
+  /** Minimalist Mode: ink-on-paper orbit study; the rocket becomes the blue dot. */
+  const [minimal, setMinimal] = useState(false);
   /** Runtime-grown system: once the user adds bodies by double-clicking,
       this replaces the seeded config (regenerating resets it). */
   const [extras, setExtras] = useState<SystemConfig | null>(null);
@@ -2103,11 +2106,11 @@ export function GeneratorSystem() {
             <path
               d={m.ringD}
               fill="none"
-              stroke="white"
-              strokeOpacity={0.72}
-              strokeWidth={(depth === 0 ? 6.5 : 5) / (s * lineScale)}
+              stroke={minimal ? "var(--mini-line)" : "white"}
+              strokeOpacity={minimal ? 0.85 : 0.72}
+              strokeWidth={(minimal ? (depth === 0 ? 1.8 : 1.3) : depth === 0 ? 6.5 : 5) / (s * lineScale)}
               strokeDasharray={
-                depth === 0
+                minimal ? undefined : depth === 0
                   ? `${(22 / (s * lineScale)).toFixed(1)} ${(17 / (s * lineScale)).toFixed(1)}`
                   : `${(16 / (s * lineScale)).toFixed(1)} ${(13 / (s * lineScale)).toFixed(1)}`
               }
@@ -2127,6 +2130,8 @@ export function GeneratorSystem() {
     });
 
   /** Moons (and their own smaller moons) riding on their parent body. */
+  const chosenId = flight ? flight.toId : rocketHostId;
+
   const renderMoonTree = (
     moons: GeneratedMoon[],
     px: number,
@@ -2168,6 +2173,7 @@ export function GeneratorSystem() {
             labelOpacity={vis.labelOpacity}
             interactive={vis.interactive}
             onTap={handleBodyTap}
+            chosen={minimal && chosenId === m.id}
           />
           {renderMoonTree(m.moons, r.x, r.y, m.id)}
         </Fragment>
@@ -2175,7 +2181,8 @@ export function GeneratorSystem() {
     });
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-space">
+    <MinimalContext.Provider value={minimal}>
+    <div className={`fixed inset-0 overflow-hidden ${minimal ? "bg-mini-paper" : "bg-space"}`}>
       <div className="flex h-full w-full">
       {/* Sky strip: the whole galaxy squeezes here when chat opens */}
       <div
@@ -2184,7 +2191,7 @@ export function GeneratorSystem() {
           chatOpen ? "w-full sm:w-[clamp(290px,33vw,460px)]" : "w-full"
         }`}
       >
-      <img
+      {minimal ? <div className="pointer-events-none absolute inset-0 bg-mini-paper" /> : <img
         key={BACKGROUNDS[bgIndex]!.src}
         src={BACKGROUNDS[bgIndex]!.src}
         srcSet={`${BACKGROUNDS[bgIndex]!.srcSm} 1280w, ${BACKGROUNDS[bgIndex]!.src} 2048w`}
@@ -2192,7 +2199,7 @@ export function GeneratorSystem() {
         alt=""
         draggable={false}
         className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
-      />
+      />}
       <TransformWrapper
         ref={cameraRef}
         key={`${seed}-${planetCount}`}
@@ -2249,7 +2256,7 @@ export function GeneratorSystem() {
               >
                 {/* Twinkling stars and comets — dimmed in chat mode so the
                     family strip stays the star of the show. */}
-                <Starfield size={WORLD} chatMix={chatMix} />
+                {!minimal && <Starfield size={WORLD} chatMix={chatMix} />}
 
                 {/* Hand-drawn orbit rings — every planet's ring is a
                     different asymmetric closed curve */}
@@ -2277,10 +2284,10 @@ export function GeneratorSystem() {
                         <path
                           d={p.orbit.d}
                           fill="none"
-                          stroke="white"
-                          strokeOpacity={p.ringOpacity}
-                          strokeWidth={p.ringWidth / (s * lineScale)}
-                          strokeDasharray={p.dash
+                          stroke={minimal ? "var(--mini-line)" : "white"}
+                          strokeOpacity={minimal ? 0.9 : p.ringOpacity}
+                          strokeWidth={(minimal ? 2.4 : p.ringWidth) / (s * lineScale)}
+                          strokeDasharray={minimal ? undefined : p.dash
                             .split(" ")
                             .map((v) => (+v / (s * lineScale)).toFixed(1))
                             .join(" ")}
@@ -2296,6 +2303,16 @@ export function GeneratorSystem() {
                       </g>
                     );
                   })}
+                  {/* Minimalist Mode: one confident ink boundary enclosing the system */}
+                  {minimal && config.planets.length > 0 && (() => {
+                    const outer = config.planets[config.planets.length - 1]!;
+                    const lineScale = Math.max(1, viewScale);
+                    return (
+                      <g transform={`translate(${CENTER} ${CENTER}) scale(1.16) rotate(14)`}>
+                        <path d={outer.orbit.d} fill="none" stroke="var(--mini-ink)" strokeWidth={5.5 / (1.16 * lineScale)} />
+                      </g>
+                    );
+                  })()}
                   {/* Moon rings follow their parent body — planets, and
                       moons with mini-moons of their own */}
                   {config.planets.map((p) => {
@@ -2309,7 +2326,7 @@ export function GeneratorSystem() {
                 </svg>
 
                 {/* Warm glow behind the Sun */}
-                <div
+                {!minimal && <div
                   className="pointer-events-none absolute rounded-full"
                   style={{
                     left: CENTER,
@@ -2320,11 +2337,11 @@ export function GeneratorSystem() {
                     background:
                       "radial-gradient(circle, oklch(0.9 0.16 95 / 0.4), transparent 65%)",
                   }}
-                />
+                />}
 
                 {config.drifters.map((d) => {
                   const q = drifterPos.get(d.id)!;
-                  if (viewScale > 2.8 || viewScale < 0.08) return null;
+                  if (minimal || viewScale > 2.8 || viewScale < 0.08) return null;
                   return <Drifter key={d.id} def={d} x={q.x} y={q.y} />;
                 })}
 
@@ -2349,6 +2366,7 @@ export function GeneratorSystem() {
                   labelOpacity={visibilityFor(config.sun.id).labelOpacity}
                   interactive={visibilityFor(config.sun.id).interactive}
                   onTap={handleBodyTap}
+            chosen={minimal && chosenId === config.sun.id}
                   spin
                 />
 
@@ -2388,6 +2406,7 @@ export function GeneratorSystem() {
                         labelOpacity={vis.labelOpacity}
                         interactive={vis.interactive}
                         onTap={handleBodyTap}
+            chosen={minimal && chosenId === p.id}
                       />
                     );
                   })}
@@ -2427,7 +2446,7 @@ export function GeneratorSystem() {
 
                 {/* Body details live in the screen-space info panel */}
 
-                <HeroRocket
+                {!minimal && <HeroRocket
                   x={rocketX}
                   y={rocketY}
                   rotation={rocketRot}
@@ -2436,16 +2455,27 @@ export function GeneratorSystem() {
                   dragging={dragActive}
                   interactive={!flight && !chatActive}
                   onDown={onRocketDown}
-                />
+                />}
 
               </div>
             </TransformComponent>
 
             <header className="pointer-events-none fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2">
-              <Sparkle className="h-5 w-5 text-star" aria-hidden />
-              <span className="font-display text-base font-semibold tracking-wide text-star sm:text-xl">
-                Galaxy Generator
+              <Sparkle className={`h-5 w-5 ${minimal ? "text-mini-blue" : "text-star"}`} aria-hidden />
+              <span className={`font-display text-base font-semibold tracking-wide sm:text-xl ${minimal ? "text-mini-ink" : "text-star"}`}>
+                {minimal ? "Orbit Study" : "Galaxy Generator"}
               </span>
+              <button
+                type="button"
+                onClick={() => setMinimal((v) => !v)}
+                aria-pressed={minimal}
+                title={minimal ? "Back to the storybook galaxy" : "Minimalist Mode: ink orbits, the chosen star is the blue dot"}
+                className={`pointer-events-auto ml-2 rounded-full border-2 px-3 py-1 font-display text-xs font-semibold transition-colors sm:text-sm ${
+                  minimal ? "border-mini-ink bg-mini-paper text-mini-ink hover:bg-mini-ink hover:text-mini-paper" : "border-star/70 bg-space/70 text-star hover:bg-star hover:text-space"
+                }`}
+              >
+                {minimal ? "Storybook" : "Minimalist"}
+              </button>
             </header>
 
             <Navigator
