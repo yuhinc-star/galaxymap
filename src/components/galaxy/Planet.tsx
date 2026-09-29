@@ -240,6 +240,14 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
     current destination remains the large blue dot inside a thin blue ring. */
 function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true, chosen }: Pick<PlanetProps, "def" | "x" | "y" | "active" | "departing" | "newborn" | "onTap" | "highlighted" | "cameraScale" | "visualOpacity" | "visualScale" | "labelOpacity" | "interactive" | "chosen">) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
+  // Only animate a release on nodes that were actually chosen before.
+  const wasChosen = useRef(!!chosen);
+  const [released, setReleased] = useState(false);
+  useEffect(() => {
+    if (wasChosen.current && !chosen) setReleased(true);
+    if (chosen) setReleased(false);
+    wasChosen.current = !!chosen;
+  }, [chosen]);
   // Dots are sized in screen pixels so every zoom depth reads like the
   // orbit studies: small ink beads, one confident blue focus.
   const sc = Math.max(1e-4, cameraScale);
@@ -284,7 +292,7 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
         >
           {/* One persistent bead: becoming chosen grows and tints it in place
               with a springy bubble, instead of swapping elements instantly. */}
-          <g key={chosen ? "chosen" : "plain"} className={chosen ? "minimal-choose-pop" : "minimal-release-pop"}>
+          <g key={chosen ? "chosen" : "plain"} className={chosen ? "minimal-choose-pop" : released ? "minimal-release-pop" : undefined}>
             <circle
               r={dot / 2}
               className={chosen ? "fill-mini-blue stroke-mini-blue" : def.asleep ? "fill-mini-ink stroke-mini-ink" : "fill-mini-paper stroke-mini-ink"}
