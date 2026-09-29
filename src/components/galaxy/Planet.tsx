@@ -317,7 +317,7 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
             style={{ opacity: chosen ? 0.45 : 0, transition: "r 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.14s, opacity 0.45s ease" }}
           />
           {(highlighted || active) && (
-            <circle r={hit / 2 - 1} fill="none" className="stroke-mini-line" strokeWidth={1.2 / sc} strokeDasharray={`${3 / sc} ${3 / sc}`} />
+            <circle r={Math.max(0, hit / 2 - 1 / sc)} fill="none" className="stroke-mini-line" strokeWidth={1.2 / sc} strokeDasharray={`${3 / sc} ${3 / sc}`} />
           )}
           {chosen && (
             <g key="choose-ripple">

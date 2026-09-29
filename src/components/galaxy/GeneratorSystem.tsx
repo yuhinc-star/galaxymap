@@ -628,7 +628,7 @@ export function GeneratorSystem() {
   const nudgeCameraZoom = (factor: number) => {
     const st = stateRef.current;
     if (!st) return;
-    const nextScale = Math.max(0.002, Math.min(96, st.scale * factor));
+    const nextScale = Math.max(0.002, Math.min(minimal ? 2000 : 96, st.scale * factor));
     const focused = followRef.current;
     const point = focused ? bodyPos(focused.id) : null;
     const worldX = point?.x ?? (window.innerWidth / 2 - st.positionX) / st.scale;
@@ -1494,7 +1494,7 @@ export function GeneratorSystem() {
     // bodies naturally need less magnification; tiny descendants get more.
     const desiredBodyPx = Math.min(isMobileView ? 138 : 178, viewport * 0.23);
     const bodyFit = desiredBodyPx / size;
-    const s = Math.min(Math.max(minimal ? familyFit : Math.min(familyFit, bodyFit), minimal ? 0.002 : 0.16), 96);
+    const s = Math.min(Math.max(minimal ? familyFit : Math.min(familyFit, bodyFit), minimal ? 0.002 : 0.16), minimal ? 2000 : 96);
     const st = stateRef.current;
     followRef.current = {
       id,
@@ -2389,7 +2389,7 @@ export function GeneratorSystem() {
         key={`${seed}-${planetCount}`}
         initialScale={0.36}
         minScale={chatOpen && fanSubj ? Math.min(fanSubj.layout.camera.scale, 0.002) : 0.002}
-        maxScale={96}
+        maxScale={minimal ? 2000 : 96}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
