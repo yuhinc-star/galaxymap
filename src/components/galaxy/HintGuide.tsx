@@ -155,21 +155,21 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
         >
           <div className={`minimal-panel flex items-center border bg-space-deep/90 px-4 py-2.5 backdrop-blur-sm ${docked ? "flex-wrap gap-2" : "gap-3"}`}>
             <Sparkle
-              className="h-5 w-5 shrink-0 animate-pulse text-star"
+              className="h-4 w-4 shrink-0 text-mini-blue" strokeWidth={1.5}
               aria-hidden
             />
-            <p className={`min-w-0 flex-1 font-hand font-bold uppercase leading-tight tracking-wider text-white ${docked ? "basis-[calc(100%-2rem)] text-lg" : "text-xl"}`}>
+            <p className={`min-w-0 flex-1 font-display font-normal leading-snug tracking-[0.04em] text-mini-ink ${docked ? "basis-[calc(100%-2rem)] text-xs" : "text-sm"}`}>
               {currentHint.text}
             </p>
             {queueTotal > 1 && (
-              <span className="shrink-0 font-display text-xs font-semibold text-white/50">
+              <span className="shrink-0 font-display text-[11px] font-normal text-mini-ink/50">
                 {queueTotal - queue.length + 1}/{queueTotal}
               </span>
             )}
             <button
               type="button"
               onClick={advance}
-              className="shrink-0 rounded-full bg-star px-3 py-1 font-hand text-lg font-bold uppercase leading-none tracking-wider text-space shadow transition-transform hover:scale-105 active:scale-95"
+              className="shrink-0 rounded-full border border-mini-ink bg-mini-ink px-3 py-1 font-display text-[11px] font-normal leading-none tracking-[0.08em] text-mini-paper transition-colors hover:bg-mini-ink/85 active:scale-95"
             >
                 {queue.length <= 1 ? "Close" : "Next"}
             </button>
@@ -177,9 +177,9 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
               type="button"
               aria-label="Skip the hints"
               onClick={skipAll}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/20 hover:text-white sm:h-6 sm:w-6"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-mini-ink/50 transition-colors hover:bg-mini-ink/5 hover:text-mini-ink sm:h-6 sm:w-6"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3 w-3" strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -193,10 +193,10 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
           docked
             ? // Strip's bottom-left corner, beside the docked controls.
               "fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-20 hidden h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 sm:flex"
-            : "fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(4.5rem,calc(env(safe-area-inset-right)+3.5rem))] z-20 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+            : "fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-[max(4.5rem,calc(env(safe-area-inset-right)+3.5rem))] z-20 flex h-10 w-10 items-center justify-center rounded-full border border-mini-line bg-mini-paper text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95"
         }
       >
-        <Lightbulb className="h-5 w-5" />
+        <Lightbulb className="h-4 w-4" strokeWidth={1.5} />
       </button>
     </>
   );

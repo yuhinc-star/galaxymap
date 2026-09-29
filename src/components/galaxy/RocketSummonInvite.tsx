@@ -9,15 +9,13 @@ interface RocketSummonInviteProps {
 }
 
 /**
- * Summon-the-rocket suggestion: shown whenever the visited body isn't
- * holding the hero rocket (parked or inbound). One tap sends the rocket
- * flying over — never offered for the body that already has it. It is
- * state-driven like the zoom-out pill: no dismiss button, it simply
- * disappears once the rocket is on its way or the camera moves on.
+ * Set-focus suggestion: shown whenever the visited node isn't the current
+ * focus. One tap moves the focus over — never offered for the node that
+ * already holds it. Minimalist edition: thin paper pill, thin crosshair
+ * marker, quiet display type.
  */
 export function RocketSummonInvite({
   name,
-  img,
   onSummon,
 }: RocketSummonInviteProps) {
   return (
@@ -26,21 +24,13 @@ export function RocketSummonInvite({
       onClick={onSummon}
       aria-label={`Set focus to ${name}`}
       title={`Set focus to ${name}`}
-      className="minimal-panel animate-pop-in flex items-center gap-2.5 border bg-space-deep/90 py-1.5 pl-2 pr-4 backdrop-blur-sm transition-opacity hover:opacity-70 active:opacity-50"
+      className="animate-pop-in flex items-center gap-2 rounded-full border border-mini-line bg-mini-paper py-1.5 pl-1.5 pr-4 transition-colors hover:border-mini-ink/60 active:scale-95"
     >
-      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
-        <img
-          src={img}
-          alt=""
-          draggable={false}
-          className="h-9 w-9 select-none rounded-full bg-space/60 object-contain p-0.5 ring-1 ring-white/25"
-        />
-        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-star shadow">
-          <LocateFixed className="h-2.5 w-2.5 text-space-deep" strokeWidth={2} aria-hidden />
-        </span>
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-mini-blue/70">
+        <LocateFixed className="h-3.5 w-3.5 text-mini-blue" strokeWidth={1.5} aria-hidden />
       </span>
-      <span className="max-w-[46vw] truncate font-hand text-2xl font-bold uppercase leading-none tracking-wider text-white sm:max-w-64">
-        Focus <span className="text-star">{name}</span>
+      <span className="max-w-[46vw] truncate font-display text-xs font-normal leading-none tracking-[0.08em] text-mini-ink sm:max-w-64">
+        Focus <span className="text-mini-blue">{name}</span>
       </span>
     </button>
   );
