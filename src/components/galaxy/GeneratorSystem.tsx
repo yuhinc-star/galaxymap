@@ -669,7 +669,7 @@ export function GeneratorSystem() {
     const innerR = Math.max(config.sun.size * 1.1, R * 0.2);
     ps.forEach((p, i) => {
       // Gaps widen outward, like the studies' growing crescents.
-      const f = Math.pow((i + 1) / (n + 0.9), 0.92);
+      const f = (i + 0.6) / (n + 0.2);
       m.set(p.id, makeStudyOrbit(shape, R, innerR, f));
     });
     return Object.assign(m, { boundary: studyPath(shape, R), shape });
