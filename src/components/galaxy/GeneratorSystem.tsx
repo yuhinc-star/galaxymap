@@ -760,9 +760,9 @@ export function GeneratorSystem() {
       const k = sorted.length;
       const fs = sorted.map((_, i) => (k === 1 ? (INNER + OUTER) / 2 : INNER + ((OUTER - INNER) * i) / (k - 1)));
       sorted.forEach((c, i) => {
-        const f = fs[i];
-        const inner = i === 0 ? f : f - fs[i - 1];
-        const outer = i === k - 1 ? 1 - f : fs[i + 1] - f;
+        const f = fs[i]!;
+        const inner = i === 0 ? f : f - fs[i - 1]!;
+        const outer = i === k - 1 ? 1 - f : fs[i + 1]! - f;
         const gap = Math.min(inner, outer) * B * minUnit(eP);
         ring.set(c.id, f * B);
         shapeOf.set(c.id, shape);
@@ -779,8 +779,8 @@ export function GeneratorSystem() {
       return (1 - f) * innerR + f * R;
     });
     ps.forEach((p, i) => {
-      const inner = i === 0 ? base[0] * 0.6 : base[i] - base[i - 1];
-      const outer = i === n - 1 ? R - base[i] : base[i + 1] - base[i];
+      const inner = i === 0 ? base[0]! * 0.6 : base[i]! - base[i - 1]!;
+      const outer = i === n - 1 ? R - base[i]! : base[i + 1]! - base[i]!;
       const gap = Math.min(inner, outer) * minUnit(0.42);
       layFamily(p.id, (gap * FILL) / maxUnit(eccOf(p.id)), p.moons);
     });
