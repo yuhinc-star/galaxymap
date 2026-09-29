@@ -307,6 +307,15 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
             strokeWidth={1.5 / sc}
             style={{ opacity: chosen ? 1 : 0, transition: "r 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.08s, opacity 0.4s ease" }}
           />
+          {/* A second, wider fainter ring makes the focused node findable at
+              a glance, like a contour line echoing the chosen bead. */}
+          <circle
+            r={(chosen ? dot / 2 + 11 / sc : dot / 2)}
+            fill="none"
+            className="stroke-mini-blue"
+            strokeWidth={1 / sc}
+            style={{ opacity: chosen ? 0.45 : 0, transition: "r 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.14s, opacity 0.45s ease" }}
+          />
           {(highlighted || active) && (
             <circle r={hit / 2 - 1} fill="none" className="stroke-mini-line" strokeWidth={1.2 / sc} strokeDasharray={`${3 / sc} ${3 / sc}`} />
           )}
@@ -319,7 +328,7 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
         </svg>
       </button>
       <span
-        className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap font-sans font-normal lowercase tracking-[0.12em] text-mini-line"
+        className={`pointer-events-none absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap font-sans lowercase tracking-[0.12em] ${chosen ? "font-medium text-mini-blue" : "font-normal text-mini-line"}`}
         style={{
           fontSize: 11 / sc,
           marginTop: 3 / sc,
