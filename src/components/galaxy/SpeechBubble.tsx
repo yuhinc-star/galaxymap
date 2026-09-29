@@ -26,7 +26,7 @@ export function SpeechBubble({ text, minimal = false }: SpeechBubbleProps) {
       }}
     >
       <div className={minimal
-        ? "animate-fade-in whitespace-nowrap border border-mini-line bg-mini-paper px-3 py-2 font-display text-xs font-medium text-mini-ink"
+        ? "animate-fade-in whitespace-nowrap rounded-full border border-mini-line bg-mini-paper px-4 py-1.5 font-display text-xs font-medium text-mini-ink"
         : "animate-pop-in rounded-2xl rounded-bl-sm border-2 border-space bg-star px-3 py-1.5 font-display text-sm font-semibold whitespace-nowrap text-space shadow-xl"
       }>
         {text}

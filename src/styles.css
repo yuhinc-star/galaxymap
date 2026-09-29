@@ -201,7 +201,7 @@
 }
 
 .minimal-panel {
-  border-radius: 0 !important;
+  border-radius: 14px !important;
   border-color: var(--mini-line) !important;
   background: color-mix(in oklab, var(--mini-paper) 96%, transparent) !important;
   backdrop-filter: blur(10px);
