@@ -636,8 +636,17 @@ export function GeneratorSystem() {
     const sy = point ? window.innerHeight / 2 : anchor?.y ?? window.innerHeight / 2;
     const worldX = point?.x ?? (sx - st.positionX) / st.scale;
     const worldY = point?.y ?? (sy - st.positionY) / st.scale;
-    if (focused) focused.scale = nextScale;
-    writeCamera(sx - worldX * nextScale, sy - worldY * nextScale, nextScale);
+    if (focused) {
+      focused.scale = nextScale;
+      focused.from = { x: sx - worldX * nextScale, y: sy - worldY * nextScale, scale: nextScale };
+    }
+    const nx = sx - worldX * nextScale;
+    const ny = sy - worldY * nextScale;
+    // The follow loop reads the live scale from these refs each frame; if they
+    // still held the old scale the button's zoom was reverted on the next tick.
+    viewScaleRef.current = nextScale;
+    stateRef.current = { positionX: nx, positionY: ny, scale: nextScale };
+    writeCamera(nx, ny, nextScale);
   };
   const nudgeRef = useRef(nudgeCameraZoom);
   nudgeRef.current = nudgeCameraZoom;
