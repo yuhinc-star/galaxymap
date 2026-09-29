@@ -11,3 +11,4 @@
 - [x] Replace all visible sun, planet, moon, and star terminology in Minimalist Mode with node terminology.
 - [x] Repair the plus and minus controls so focus tracking preserves button-driven zoom.
 - [x] Remove squared and inward-pinched minimalist contours; keep child orbits smoothly convex.
+- [x] Add a visible bubbly cobalt pulse when focus moves to a node.

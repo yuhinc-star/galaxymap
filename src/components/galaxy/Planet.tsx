@@ -297,6 +297,22 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
           {(highlighted || active) && (
             <circle r={hit / 2 - 1} fill="none" className="stroke-mini-line" strokeWidth={1.2 / sc} strokeDasharray={`${3 / sc} ${3 / sc}`} />
           )}
+          {active && (
+            <g className="minimal-refocus-pulse">
+              <circle
+                r={dot / 2 + 4 / sc}
+                fill="none"
+                className="minimal-refocus-ring stroke-mini-blue"
+                strokeWidth={1.8 / sc}
+              />
+              <circle
+                r={dot / 2 + 4 / sc}
+                fill="none"
+                className="minimal-refocus-ring minimal-refocus-ring-delay stroke-mini-blue"
+                strokeWidth={1.2 / sc}
+              />
+            </g>
+          )}
         </svg>
       </button>
       <span
