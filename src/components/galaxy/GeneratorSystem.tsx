@@ -482,11 +482,13 @@ export function GeneratorSystem() {
       if (minimalRef.current) {
         const v = camSpeedRef.current;
         if (v > 1) {
-          const correction = Math.max(0.2, Math.min(3, MOTION_TARGET_PX_PER_SEC / v));
+          const correction = Math.max(0.08, Math.min(2.4, MOTION_TARGET_PX_PER_SEC / v));
           want = Math.max(0.0005, Math.min(want, rate * correction));
         }
       }
-      rate += (want - rate) * Math.min(1, dt / 420);
+      // Brake fast, recover gently: a sudden zoom must not let the view lurch.
+      const ease = want < rate ? Math.min(1, dt / 90) : Math.min(1, dt / 520);
+      rate += (want - rate) * ease;
       if (!freezeDeepMotionRef.current) elapsed += dt * rate;
       if (!mobile || now - lastSet >= 33) {
         lastSet = now;
