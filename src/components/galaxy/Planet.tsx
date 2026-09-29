@@ -81,7 +81,7 @@ export function planetLabelSize(size: number, name: string): number {
 export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true, asleep = def.asleep ?? false, chosen = false }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
   const minimal = useContext(MinimalContext);
-  if (minimal) return <MinimalDot {...{ def, x, y, active, departing, newborn, onTap, highlighted, cameraScale, visualOpacity, visualScale, labelOpacity, interactive, chosen }} />;
+  if (minimal) return <MinimalDot {...{ def, x, y, active, departing, newborn, onTap, highlighted: !!highlighted, cameraScale, visualOpacity, visualScale, labelOpacity, interactive, chosen }} />;
   const longName = def.name.length > 16;
 
   let animation: string | undefined;
