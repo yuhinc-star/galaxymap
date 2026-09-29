@@ -16,3 +16,4 @@
 - [x] Clearer faded vs active node contrast (minimalist)
 
 - [ ] Minimalist: camera jumps to wrong place before settling when zooming (even between close parent/child)
+- [ ] Minimalist: zoom out breaks the view
