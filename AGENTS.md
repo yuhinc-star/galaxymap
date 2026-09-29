@@ -20,3 +20,4 @@
 - Sleep is per-body presentation state: bodies keep orbiting and chatting, while their artwork switches to a closed-eye edition with animated “zzz” marks.
 - Minimalist Mode owns its eccentric system-fit camera and reuses study-orbit geometry during chat morphs, preventing clipped overviews and split coordinate systems.
 - The generator is permanently minimalist: Sora, paper/ink/cobalt, open canvas, neutral focus/notes language, and no visible storybook or rocket metaphors.
+- Minimalist spacing: sibling rings are scaled copies of the parent contour on an even ladder (0.36–0.80 of the family boundary); miniature families fit their free band with a 0.4 floor — nested rings never cross and deep zoom stays within render precision.
