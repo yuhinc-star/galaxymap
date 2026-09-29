@@ -2166,7 +2166,11 @@ export function GeneratorSystem() {
         <Fragment key={m.id}>
           {/* Position lives on the <g> so the path's own CSS transform
               stays free for the appear/disappear animation */}
-          <g className="semantic-orbit" opacity={localRingOpacity(m.id, vis.ringOpacity)} transform={`translate(${px} ${py}) scale(${s})`}>
+          <g
+            className="semantic-orbit"
+            opacity={minimal && chatActive ? Math.min(0.16, vis.ringOpacity) : localRingOpacity(m.id, vis.ringOpacity)}
+            transform={`translate(${px} ${py}) scale(${s})`}
+          >
             <path
               d={minimal ? studyPath(nestedOrbits.shape, m.orbitR * 1.18) : m.ringD}
               fill="none"
@@ -2188,7 +2192,7 @@ export function GeneratorSystem() {
               }
             />
           </g>
-          {minimal && m.moons.length > 0 && (
+          {minimal && !chatActive && m.moons.length > 0 && (
             <path
               transform={`translate(${pose.x} ${pose.y})`}
               d={studyPath(nestedOrbits.shape, m.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.18 + c.size * 0.7), 0) * 1.22)}
@@ -2353,7 +2357,7 @@ export function GeneratorSystem() {
                       <g
                         key={p.id}
                         className="semantic-orbit"
-                        opacity={localRingOpacity(p.id, vis.ringOpacity)}
+                        opacity={minimal && chatActive ? Math.min(0.16, vis.ringOpacity) : localRingOpacity(p.id, vis.ringOpacity)}
                         transform={`translate(${CENTER} ${CENTER}) scale(${s})`}
                       >
                         <path
@@ -2380,7 +2384,7 @@ export function GeneratorSystem() {
                   })}
                   {/* Minimalist Mode: one confident ink boundary enclosing the system,
                       and a miniature boundary around each planet's own family */}
-                  {minimal && (
+                  {minimal && !chatActive && (
                     <path
                       d={nestedOrbits.boundary}
                       transform={`translate(${CENTER} ${CENTER})`}
@@ -2389,7 +2393,7 @@ export function GeneratorSystem() {
                       strokeWidth={3 / Math.max(1e-4, viewScale)}
                     />
                   )}
-                  {minimal && config.planets.map((p) => {
+                  {minimal && !chatActive && config.planets.map((p) => {
                     if (p.moons.length === 0 || visibilityFor(p.id).detail === "hidden") return null;
                     const q = planetPos.get(p.id)!;
                     const r = p.moons.reduce((a, c) => Math.max(a, c.orbitR * 1.18 + c.size * 0.7), 0) * 1.22;
