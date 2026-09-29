@@ -1021,8 +1021,6 @@ export function GeneratorSystem() {
     } else if (m) {
       const anchor = bodyPos(m.id) ?? { x: CENTER, y: CENTER };
       const parent = findMoonParent(config.planets, m.id);
-      const parentIsPlanet =
-        parent != null && config.planets.some((pp) => pp.id === parent.id);
       subject = {
         info: {
           id: m.id,
@@ -1941,8 +1939,6 @@ export function GeneratorSystem() {
     const m = findMoonById(config.planets, id);
     if (m) {
       const parent = findMoonParent(config.planets, id);
-      const parentIsPlanet =
-        parent != null && config.planets.some((pp) => pp.id === parent.id);
       return {
         id,
         name: m.name,
