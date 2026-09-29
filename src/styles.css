@@ -67,8 +67,9 @@
   --color-mini-ink: var(--mini-ink);
   --color-mini-line: var(--mini-line);
   --color-mini-blue: var(--mini-blue);
-  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
-  --font-hand: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fredoka", ui-rounded, "Comic Sans MS", system-ui, sans-serif;
+  --font-hand: "Amatic SC", "Fredoka", ui-rounded, system-ui, sans-serif;
+  --font-mini: "Sora", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
@@ -156,9 +157,8 @@
   }
 
   body {
-    background-color: var(--color-mini-paper);
+    background-color: var(--color-space-deep);
     color: var(--color-foreground);
-    font-family: var(--font-display);
     overscroll-behavior: none;
   }
 }
@@ -167,6 +167,8 @@
    single cobalt focus mark. These overrides also neutralize legacy utility
    colors inside the preserved interaction components. */
 .minimal-ui {
+  --font-display: var(--font-mini);
+  --font-hand: var(--font-mini);
   --space: var(--mini-paper);
   --space-deep: var(--mini-paper);
   --star: var(--mini-blue);

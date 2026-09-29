@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SolarSystem } from "@/components/galaxy/SolarSystem";
+import { SolarSystem } from "@/components/galaxy-classic/SolarSystem";
 
 export const Route = createFileRoute("/")({
   head: () => ({

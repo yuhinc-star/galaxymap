@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as GeneratorRouteImport } from './routes/generator'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MinimalistRouteImport } from './routes/minimalist'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -36,6 +37,11 @@ const GeneratorRoute = GeneratorRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MinimalistRoute = MinimalistRouteImport.update({
+  id: '/minimalist',
+  path: '/minimalist',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotmcpChar93ListToolsRoute =
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/diagnostics': typeof DiagnosticsRoute
   '/generator': typeof GeneratorRoute
   '/mcp': typeof McpRoute
+  '/minimalist': typeof MinimalistRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/diagnostics': typeof DiagnosticsRoute
   '/generator': typeof GeneratorRoute
   '/mcp': typeof McpRoute
+  '/minimalist': typeof MinimalistRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/diagnostics': typeof DiagnosticsRoute
   '/generator': typeof GeneratorRoute
   '/mcp': typeof McpRoute
+  '/minimalist': typeof MinimalistRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/diagnostics'
     | '/generator'
     | '/mcp'
+    | '/minimalist'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.mcp/invoke-tool/$tool'
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/diagnostics'
     | '/generator'
     | '/mcp'
+    | '/minimalist'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.mcp/invoke-tool/$tool'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/diagnostics'
     | '/generator'
     | '/mcp'
+    | '/minimalist'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.mcp/invoke-tool/$tool'
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   DiagnosticsRoute: typeof DiagnosticsRoute
   GeneratorRoute: typeof GeneratorRoute
   McpRoute: typeof McpRoute
+  MinimalistRoute: typeof MinimalistRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/minimalist': {
+      id: '/minimalist'
+      path: '/minimalist'
+      fullPath: '/minimalist'
+      preLoaderRoute: typeof MinimalistRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiagnosticsRoute: DiagnosticsRoute,
   GeneratorRoute: GeneratorRoute,
   McpRoute: McpRoute,
+  MinimalistRoute: MinimalistRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
