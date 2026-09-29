@@ -1,13 +1,7 @@
 import { createContext, useContext, useRef } from "react";
 
-/** Minimalist Mode: bodies render as ink dots; the chosen one is the blue dot in a ring. */
+/** Minimalist Mode: bodies render as stateful ink dots; the chosen one is blue. */
 export const MinimalContext = createContext(false);
-
-function hashId(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
 import type { BodyDef } from "./planets";
 import { SpeechBubble } from "./SpeechBubble";
 import { sleepingSpriteFor } from "./sleepSprites";
@@ -241,8 +235,8 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
   );
 }
 
-/** Minimalist Mode body: a small ink dot on its orbit (filled or hollow),
-    or — for the chosen body — a large blue dot inside a thin blue ring. */
+/** Minimalist Mode body: awake is white, asleep is black, and the rocket's
+    current destination remains the large blue dot inside a thin blue ring. */
 function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true, chosen }: Pick<PlanetProps, "def" | "x" | "y" | "active" | "departing" | "newborn" | "onTap" | "highlighted" | "cameraScale" | "visualOpacity" | "visualScale" | "labelOpacity" | "interactive" | "chosen">) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
   // Dots are sized in screen pixels so every zoom depth reads like the
@@ -251,7 +245,6 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
   // Three quiet bead sizes (nucleus / planet / moon) keep the page calm.
   const tier = def.id === "sun" || def.size > 260 ? 15 : def.size > 90 ? 9 : 6.5;
   const dot = (chosen ? 26 : tier) / sc;
-  const hollow = !chosen && hashId(def.id) % 3 === 0;
   const hit = Math.max(dot * 2.4, 30 / sc);
   const stroke = 1.6 / sc;
   return (
@@ -296,8 +289,8 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
           ) : (
             <circle
               r={dot / 2}
-              className={hollow ? "fill-mini-paper stroke-mini-ink" : "fill-mini-ink"}
-              strokeWidth={hollow ? stroke : 0}
+              className={def.asleep ? "fill-mini-ink" : "fill-mini-paper stroke-mini-ink"}
+              strokeWidth={def.asleep ? 0 : stroke}
             />
           )}
           {(highlighted || active) && (

@@ -672,8 +672,24 @@ export function GeneratorSystem() {
       const f = (i + 0.6) / (n + 0.2);
       m.set(p.id, makeStudyOrbit(shape, R, innerR, f));
     });
-    return Object.assign(m, { boundary: studyPath(shape, R), shape });
+    return Object.assign(m, { boundary: studyPath(shape, R), shape, radius: R });
   }, [config.planets, config.sun.size, seed]);
+
+  /** Fit the complete Minimalist study, whose eccentric boundary can extend
+      well beyond the storybook world's default reset scale. */
+  const fitMinimalSystem = () => {
+    const viewportW = stripRef.current?.clientWidth ?? window.innerWidth;
+    const viewportH = stripRef.current?.clientHeight ?? window.innerHeight;
+    const boundaryExtent = nestedOrbits.radius * 1.72;
+    const s = Math.max(
+      0.002,
+      Math.min(0.36, (Math.min(viewportW, viewportH) * 0.86) / (boundaryExtent * 2)),
+    );
+    followRef.current = null;
+    setFocusedId(null);
+    setInfoId(null);
+    writeCamera(viewportW / 2 - CENTER * s, viewportH / 2 - CENTER * s, s);
+  };
 
   /** Moon offset from its parent: a circle in storybook, the study egg in Minimalist Mode. */
   const moonOff = (m: GeneratedMoon, a: number) => {
@@ -951,8 +967,8 @@ export function GeneratorSystem() {
             : k;
         ringScaleRef.current.set(m.id, next);
         return {
-          x: px + m.orbitR * next * Math.cos(a),
-          y: py + m.orbitR * next * Math.sin(a),
+          x: px + moonOff(m, a).x * next,
+          y: py + moonOff(m, a).y * next,
           size: m.size,
         };
       }
@@ -1091,7 +1107,14 @@ export function GeneratorSystem() {
       if (inFan && p.id === fanSubj.layout.parentId) {
         r = chatAdjustSubject(p.id, q.x, q.y, p.size);
       } else if (inFan) {
-        r = chatRide(p.id, CENTER, CENTER, a, p.orbit.pointAt, p.size);
+        r = chatRide(
+          p.id,
+          CENTER,
+          CENTER,
+          a,
+          (minimal ? nestedOrbits.get(p.id) : p.orbit)?.pointAt ?? p.orbit.pointAt,
+          p.size,
+        );
       } else if (wasSubject) {
         const live = { x: q.x, y: q.y, size: p.size };
         const c = chaseChatTarget(chatRenderRef.current, p.id, live, live, t);
@@ -1109,7 +1132,7 @@ export function GeneratorSystem() {
           CENTER,
           CENTER,
           a,
-          p.orbit.pointAt,
+          (minimal ? nestedOrbits.get(p.id) : p.orbit)?.pointAt ?? p.orbit.pointAt,
           p.size,
           t,
         );
@@ -2035,7 +2058,8 @@ export function GeneratorSystem() {
         preChatCamRef.current = null;
         closeChat();
       }
-      resetTransformRef.current?.();
+      if (minimal) fitMinimalSystem();
+      else resetTransformRef.current?.();
       return;
     }
     handleNavigate(id);
