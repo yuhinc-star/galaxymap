@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Moon, Send, Sun, X } from "lucide-react";
+import { minimalNodeDescription } from "./minimalCopy";
 
 export interface ChatSubjectInfo {
   id: string;
@@ -75,10 +76,9 @@ export function ChatPanel({ subject, onClose, waiting = false, onToggleSleep }: 
     const text = raw.trim();
     if (!text || typing || waiting) return;
     const replyCount = messages.filter((m) => m.from === "body").length;
-    const reply =
-      replyCount === 0
-        ? subject.line
-        : QUIPS[(replyCount - 1 + subject.id.length) % QUIPS.length]!;
+    const reply = replyCount === 0
+      ? minimalNodeDescription(subject, subject.kindLabel)
+      : QUIPS[(replyCount - 1 + subject.id.length) % QUIPS.length]!;
     setMessages((m) => [...m, { from: "me", text }]);
     setDraft("");
     setTyping(true);

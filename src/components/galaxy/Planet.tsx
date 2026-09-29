@@ -5,6 +5,7 @@ export const MinimalContext = createContext(false);
 import type { BodyDef } from "./planets";
 import { SpeechBubble } from "./SpeechBubble";
 import { sleepingSpriteFor } from "./sleepSprites";
+import { minimalNodeDescription } from "./minimalCopy";
 
 /** Hand-wobbled closed ring (r≈68 in a 160 viewBox) for the navigator
     highlight — deliberately imperfect so it reads as drawn, not orbital. */
@@ -230,7 +231,7 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
       >
         {def.name}
       </span>
-      {active && <SpeechBubble text={def.line} />}
+      {active && <SpeechBubble text={minimalNodeDescription(def)} minimal />}
     </div>
   );
 }
