@@ -83,18 +83,18 @@ const DEFAULT_COUNT = 6;
 
 /** The exploration tour, one hand-lettered tip at a time. */
 const GENERATOR_HINTS: ContextualHint[] = [
-  { id: "wander", context: "explore", text: "Drag to wander the galaxy — pinch or scroll to zoom!" },
-  { id: "navigator", context: "explore", text: "The navigator lists everyone — double-tap a name for tales & tricks!" },
-  { id: "new-system", context: "explore", text: "Roll 'New system' for a fresh galaxy — the palette paints new skies!" },
-  { id: "hello", context: "focused", text: "Tap a star to say hello… tap it again quickly for its storybook page!" },
-  { id: "zoom-out", context: "focused", text: "The pill up top flies you back to the parent star — from the sun, to the whole sky!" },
-  { id: "summon", context: "summon", text: "One tap sends the little rocket flying over — or drag it there yourself!" },
-  { id: "rocket-home", context: "at-host", text: "The little rocket lives here — drag it onto another star, or tap its chip in the navigator!" },
-  { id: "chat-link", context: "at-host", text: "Wherever the little rocket lands, that's who answers the chat!" },
-  { id: "storybook", context: "storybook", text: "A star's page gives it a new name, grows its family, summons the rocket… or says goodbye!" },
-  { id: "armed", context: "rocket-armed", text: "Move mode! Tap any star — the rocket will fly straight to it!" },
-  { id: "flight", context: "rocket-flight", text: "Wherever the little rocket lands, that's who answers the chat!" },
-  { id: "chat", context: "chat", text: "The family lines up to listen in — wander the strip, the chat stays with the rocket's host!" },
+  { id: "wander", context: "explore", text: "Drag the canvas. Pinch or scroll to change scale." },
+  { id: "navigator", context: "explore", text: "The system index preserves every generation." },
+  { id: "new-system", context: "explore", text: "New system creates another deterministic orbit study." },
+  { id: "hello", context: "focused", text: "Select a node to focus. Select it twice for its details." },
+  { id: "zoom-out", context: "focused", text: "Move upward one generation, or return to the full system." },
+  { id: "summon", context: "summon", text: "Set this node as the current focus." },
+  { id: "rocket-home", context: "at-host", text: "The cobalt node marks the current focus." },
+  { id: "chat-link", context: "at-host", text: "Open notes for the current focus." },
+  { id: "storybook", context: "storybook", text: "Details include naming, state, descendants, and removal." },
+  { id: "armed", context: "rocket-armed", text: "Choose any node as the next focus." },
+  { id: "flight", context: "rocket-flight", text: "Focus is shifting to the selected node." },
+  { id: "chat", context: "chat", text: "Five generations remain visible beside the notes panel." },
 ];
 
 /** Parked rocket stands on its host's upper-right shoulder. */
@@ -688,18 +688,6 @@ export function GeneratorSystem() {
     setFocusedId(null);
     setInfoId(null);
     writeCamera(viewportW / 2 - CENTER * s, viewportH / 2 - CENTER * s, s);
-  };
-
-  const toggleMinimalMode = () => {
-    if (minimal) {
-      setMinimal(false);
-      return;
-    }
-    setMinimal(true);
-    // The deep-system showcase opens focused several generations down.
-    // Entering the orbit study is a new overview, so frame its real outer
-    // contour after the narrower chat strip (if any) has settled.
-    requestAnimationFrame(() => fitMinimalSystem());
   };
 
   /** Moon offset from its parent: a circle in storybook, the study egg in Minimalist Mode. */
@@ -2609,7 +2597,6 @@ export function GeneratorSystem() {
             >
               <button
                 type="button"
-                aria-label="Chat with this world"
                 aria-label="Open notes"
                 title="Open notes"
                 onClick={() => openChat()}

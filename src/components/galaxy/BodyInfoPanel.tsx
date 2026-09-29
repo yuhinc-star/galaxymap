@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Moon, Pencil, Plus, Sun, Trash2, X } from "lucide-react";
+import { Check, LocateFixed, Moon, Pencil, Plus, Sun, Trash2, X } from "lucide-react";
 import { MAX_BODY_NAME } from "./systemGenerator";
 import { sleepingSpriteFor } from "./sleepSprites";
 
@@ -254,7 +254,7 @@ export function BodyInfoPanel({
             disabled={rocket.flying}
             className="flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-dashed border-star/60 px-4 py-1.5 font-hand text-xl font-bold uppercase leading-none tracking-wider text-star transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
           >
-            <Rocket className="h-5 w-5" strokeWidth={2.5} />
+             <LocateFixed className="h-5 w-5" strokeWidth={2} />
             {rocket.flying ? "Changing focus…" : "Set as focus"}
           </button>
         )}
