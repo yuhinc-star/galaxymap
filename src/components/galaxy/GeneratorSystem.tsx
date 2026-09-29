@@ -647,6 +647,9 @@ export function GeneratorSystem() {
     viewScaleRef.current = nextScale;
     stateRef.current = { positionX: nx, positionY: ny, scale: nextScale };
     writeCamera(nx, ny, nextScale);
+    setViewScale((current) =>
+      Math.abs(current - nextScale) > Math.max(0.018, current * 0.055) ? nextScale : current,
+    );
   };
   const nudgeRef = useRef(nudgeCameraZoom);
   nudgeRef.current = nudgeCameraZoom;
