@@ -766,7 +766,10 @@ export function GeneratorSystem() {
         const gap = Math.min(inner, outer) * B * minUnit(eP);
         ring.set(c.id, f * B);
         shapeOf.set(c.id, shape);
-        layFamily(c.id, (gap * FILL) / maxUnit(eccOf(c.id)), c.moons);
+        // A steady generational ratio (0.24–0.36 of the parent) keeps every
+        // depth reading as the same study, just smaller.
+        const fit = (gap * FILL) / maxUnit(eccOf(c.id));
+        layFamily(c.id, Math.min(B * 0.36, Math.max(B * 0.24, fit)), c.moons);
       });
     };
     const ps = [...config.planets].sort((a, b) => a.orbit.maxR - b.orbit.maxR);
@@ -2372,7 +2375,7 @@ export function GeneratorSystem() {
         key={`${seed}-${planetCount}`}
         initialScale={0.36}
         minScale={chatOpen && fanSubj ? Math.min(fanSubj.layout.camera.scale, 0.002) : 0.002}
-        maxScale={96}
+        maxScale={minimal ? 40000 : 96}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
