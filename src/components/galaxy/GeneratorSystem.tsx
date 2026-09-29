@@ -490,6 +490,18 @@ export function GeneratorSystem() {
       const ease = want < rate ? Math.min(1, dt / 90) : Math.min(1, dt / 520);
       rate += (want - rate) * ease;
       if (!freezeDeepMotionRef.current) elapsed += dt * rate;
+      // Per-ring phases: each orbit advances at its own eased rate.
+      if (!freezeDeepMotionRef.current && minimalRef.current) {
+        const phases = bodyPhaseRef.current;
+        const live = liveRateRef.current;
+        for (const [id, target] of bodyRateRef.current) {
+          const prev = live.get(id) ?? target;
+          const step = target < prev ? Math.min(1, dt / 120) : Math.min(1, dt / 480);
+          const r = prev + (target - prev) * step;
+          live.set(id, r);
+          phases.set(id, (phases.get(id) ?? 0) + (dt / 1000) * r);
+        }
+      }
       if (!mobile || now - lastSet >= 33) {
         lastSet = now;
         if (freezeDeepMotionRef.current) setCameraFrame((frame) => frame + 1);
