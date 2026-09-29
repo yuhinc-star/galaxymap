@@ -8,3 +8,4 @@
 - [x] Add smooth focus transitions between nodes.
 - [x] Diversify small-body contours with restrained angular and squared variants.
 - [x] Replace playful node speech with concise Minimalist observation labels.
+- [x] Replace all visible sun, planet, moon, and star terminology in Minimalist Mode with node terminology.

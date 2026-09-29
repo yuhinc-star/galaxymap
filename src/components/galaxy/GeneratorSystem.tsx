@@ -1008,7 +1008,7 @@ export function GeneratorSystem() {
     if (p) {
       const anchor = planetPos.get(p.id) ?? { x: CENTER, y: CENTER };
       subject = {
-        info: { id: p.id, name: p.name, img: p.img, line: p.line, kindLabel: "Planet" },
+        info: { id: p.id, name: p.name, img: p.img, line: p.line, kindLabel: "Node" },
         layout: computeChatLayout(
           p.id,
           anchor,
@@ -1020,16 +1020,13 @@ export function GeneratorSystem() {
       };
     } else if (m) {
       const anchor = bodyPos(m.id) ?? { x: CENTER, y: CENTER };
-      const parent = findMoonParent(config.planets, m.id);
-      const parentIsPlanet =
-        parent != null && config.planets.some((pp) => pp.id === parent.id);
       subject = {
         info: {
           id: m.id,
           name: m.name,
           img: m.img,
           line: m.line,
-          kindLabel: parentIsPlanet ? "Moon" : "Tiny moon",
+          kindLabel: "Node",
         },
         layout: computeChatLayout(
           m.id,
@@ -1048,7 +1045,7 @@ export function GeneratorSystem() {
           name: config.sun.name,
           img: config.sun.img,
           line: config.sun.line,
-          kindLabel: "Star",
+          kindLabel: "Node",
         },
         layout: computeChatLayout(
           config.sun.id,
@@ -1663,22 +1660,22 @@ export function GeneratorSystem() {
   const getAddMenuInfo = (id: string): AddMenuInfo | null => {
     if (id === config.sun.id) {
       return config.planets.length < MAX_SYSTEM_PLANETS
-        ? { canAdd: true, actionLabel: "Add a planet" }
-        : { canAdd: false, fullNote: "All 8 planet seats are full!" };
+        ? { canAdd: true, actionLabel: "Add a node" }
+        : { canAdd: false, fullNote: "Node limit reached" };
     }
     const p = config.planets.find((pp) => pp.id === id);
     if (p) {
       return p.moons.length < MAX_MOONS_PER_BODY
-        ? { canAdd: true, actionLabel: "Add a moon" }
-        : { canAdd: false, fullNote: "This planet's sky is full!" };
+        ? { canAdd: true, actionLabel: "Add a child node" }
+        : { canAdd: false, fullNote: "Child-node limit reached" };
     }
     const m = findMoonById(config.planets, id);
     if (m) {
       if (m.moons.length >= MAX_MOONS_PER_BODY)
-        return { canAdd: false, fullNote: "This little moon is full!" };
+        return { canAdd: false, fullNote: "Child-node limit reached" };
       if (m.size < MIN_MOON_PARENT_SIZE)
-        return { canAdd: false, fullNote: "Too tiny for a moon of its own!" };
-      return { canAdd: true, actionLabel: "Add a tiny moon" };
+        return { canAdd: false, fullNote: "Maximum node depth reached" };
+      return { canAdd: true, actionLabel: "Add a child node" };
     }
     return null;
   };
@@ -1910,9 +1907,9 @@ export function GeneratorSystem() {
         id,
         name: config.sun.name,
         img: config.sun.img,
-        kindLabel: "Sun",
+        kindLabel: "Node",
         line: config.sun.line,
-        childrenLabel: "Planets",
+        childrenLabel: "Child nodes",
         childrenCap: MAX_SYSTEM_PLANETS,
         children: config.planets.map((p) => ({
           id: p.id,
@@ -1929,9 +1926,9 @@ export function GeneratorSystem() {
         id,
         name: p.name,
         img: p.img,
-        kindLabel: "Planet",
+        kindLabel: "Node",
         line: p.line,
-        childrenLabel: "Moons",
+        childrenLabel: "Child nodes",
         childrenCap: MAX_MOONS_PER_BODY,
         children: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
         add,
@@ -1940,16 +1937,13 @@ export function GeneratorSystem() {
     }
     const m = findMoonById(config.planets, id);
     if (m) {
-      const parent = findMoonParent(config.planets, id);
-      const parentIsPlanet =
-        parent != null && config.planets.some((pp) => pp.id === parent.id);
       return {
         id,
         name: m.name,
         img: m.img,
-        kindLabel: parentIsPlanet ? "Moon" : "Tiny moon",
+        kindLabel: "Node",
         line: m.line,
-        childrenLabel: "Tiny moons",
+        childrenLabel: "Child nodes",
         childrenCap: MAX_MOONS_PER_BODY,
         children: m.moons.map((c) => ({ id: c.id, name: c.name, img: c.img })),
         add,
@@ -2621,8 +2615,8 @@ export function GeneratorSystem() {
               </button>
               <Link
                 to="/"
-                aria-label="Back to the classic solar system"
-                title="Back to the classic solar system"
+                aria-label="Back to the original view"
+                title="Back to the original view"
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
                 <Home className="h-5 w-5" />

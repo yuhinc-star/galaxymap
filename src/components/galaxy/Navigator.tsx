@@ -222,10 +222,10 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
             </span>
             {parentName && (
               <span
-                title={`Orbits ${parentName}`}
+                title={`Child of ${parentName}`}
                 className="mt-0.5 truncate font-display text-[9px] font-semibold uppercase leading-none text-white/45"
               >
-                orbits {parentName}
+                child of {parentName}
               </span>
             )}
           </span>
@@ -256,9 +256,9 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
         {hasChildren && !rocketHere && (
           <button
             type="button"
-            aria-label={expanded ? `Fold ${entry.name}'s family` : `Open ${entry.name}'s family`}
+            aria-label={expanded ? `Fold ${entry.name}'s descendants` : `Open ${entry.name}'s descendants`}
             aria-expanded={expanded}
-            title={forcedOpen ? "This family contains your current location" : expanded ? "Tuck away this family" : "Show this family"}
+            title={forcedOpen ? "This branch contains the current node" : expanded ? "Hide descendants" : "Show descendants"}
             onClick={() => {
               if (!forcedOpen) toggleBranch(entry.id);
             }}
@@ -344,8 +344,8 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
             type="button"
             onClick={() => toggleBranch(item.id)}
             className="group flex items-center gap-1.5 rounded-xl py-1 pl-1 pr-2.5 text-left text-star/80 transition-colors hover:bg-star/15 hover:text-star"
-            aria-label={`Show ${hidden} tucked-away ${hidden === 1 ? "star" : "stars"} orbiting ${item.name}`}
-            title={`Show ${hidden} more orbiting ${item.name}`}
+            aria-label={`Show ${hidden} hidden ${hidden === 1 ? "node" : "nodes"} below ${item.name}`}
+            title={`Show ${hidden} more ${hidden === 1 ? "node" : "nodes"}`}
           >
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-star/55">
               <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
