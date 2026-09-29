@@ -153,7 +153,7 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
               : "animate-panel-in fixed left-1/2 top-[max(7rem,calc(env(safe-area-inset-top)+6rem))] z-30 w-[26rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 sm:bottom-5 sm:top-auto"
           }
         >
-          <div className={`flex items-center rounded-3xl border-2 border-dashed border-star/70 bg-space-deep/90 px-4 py-2.5 shadow-xl backdrop-blur-sm ${docked ? "flex-wrap gap-2" : "gap-3"}`}>
+          <div className={`minimal-panel flex items-center border bg-space-deep/90 px-4 py-2.5 backdrop-blur-sm ${docked ? "flex-wrap gap-2" : "gap-3"}`}>
             <Sparkle
               className="h-5 w-5 shrink-0 animate-pulse text-star"
               aria-hidden
@@ -171,7 +171,7 @@ export function HintGuide({ pageId, hints, context, docked = false }: HintGuideP
               onClick={advance}
               className="shrink-0 rounded-full bg-star px-3 py-1 font-hand text-lg font-bold uppercase leading-none tracking-wider text-space shadow transition-transform hover:scale-105 active:scale-95"
             >
-              {queue.length <= 1 ? "Off you go!" : "Got it!"}
+                {queue.length <= 1 ? "Close" : "Next"}
             </button>
             <button
               type="button"

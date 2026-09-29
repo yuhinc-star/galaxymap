@@ -20,7 +20,6 @@ import {
   Home,
   MessagesSquare,
   Minus,
-  Palette,
   Plus,
   RotateCcw,
   Sparkle,
@@ -84,18 +83,18 @@ const DEFAULT_COUNT = 6;
 
 /** The exploration tour, one hand-lettered tip at a time. */
 const GENERATOR_HINTS: ContextualHint[] = [
-  { id: "wander", context: "explore", text: "Drag to wander the galaxy — pinch or scroll to zoom!" },
-  { id: "navigator", context: "explore", text: "The navigator lists everyone — double-tap a name for tales & tricks!" },
-  { id: "new-system", context: "explore", text: "Roll 'New system' for a fresh galaxy — the palette paints new skies!" },
-  { id: "hello", context: "focused", text: "Tap a star to say hello… tap it again quickly for its storybook page!" },
-  { id: "zoom-out", context: "focused", text: "The pill up top flies you back to the parent star — from the sun, to the whole sky!" },
-  { id: "summon", context: "summon", text: "One tap sends the little rocket flying over — or drag it there yourself!" },
-  { id: "rocket-home", context: "at-host", text: "The little rocket lives here — drag it onto another star, or tap its chip in the navigator!" },
-  { id: "chat-link", context: "at-host", text: "Wherever the little rocket lands, that's who answers the chat!" },
-  { id: "storybook", context: "storybook", text: "A star's page gives it a new name, grows its family, summons the rocket… or says goodbye!" },
-  { id: "armed", context: "rocket-armed", text: "Move mode! Tap any star — the rocket will fly straight to it!" },
-  { id: "flight", context: "rocket-flight", text: "Wherever the little rocket lands, that's who answers the chat!" },
-  { id: "chat", context: "chat", text: "The family lines up to listen in — wander the strip, the chat stays with the rocket's host!" },
+  { id: "wander", context: "explore", text: "Drag the canvas. Pinch or scroll to change scale." },
+  { id: "navigator", context: "explore", text: "The system index preserves every generation." },
+  { id: "new-system", context: "explore", text: "New system creates another deterministic orbit study." },
+  { id: "hello", context: "focused", text: "Select a node to focus. Select it twice for its details." },
+  { id: "zoom-out", context: "focused", text: "Move upward one generation, or return to the full system." },
+  { id: "summon", context: "summon", text: "Set this node as the current focus." },
+  { id: "rocket-home", context: "at-host", text: "The cobalt node marks the current focus." },
+  { id: "chat-link", context: "at-host", text: "Open notes for the current focus." },
+  { id: "storybook", context: "storybook", text: "Details include naming, state, descendants, and removal." },
+  { id: "armed", context: "rocket-armed", text: "Choose any node as the next focus." },
+  { id: "flight", context: "rocket-flight", text: "Focus is shifting to the selected node." },
+  { id: "chat", context: "chat", text: "Five generations remain visible beside the notes panel." },
 ];
 
 /** Parked rocket stands on its host's upper-right shoulder. */
@@ -181,8 +180,8 @@ export function GeneratorSystem() {
       elsewhere never hijacks the ongoing conversation. */
   const [chatTalkId, setChatTalkId] = useState<string | null>(null);
   const [bgIndex, setBgIndex] = useState(0);
-  /** Minimalist Mode: ink-on-paper orbit study; the rocket becomes the blue dot. */
-  const [minimal, setMinimal] = useState(false);
+  /** The generator is permanently presented as an ink-on-paper orbit study. */
+  const minimal = true;
   /** Runtime-grown system: once the user adds bodies by double-clicking,
       this replaces the seeded config (regenerating resets it). */
   const [extras, setExtras] = useState<SystemConfig | null>(null);
@@ -689,18 +688,6 @@ export function GeneratorSystem() {
     setFocusedId(null);
     setInfoId(null);
     writeCamera(viewportW / 2 - CENTER * s, viewportH / 2 - CENTER * s, s);
-  };
-
-  const toggleMinimalMode = () => {
-    if (minimal) {
-      setMinimal(false);
-      return;
-    }
-    setMinimal(true);
-    // The deep-system showcase opens focused several generations down.
-    // Entering the orbit study is a new overview, so frame its real outer
-    // contour after the narrower chat strip (if any) has settled.
-    requestAnimationFrame(() => fitMinimalSystem());
   };
 
   /** Moon offset from its parent: a circle in storybook, the study egg in Minimalist Mode. */
@@ -2260,7 +2247,7 @@ export function GeneratorSystem() {
 
   return (
     <MinimalContext.Provider value={minimal}>
-    <div className={`fixed inset-0 overflow-hidden ${minimal ? "bg-mini-paper" : "bg-space"}`}>
+    <div className="minimal-ui fixed inset-0 overflow-hidden bg-mini-paper">
       <div className="flex h-full w-full">
       {/* Sky strip: the whole galaxy squeezes here when chat opens */}
       <div
@@ -2547,21 +2534,10 @@ export function GeneratorSystem() {
             </TransformComponent>
 
             <header className="pointer-events-none fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2">
-              <Sparkle className={`h-5 w-5 ${minimal ? "text-mini-blue" : "text-star"}`} aria-hidden />
-              <span className={`font-display text-base font-semibold tracking-wide sm:text-xl ${minimal ? "text-mini-ink" : "text-star"}`}>
-                {minimal ? "Orbit Study" : "Galaxy Generator"}
+              <span className="h-2.5 w-2.5 rounded-full bg-mini-blue" aria-hidden />
+              <span className="font-display text-base font-semibold text-mini-ink sm:text-xl">
+                Orbit Study
               </span>
-              <button
-                type="button"
-                onClick={toggleMinimalMode}
-                aria-pressed={minimal}
-                title={minimal ? "Back to the storybook galaxy" : "Minimalist Mode: ink orbits, the chosen star is the blue dot"}
-                className={`pointer-events-auto ml-2 rounded-full border-2 px-3 py-1 font-display text-xs font-semibold transition-colors sm:text-sm ${
-                  minimal ? "border-mini-ink bg-mini-paper text-mini-ink hover:bg-mini-ink hover:text-mini-paper" : "border-star/70 bg-space/70 text-star hover:bg-star hover:text-space"
-                }`}
-              >
-                {minimal ? "Storybook" : "Minimalist"}
-              </button>
             </header>
 
             <Navigator
@@ -2621,8 +2597,8 @@ export function GeneratorSystem() {
             >
               <button
                 type="button"
-                aria-label="Chat with this world"
-                title="Chat mode — the rocket introduces its host"
+                aria-label="Open notes"
+                title="Open notes"
                 onClick={() => openChat()}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
@@ -2728,16 +2704,6 @@ export function GeneratorSystem() {
                   : "flex right-[max(1rem,env(safe-area-inset-right))]"
               }`}
             >
-              <button
-                type="button"
-                aria-label={`Change background (now: ${BACKGROUNDS[bgIndex]!.name})`}
-                title={`Sky: ${BACKGROUNDS[bgIndex]!.name}`}
-                onClick={cycleBg}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
-              >
-                <Palette className="h-5 w-5" />
-              </button>
-
               {chatActive ? (
                 <button
                   type="button"

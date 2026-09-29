@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, List, Sparkle, X } from "lucide-react";
+import { ChevronDown, ChevronRight, List, LocateFixed, Sparkle, X } from "lucide-react";
 
 export interface NavigatorEntry {
   id: string;
@@ -99,8 +99,8 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
     return (
       <button
         type="button"
-        aria-label="Open the navigator"
-        title="Navigator"
+        aria-label="Open system index"
+        title="System index"
         onClick={() => setOpen(true)}
         className={`animate-pop-in fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 ${chatMode ? "hidden sm:flex" : "flex"} h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-space-deep/90 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 active:scale-95`}
       >
@@ -241,21 +241,16 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
             type="button"
             aria-label={
               armed
-                ? "Cancel rocket move"
-                : `Move the rocket (parked at ${entry.name})`
+                ? "Cancel focus selection"
+                : `Change focus from ${entry.name}`
             }
-            title={armed ? "Cancel rocket move" : "Move the rocket"}
+            title={armed ? "Cancel focus selection" : "Change focus"}
             onClick={rocket.onChip}
             className={`absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border shadow-sm transition-transform hover:scale-110 active:scale-95 sm:h-7 sm:w-7 ${
               armed ? "border-star bg-star/40" : "border-star/60 bg-star/15"
             } ${rocket.flying ? "animate-pulse" : ""}`}
           >
-            <img
-              src={rocket.img}
-              alt=""
-              draggable={false}
-              className="h-4 w-4 rotate-45 object-contain"
-            />
+            <LocateFixed className="h-4 w-4" aria-hidden />
           </button>
         )}
         {hasChildren && !rocketHere && (
@@ -366,8 +361,8 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
   return (
     <nav
       ref={navRef}
-      aria-label="System navigator"
-      className={`${closing ? "nav-out" : "animate-pop-in"} fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 ${chatMode ? "hidden sm:flex" : "flex"} max-h-[62vh] flex-col overflow-hidden rounded-3xl border border-white/20 bg-space-deep/90 shadow-xl backdrop-blur-sm ${
+      aria-label="System index"
+      className={`${closing ? "nav-out" : "animate-pop-in"} minimal-panel fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] z-20 ${chatMode ? "hidden sm:flex" : "flex"} max-h-[62vh] flex-col overflow-hidden border bg-space-deep/90 backdrop-blur-sm ${
         chatMode
           ? // Fill the galaxy strip (its width minus the side margins).
             "w-[calc(clamp(290px,33vw,460px)-2rem)]"
@@ -376,13 +371,13 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
     >
       <div className="flex items-center justify-between px-4 pb-1 pt-3">
         <span className="font-hand text-2xl font-bold uppercase tracking-[0.2em] text-white">
-          {armed ? "Fly the rocket to…" : "Navigator"}
+          {armed ? "Choose focus" : "System index"}
         </span>
         <div className="flex items-center gap-1">
           {armed && (
             <button
               type="button"
-              aria-label="Cancel rocket move"
+              aria-label="Cancel focus selection"
               onClick={rocket!.onChip}
               className="flex h-9 w-9 items-center justify-center rounded-full text-star transition-colors hover:bg-star/20 sm:h-7 sm:w-7"
             >
@@ -391,7 +386,7 @@ export function Navigator({ items, activeId, focusedId, onSelect, onInfo, depart
           )}
           <button
             type="button"
-            aria-label="Collapse the navigator"
+            aria-label="Collapse system index"
             onClick={collapse}
             className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/20 hover:text-white sm:h-7 sm:w-7"
           >
