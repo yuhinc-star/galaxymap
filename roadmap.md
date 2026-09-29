@@ -1,25 +1,6 @@
 # Roadmap
 
-- [x] Make deep-system orbit radii proportional at every generation.
-- [x] Ensure every child body is visibly smaller than its parent.
-- [x] Frame each focused family aesthetically around the screen-stable rocket.
-- [x] Verify all seven generations on desktop and mobile, including rocket parking and chat mode.
-- [x] Fold deep Navigator branches without hiding the active family path.
-- [x] Verify deep navigation, rocket targeting, long names, and Chat Mode across compact, desktop, and phone views.
-- [x] Stop infinite camera shaking during deep zoom without weakening semantic zoom.
-- [x] Verify wheel, button, and focused-body zoom at the current viewport and on mobile.
-- [x] Restore an unmistakable parent-to-child genealogy in the deep Navigator.
-- [x] Keep deep branches compact without flattening siblings or hiding active ancestry.
-- [x] Verify tree expansion and focus behavior at the current screen size and on mobile.
-- [x] Synchronize orbit motion and camera tracking before paint to eliminate residual deep-focus shake.
-- [x] Keep selected-body tracking active through wheel and pinch zoom; release it only on deliberate panning.
-- [x] Expand Chat Mode's visible family window from three to five generations without changing the galaxy tree.
-- [x] Restore five visibly distinct parent-to-child levels in Chat Mode and verify the deep genealogy.
-- [x] Give the zoom gesture sole ownership of the camera, then re-lock the focused star, ending deep-zoom shake (verified on the smallest star, Speck).
-- [x] Replace competing camera writers with one explicit camera controller and re-test deep focus at maximum magnification.
-- [x] Freeze deep-family orbital movement while a tiny descendant is focused, so extreme zoom remains calm.
-- [x] Restore proportional planet sizes in Sun Chat Mode without crowding its overview with deep descendants.
-- [x] Add controllable sleep/wake state to every sun, planet, and moon.
-- [x] Give every sleeping body closed eyes and vivid drifting “zzz” marks.
-- [x] Refine every sleeping face as a genuinely drowsy hand-painted expression, never a generic closed-eye smile.
-- [x] Verify sleep controls in storybook cards and Chat Mode on desktop and phone.
+- [x] Frame the complete Minimalist orbit study when entering the mode or returning to the whole system.
+- [x] Keep Minimalist Chat on the same nested contour geometry as the main view.
+- [x] Show awake nodes as white, sleeping nodes as black, and the rocket node as blue-ringed.
+- [ ] Verify desktop and compact views, Chat Mode, and all three node states.

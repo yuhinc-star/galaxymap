@@ -691,6 +691,18 @@ export function GeneratorSystem() {
     writeCamera(viewportW / 2 - CENTER * s, viewportH / 2 - CENTER * s, s);
   };
 
+  const toggleMinimalMode = () => {
+    if (minimal) {
+      setMinimal(false);
+      return;
+    }
+    setMinimal(true);
+    // The deep-system showcase opens focused several generations down.
+    // Entering the orbit study is a new overview, so frame its real outer
+    // contour after the narrower chat strip (if any) has settled.
+    requestAnimationFrame(() => fitMinimalSystem());
+  };
+
   /** Moon offset from its parent: a circle in storybook, the study egg in Minimalist Mode. */
   const moonOff = (m: GeneratedMoon, a: number) => {
     const r = minimal ? m.orbitR * nestedOrbits.shape.unit(a) * 1.18 : m.orbitR;
@@ -2537,7 +2549,7 @@ export function GeneratorSystem() {
               </span>
               <button
                 type="button"
-                onClick={() => setMinimal((v) => !v)}
+                onClick={toggleMinimalMode}
                 aria-pressed={minimal}
                 title={minimal ? "Back to the storybook galaxy" : "Minimalist Mode: ink orbits, the chosen star is the blue dot"}
                 className={`pointer-events-auto ml-2 rounded-full border-2 px-3 py-1 font-display text-xs font-semibold transition-colors sm:text-sm ${
