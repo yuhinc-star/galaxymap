@@ -108,7 +108,7 @@ export function BodyInfoPanel({
           src={info.asleep ? sleepingSpriteFor(info.img) : info.img}
           alt=""
           draggable={false}
-          className="h-14 w-14 shrink-0 select-none rounded-full bg-space/60 object-contain p-1 ring-2 ring-star/70"
+          className="h-14 w-14 shrink-0 select-none rounded-full object-contain p-1 ring-1 ring-mini-line"
         />
         <div className="min-w-0 flex-1">
           <span className="font-display text-sm font-bold uppercase tracking-[0.28em] text-mini-ink/60">
@@ -143,18 +143,18 @@ export function BodyInfoPanel({
                   aria-label="Save the new name"
                   title="Save name"
                   onClick={commitEdit}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-star text-space shadow transition-transform hover:scale-110 active:scale-95"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-mini-ink bg-mini-ink text-mini-paper transition-colors hover:bg-mini-ink/85 active:scale-95"
                 >
-                  <Check className="h-4 w-4" strokeWidth={3} />
+                  <Check className="h-3.5 w-3.5" strokeWidth={1.5} />
                 </button>
                 <button
                   type="button"
                   aria-label="Keep the old name"
                   title="Cancel"
                   onClick={() => setEditing(false)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-mini-ink/70 transition-colors hover:bg-white/20 hover:text-mini-ink"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-mini-ink/70 transition-colors hover:bg-mini-ink/5 hover:text-mini-ink"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" strokeWidth={1.5} />
                 </button>
               </div>
             </div>
@@ -171,9 +171,9 @@ export function BodyInfoPanel({
                   aria-label={`Rename ${info.name}`}
                   title="Give it a new name"
                   onClick={startEdit}
-                  className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-mini-ink/55 transition-colors hover:bg-star/20 hover:text-mini-blue"
+                  className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-mini-ink/55 transition-colors hover:bg-mini-ink/5 hover:text-mini-blue"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
                 </button>
               )}
             </div>
@@ -183,15 +183,15 @@ export function BodyInfoPanel({
           type="button"
           aria-label="Close the info panel"
           onClick={onClose}
-          className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-mini-ink/80 transition-colors hover:bg-white/20 hover:text-white sm:h-7 sm:w-7"
+          className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-mini-ink/80 transition-colors hover:bg-mini-ink/5 hover:text-mini-ink sm:h-7 sm:w-7"
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" strokeWidth={1.5} />
         </button>
       </div>
 
       <div className="flex flex-col gap-3 overflow-y-auto overscroll-contain px-4 pb-4 pt-1 [touch-action:pan-y]">
         {info.line && (
-          <p className="rounded-2xl border-2 border-dashed border-mini-line25 px-3 py-2 font-display text-xs font-medium uppercase tracking-[0.18em] leading-snug text-mini-ink/90">
+          <p className="rounded-2xl border border-mini-line px-3 py-2 font-display text-xs font-normal tracking-[0.08em] leading-snug text-mini-ink/80">
             {info.line}
           </p>
         )}
@@ -227,7 +227,7 @@ export function BodyInfoPanel({
                       src={c.img}
                       alt=""
                       draggable={false}
-                      className="h-7 w-7 shrink-0 select-none rounded-full bg-space/60 object-contain p-0.5"
+                      className="h-7 w-7 shrink-0 select-none rounded-full object-contain p-0.5"
                     />
                     <span
                       title={c.name}
