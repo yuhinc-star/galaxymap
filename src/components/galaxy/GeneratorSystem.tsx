@@ -843,6 +843,59 @@ export function GeneratorSystem() {
     studyPath(minimalLayout.shapeOf.get(m.id) ?? moonStudyShape(m.id), minimalLayout.ring.get(m.id) ?? m.orbitR);
   const minimalBoundaryPath = (id: string) => studyPath(moonStudyShape(id), minimalLayout.reach.get(id) ?? 0);
 
+  /**
+   * Zoom-relative motion (presentation-only): the study should read as alive
+   * at every zoom level. Bodies keep their own geometry and relative periods;
+   * only the shared clock rate changes, derived from how many screen pixels
+   * per second the family currently in view would otherwise travel.
+   */
+  const TARGET_PX_PER_SEC = 26;
+  const familyIndex = useMemo(() => {
+    const moonById = new Map<string, GeneratedMoon>();
+    const kids = new Map<string, string[]>();
+    const walk = (moons: GeneratedMoon[], parentId: string) => {
+      kids.set(
+        parentId,
+        moons.map((m) => m.id),
+      );
+      for (const m of moons) {
+        moonById.set(m.id, m);
+        walk(m.moons, m.id);
+      }
+    };
+    kids.set(config.sun.id, config.planets.map((p) => p.id));
+    for (const p of config.planets) walk(p.moons, p.id);
+    return { moonById, kids };
+  }, [config]);
+
+  /** Screen-space orbital speed (px/s) a body would have at clock rate 1. */
+  const screenOrbitSpeed = (id: string): number | null => {
+    const moon = familyIndex.moonById.get(id);
+    if (moon) {
+      const r = minimal ? minimalLayout.ring.get(id) ?? moon.orbitR : moon.orbitR;
+      return moon.period > 0 ? (TAU * r * viewScale) / moon.period : null;
+    }
+    const planet = config.planets.find((p) => p.id === id);
+    if (planet) {
+      const shape = (minimal ? nestedOrbits.get(id) : planet.orbit) ?? planet.orbit;
+      return planet.period > 0 ? (TAU * shape.maxR * viewScale) / planet.period : null;
+    }
+    return null;
+  };
+
+  const desiredMotionRateRef = useRef(1);
+  desiredMotionRateRef.current = (() => {
+    if (!minimal) return 1;
+    const ids = [focusForVisibility, ...(familyIndex.kids.get(focusForVisibility) ?? [])];
+    const speeds = ids
+      .map(screenOrbitSpeed)
+      .filter((s): s is number => typeof s === "number" && s > 0.0001)
+      .sort((a, b) => a - b);
+    if (speeds.length === 0) return 1;
+    const median = speeds[Math.floor(speeds.length / 2)]!;
+    return Math.min(20, Math.max(0.25, TARGET_PX_PER_SEC / median));
+  })();
+
   // Orbit math: bodies advance along their own wobbly closed curves.
   const planetPos = new Map<string, { x: number; y: number }>();
   for (const p of config.planets) {
