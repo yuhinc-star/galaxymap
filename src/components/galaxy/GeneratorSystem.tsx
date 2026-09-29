@@ -921,21 +921,39 @@ export function GeneratorSystem() {
   };
 
   const desiredMotionRateRef = useRef(1);
-  desiredMotionRateRef.current = (() => {
-    if (!minimal) return 1;
-    const ids = [focusForVisibility, ...(familyIndex.kids.get(focusForVisibility) ?? [])];
-    const speeds = ids
-      .map(screenOrbitSpeed)
-      .filter((s): s is number => typeof s === "number" && s > 0.0001)
-      .sort((a, b) => a - b);
-    if (speeds.length === 0) return 1;
-    const median = speeds[Math.floor(speeds.length / 2)]!;
-    // Wide bounds: deep zoom needs a very slow clock to hold the same apparent
-    // speed, while the whole-system overview needs a fast one.
-    const rate = Math.min(400, Math.max(0.01, MOTION_TARGET_PX_PER_SEC / median));
-    (window as unknown as Record<string, unknown>)["__miniRate"] = { rate, median, viewScale, focus: focusForVisibility, n: speeds.length };
-    return rate;
-  })();
+  desiredMotionRateRef.current = 1;
+
+  /**
+   * Per-ring clock (minimalist only). Each orbit runs at its own rate so that
+   * every ring shows roughly the same apparent travel on screen: rings that
+   * are huge at the current zoom (the distant ancestors of a node you are
+   * zoomed into) slow to a near stop, while the local family stays lively.
+   * Rates are eased, and each body keeps its own accumulated phase, so
+   * changing zoom or focus never snaps an orbit.
+   */
+  const bodyRateRef = useRef(new Map<string, number>());
+  const bodyPhaseRef = useRef(new Map<string, number>());
+  const livePhase = (id: string) => bodyPhaseRef.current.get(id) ?? 0;
+  if (minimal) {
+    const rates = new Map<string, number>();
+    const rateFor = (speed: number | null) => {
+      if (!speed || speed <= 0.0001) return 1;
+      // Exponent below 1 keeps a hint of the original variety between rings
+      // instead of making every orbit crawl at exactly the same pace.
+      return Math.min(8, Math.max(0, Math.pow(MOTION_TARGET_PX_PER_SEC / speed, 0.85)));
+    };
+    for (const p of config.planets) {
+      rates.set(p.id, rateFor(screenOrbitSpeed(p.id)));
+      const walk = (moons: GeneratedMoon[]) => {
+        for (const m of moons) {
+          rates.set(m.id, rateFor(screenOrbitSpeed(m.id)));
+          walk(m.moons);
+        }
+      };
+      walk(p.moons);
+    }
+    bodyRateRef.current = rates;
+  }
 
   // Orbit math: bodies advance along their own wobbly closed curves.
   const planetPos = new Map<string, { x: number; y: number }>();
