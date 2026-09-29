@@ -191,8 +191,8 @@ export function BodyInfoPanel({
 
       <div className="flex flex-col gap-3 overflow-y-auto overscroll-contain px-4 pb-4 pt-1 [touch-action:pan-y]">
         {info.line && (
-          <p className="rounded-2xl border-2 border-dashed border-white/25 px-3 py-2 font-hand text-xl font-bold leading-snug text-white/90">
-            &ldquo;{info.line}&rdquo;
+          <p className="rounded-2xl border-2 border-dashed border-white/25 px-3 py-2 font-display text-xs font-medium uppercase tracking-[0.18em] leading-snug text-white/90">
+            {info.line}
           </p>
         )}
 
