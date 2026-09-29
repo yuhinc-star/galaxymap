@@ -157,6 +157,9 @@ const countMoons = (ms: GeneratedMoon[]): number =>
  * world from the sprite pool — a random sun, random planets on asymmetric
  * hand-drawn orbits, 0–2 moons each, and a few drifting friends.
  */
+/** Apparent on-screen speed the study aims for at any zoom level (px/s). */
+const MOTION_TARGET_PX_PER_SEC = 26;
+
 export function GeneratorSystem() {
   const [activeId, setActiveId] = useState<string | null>(null);
   /** Body the camera is currently locked onto (navigator "you are here"). */
@@ -882,7 +885,6 @@ export function GeneratorSystem() {
    * only the shared clock rate changes, derived from how many screen pixels
    * per second the family currently in view would otherwise travel.
    */
-  const TARGET_PX_PER_SEC = 26;
   const familyIndex = useMemo(() => {
     const moonById = new Map<string, GeneratedMoon>();
     const kids = new Map<string, string[]>();
@@ -928,7 +930,7 @@ export function GeneratorSystem() {
     const median = speeds[Math.floor(speeds.length / 2)]!;
     // Wide bounds: deep zoom needs a very slow clock to hold the same apparent
     // speed, while the whole-system overview needs a fast one.
-    const rate = Math.min(400, Math.max(0.01, TARGET_PX_PER_SEC / median));
+    const rate = Math.min(400, Math.max(0.01, MOTION_TARGET_PX_PER_SEC / median));
     (window as unknown as Record<string, unknown>)["__miniRate"] = { rate, median, viewScale, focus: focusForVisibility, n: speeds.length };
     return rate;
   })();
