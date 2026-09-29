@@ -1,4 +1,13 @@
-import { useRef } from "react";
+import { createContext, useContext, useRef } from "react";
+
+/** Minimalist Mode: bodies render as ink dots; the chosen one is the blue dot in a ring. */
+export const MinimalContext = createContext(false);
+
+function hashId(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
 import type { BodyDef } from "./planets";
 import { SpeechBubble } from "./SpeechBubble";
 import { sleepingSpriteFor } from "./sleepSprites";
@@ -50,6 +59,8 @@ interface PlanetProps {
   labelOpacity?: number;
   interactive?: boolean;
   asleep?: boolean;
+  /** Minimalist Mode: the rocket's host, drawn as the blue ringed dot. */
+  chosen?: boolean;
 }
 
 /**
@@ -67,8 +78,10 @@ export function planetLabelSize(size: number, name: string): number {
  * A celestial body floating in the world: sprite, name label, tap
  * reaction. Position comes from the parent's orbit math.
  */
-export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true, asleep = def.asleep ?? false }: PlanetProps) {
+export function Planet({ def, x, y, active, bouncing = false, newborn = false, departing = false, onTap, spin, jumping, highlighted, highlightMode = "flash", labelBoost = 1, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true, asleep = def.asleep ?? false, chosen = false }: PlanetProps) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
+  const minimal = useContext(MinimalContext);
+  if (minimal) return <MinimalDot {...{ def, x, y, active, departing, newborn, onTap, highlighted: !!highlighted, cameraScale, visualOpacity, visualScale, labelOpacity, interactive, chosen }} />;
   const longName = def.name.length > 16;
 
   let animation: string | undefined;
@@ -219,6 +232,87 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
           marginTop: 4 / labelCounterScale,
           opacity: departing ? 0 : labelOpacity,
           textShadow: `0 ${2 / labelCounterScale}px ${10 / labelCounterScale}px rgba(10, 6, 30, 0.9)`,
+        }}
+      >
+        {def.name}
+      </span>
+      {active && <SpeechBubble text={def.line} />}
+    </div>
+  );
+}
+
+/** Minimalist Mode body: a small ink dot on its orbit (filled or hollow),
+    or — for the chosen body — a large blue dot inside a thin blue ring. */
+function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true, chosen }: Pick<PlanetProps, "def" | "x" | "y" | "active" | "departing" | "newborn" | "onTap" | "highlighted" | "cameraScale" | "visualOpacity" | "visualScale" | "labelOpacity" | "interactive" | "chosen">) {
+  const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
+  // Dots are sized in screen pixels so every zoom depth reads like the
+  // orbit studies: small ink beads, one confident blue focus.
+  const sc = Math.max(1e-4, cameraScale);
+  const screen = Math.min(15, Math.max(6, def.size * 0.12 * sc));
+  const dot = (chosen ? 24 : screen) / sc;
+  const hollow = !chosen && hashId(def.id) % 3 === 0;
+  const hit = Math.max(dot * 2.4, 30 / sc);
+  const stroke = 1.6 / sc;
+  return (
+    <div
+      className={`absolute semantic-body ${departing || !interactive ? "pointer-events-none" : ""}`}
+      style={{
+        left: x,
+        top: y,
+        transform: "translate(-50%, -50%)",
+        zIndex: active || highlighted || chosen ? 30 : undefined,
+        opacity: visualOpacity,
+        transition: "opacity 0.5s",
+        ["--semantic-scale" as string]: visualScale,
+      }}
+    >
+      <button
+        type="button"
+        aria-label={def.name}
+        className="relative block cursor-pointer touch-manipulation select-none"
+        style={{ width: hit, height: hit }}
+        onPointerDown={(e) => {
+          downAt.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+        }}
+        onPointerUp={(e) => {
+          const pd = downAt.current;
+          downAt.current = null;
+          if (!pd) return;
+          if (Math.hypot(e.clientX - pd.x, e.clientY - pd.y) < 12 && Date.now() - pd.t < 600) onTap(def.id);
+        }}
+      >
+        <svg
+          viewBox={`${-hit / 2} ${-hit / 2} ${hit} ${hit}`}
+          className="absolute inset-0 h-full w-full overflow-visible"
+          style={{ animation: departing ? "body-goodbye 0.68s ease-in 1 both" : newborn ? "planet-birth 0.9s cubic-bezier(0.34,1.56,0.64,1) 1" : undefined }}
+          aria-hidden
+        >
+          {chosen ? (
+            <>
+              <circle r={dot / 2} className="fill-mini-blue" style={{ transition: "r 0.5s" }} />
+              <circle r={dot / 2 + 6 / sc} fill="none" className="stroke-mini-blue" strokeWidth={1.8 / sc} />
+            </>
+          ) : (
+            <circle
+              r={dot / 2}
+              className={hollow ? "fill-mini-paper stroke-mini-ink" : "fill-mini-ink"}
+              strokeWidth={hollow ? stroke : 0}
+            />
+          )}
+          {(highlighted || active) && (
+            <circle r={hit / 2 - 1} fill="none" className="stroke-mini-line" strokeWidth={1.2 / sc} strokeDasharray={`${3 / sc} ${3 / sc}`} />
+          )}
+        </svg>
+      </button>
+      <span
+        className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap font-sans font-medium uppercase tracking-[0.18em] text-mini-line"
+        style={{
+          fontSize: (chosen ? 13 : 11) / sc,
+          marginTop: 3 / sc,
+          maxWidth: 260 / sc,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          opacity: departing ? 0 : labelOpacity,
         }}
       >
         {def.name}

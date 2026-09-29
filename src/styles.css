@@ -63,6 +63,10 @@
   --color-space-deep: var(--space-deep);
   --color-star: var(--star);
   --color-orbit-label: var(--orbit-label);
+  --color-mini-paper: var(--mini-paper);
+  --color-mini-ink: var(--mini-ink);
+  --color-mini-line: var(--mini-line);
+  --color-mini-blue: var(--mini-blue);
   --font-display: "Fredoka", ui-rounded, "Comic Sans MS", system-ui, sans-serif;
   --font-hand: "Amatic SC", "Fredoka", ui-rounded, system-ui, sans-serif;
 }
@@ -105,6 +109,10 @@
   --space-deep: oklch(0.19 0.055 298);
   --star: oklch(0.9 0.16 95);
   --orbit-label: oklch(0.84 0.12 195);
+  --mini-paper: oklch(0.99 0.002 90);
+  --mini-ink: oklch(0.14 0 0);
+  --mini-line: oklch(0.42 0 0);
+  --mini-blue: oklch(0.55 0.25 262);
 }
 
 .dark {
