@@ -200,9 +200,9 @@ export function BodyInfoPanel({
           <button
             type="button"
             onClick={onToggleSleep}
-            className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-dashed border-orbit-label/60 bg-space/45 px-4 py-2 font-hand text-2xl font-bold uppercase leading-none tracking-wider text-orbit-label transition-transform hover:scale-[1.03] active:scale-95"
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-mini-line bg-mini-paper px-4 py-1.5 font-display text-xs font-normal leading-none tracking-[0.08em] text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95"
           >
-            <Circle className={`h-5 w-5 ${info.asleep ? "fill-current" : ""}`} />
+            <Circle className={`h-3.5 w-3.5 ${info.asleep ? "fill-current" : ""}`} strokeWidth={1.5} />
             {info.asleep ? `Wake ${info.name}` : `Let ${info.name} sleep`}
           </button>
         )}
@@ -252,34 +252,34 @@ export function BodyInfoPanel({
             type="button"
             onClick={rocket.onSummon}
             disabled={rocket.flying}
-            className="flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-dashed border-star/60 px-4 py-1.5 font-hand text-xl font-bold uppercase leading-none tracking-wider text-star transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-1.5 rounded-full border border-mini-blue/70 px-4 py-1.5 font-display text-xs font-normal leading-none tracking-[0.08em] text-mini-blue transition-colors hover:border-mini-blue active:scale-95 disabled:opacity-40"
           >
-             <LocateFixed className="h-5 w-5" strokeWidth={2} />
+             <LocateFixed className="h-3.5 w-3.5" strokeWidth={1.5} />
             {rocket.flying ? "Changing focus…" : "Set as focus"}
           </button>
         )}
         {rocket && rocket.here && (
-          <p className="rounded-2xl border-2 border-dashed border-white/15 px-3 py-2 text-center font-hand text-lg font-bold uppercase leading-tight tracking-wider text-star">
+          <p className="rounded-full border border-mini-line px-3 py-1.5 text-center font-display text-xs font-normal leading-tight tracking-[0.08em] text-mini-ink/60">
             {rocket.flying ? "Focus changing" : "Current focus"}
           </p>
         )}
 
         {/* The single primary action: grow this family */}
-        <section className="rounded-2xl border-2 border-dashed border-star/60 bg-star/10 px-3 py-2.5">
-          <h3 className="font-hand text-lg font-bold uppercase tracking-[0.18em] text-star">
+        <section className="rounded-2xl border border-mini-line px-3 py-2.5">
+          <h3 className="font-display text-xs font-normal tracking-[0.08em] text-mini-ink/60">
              Add node
           </h3>
           {info.add.canAdd ? (
             <button
               type="button"
               onClick={onAdd}
-              className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-full bg-star px-4 py-1.5 font-hand text-2xl font-bold uppercase leading-none tracking-wider text-space shadow-md transition-transform hover:scale-105 active:scale-95"
+              className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-full border border-mini-ink bg-mini-ink px-4 py-1.5 font-display text-xs font-normal leading-none tracking-[0.08em] text-mini-paper transition-colors hover:bg-mini-ink/85 active:scale-95"
             >
-              <Plus className="h-5 w-5" strokeWidth={3} />
+              <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
               {info.add.actionLabel}
             </button>
           ) : (
-            <p className="mt-1 font-hand text-xl font-bold uppercase leading-tight tracking-wider text-star">
+            <p className="mt-1 font-display text-xs font-normal leading-tight tracking-[0.08em] text-mini-ink/60">
               {info.add.fullNote}
             </p>
           )}
@@ -289,9 +289,9 @@ export function BodyInfoPanel({
           <button
             type="button"
             onClick={onDelete}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/20 px-3 py-1.5 font-hand text-xl font-bold uppercase tracking-wider text-white/50 transition-colors hover:border-red-300/60 hover:bg-red-400/10 hover:text-red-200 active:scale-95"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-mini-line px-3 py-1.5 font-display text-xs font-normal tracking-[0.08em] text-mini-ink/50 transition-colors hover:border-mini-ink/40 hover:text-mini-ink active:scale-95"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
              Remove node
           </button>
         )}
