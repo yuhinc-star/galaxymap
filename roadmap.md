@@ -10,3 +10,4 @@
 - [x] Replace playful node speech with concise Minimalist observation labels.
 - [x] Replace all visible sun, planet, moon, and star terminology in Minimalist Mode with node terminology.
 - [x] Repair the plus and minus controls so focus tracking preserves button-driven zoom.
+- [x] Remove squared and inward-pinched minimalist contours; keep child orbits smoothly convex.
