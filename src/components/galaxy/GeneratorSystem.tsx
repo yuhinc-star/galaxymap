@@ -899,7 +899,9 @@ export function GeneratorSystem() {
       .sort((a, b) => a - b);
     if (speeds.length === 0) return 1;
     const median = speeds[Math.floor(speeds.length / 2)]!;
-    return Math.min(20, Math.max(0.25, TARGET_PX_PER_SEC / median));
+    // Wide bounds: deep zoom needs a very slow clock to hold the same apparent
+    // speed, while the whole-system overview needs a fast one.
+    return Math.min(400, Math.max(0.01, TARGET_PX_PER_SEC / median));
   })();
 
   // Orbit math: bodies advance along their own wobbly closed curves.
