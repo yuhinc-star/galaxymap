@@ -231,7 +231,7 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
       >
         {def.name}
       </span>
-      {active && <SpeechBubble text={minimalNodeDescription(def)} minimal />}
+      {active && <SpeechBubble text={def.line} />}
     </div>
   );
 }
@@ -313,7 +313,7 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
       >
         {def.name}
       </span>
-      {active && <SpeechBubble text={def.line} />}
+      {active && <SpeechBubble text={minimalNodeDescription(def)} minimal />}
     </div>
   );
 }
