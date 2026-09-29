@@ -613,6 +613,24 @@ export function GeneratorSystem() {
     requestAnimationFrame(endUserZoom);
   };
 
+  /** Toolbar zoom uses the same camera writer as focus tracking. The library's
+      convenience zoom methods were immediately overwritten by the follow loop. */
+  const nudgeCameraZoom = (factor: number) => {
+    const st = stateRef.current;
+    if (!st) return;
+    const nextScale = Math.max(0.002, Math.min(96, st.scale * factor));
+    const focused = followRef.current;
+    const point = focused ? bodyPos(focused.id) : null;
+    const worldX = point?.x ?? (window.innerWidth / 2 - st.positionX) / st.scale;
+    const worldY = point?.y ?? (window.innerHeight / 2 - st.positionY) / st.scale;
+    if (focused) focused.scale = nextScale;
+    writeCamera(
+      window.innerWidth / 2 - worldX * nextScale,
+      window.innerHeight / 2 - worldY * nextScale,
+      nextScale,
+    );
+  };
+
 
   /** Open chat mode: the rocket decides who we chat with. A zoomed body
       summons the rocket over first; with nothing zoomed we chat with the
@@ -2317,7 +2335,7 @@ export function GeneratorSystem() {
           setViewScale((current) => Math.abs(current - next.scale) > Math.max(0.018, current * 0.055) ? next.scale : current);
         }}
       >
-        {({ zoomIn, zoomOut, resetTransform, setTransform, state }) => {
+        {({ resetTransform, setTransform, state }) => {
           setTransformRef.current = setTransform;
           resetTransformRef.current = resetTransform;
           stateRef.current = state;
@@ -2752,8 +2770,7 @@ export function GeneratorSystem() {
                     type="button"
                     aria-label="Zoom in"
                     onClick={() => {
-                      chatUserZoom();
-                      zoomIn();
+                      nudgeCameraZoom(1.28);
                     }}
                     className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
                   >
@@ -2763,8 +2780,7 @@ export function GeneratorSystem() {
                     type="button"
                     aria-label="Zoom out"
                     onClick={() => {
-                      chatUserZoom();
-                      zoomOut();
+                      nudgeCameraZoom(1 / 1.28);
                     }}
                     className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
                   >
