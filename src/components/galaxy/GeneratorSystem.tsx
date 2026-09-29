@@ -718,9 +718,10 @@ export function GeneratorSystem() {
     let hash = seed ^ 0x7f4a7c15;
     for (let i = 0; i < id.length; i++) hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
     const variant = Math.abs(hash) % 5;
-    const squareness = variant === 0 ? 0.78 : variant === 1 ? 0.48 : variant === 2 ? 0.24 : 0;
-    const eccentricity = variant === 3 ? 0.5 : variant === 4 ? 0.28 : 0.34;
-    return makeStudyShape(hash, eccentricity, squareness);
+    // Diversity comes only from smooth eccentricity and rotation. Keeping the
+    // contour radially convex prevents the inward dents created by superellipses.
+    const eccentricity = variant === 0 ? 0.5 : variant === 1 ? 0.42 : variant === 2 ? 0.34 : variant === 3 ? 0.28 : 0.22;
+    return makeStudyShape(hash, eccentricity);
   };
 
   /** Moon offset from its parent follows that moon's own stable contour. */

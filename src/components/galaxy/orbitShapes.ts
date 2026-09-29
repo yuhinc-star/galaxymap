@@ -162,21 +162,15 @@ export interface StudyShape {
   bounds: { minX: number; maxX: number; minY: number; maxY: number };
 }
 
-export function makeStudyShape(seed: number, ecc = 0.44, squareness = 0): StudyShape {
+export function makeStudyShape(seed: number, ecc = 0.44): StudyShape {
   const rand = mulberry32(seed ^ 0x51ed);
   const phi = (-35 + (rand() - 0.5) * 70) * (Math.PI / 180); // nucleus leans upper-right
   const h = 0.025 + rand() * 0.025;
   const hp = rand() * TAU;
   const norm = 1 - ecc * ecc;
-  const cornerPower = 2 + Math.max(0, Math.min(1, squareness)) * 2.8;
-  const cornerRotation = rand() * TAU;
   const unit = (a: number) => {
     const eccentric = norm / (1 + ecc * Math.cos(a - phi));
-    const ca = Math.abs(Math.cos(a - cornerRotation));
-    const sa = Math.abs(Math.sin(a - cornerRotation));
-    const roundedSquare = Math.pow(Math.pow(ca, cornerPower) + Math.pow(sa, cornerPower), -1 / cornerPower);
-    const contour = 1 + (roundedSquare - 1) * squareness;
-    return eccentric * contour * (1 + h * Math.cos(2 * a + hp));
+    return eccentric * (1 + h * Math.cos(2 * a + hp));
   };
   let minX = Infinity;
   let maxX = -Infinity;
