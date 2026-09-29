@@ -9,6 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { minimalNodeDescription } from "./minimalCopy";
 import { Link } from "@tanstack/react-router";
 import {
   TransformComponent,
@@ -1027,7 +1028,7 @@ export function GeneratorSystem() {
     if (p) {
       const anchor = planetPos.get(p.id) ?? { x: CENTER, y: CENTER };
       subject = {
-        info: { id: p.id, name: p.name, img: p.img, line: p.line, kindLabel: "Node" },
+        info: { id: p.id, name: p.name, img: p.img, line: minimalNodeDescription(p), kindLabel: "Node" },
         layout: computeChatLayout(
           p.id,
           anchor,
@@ -1044,7 +1045,7 @@ export function GeneratorSystem() {
           id: m.id,
           name: m.name,
           img: m.img,
-          line: m.line,
+          line: minimalNodeDescription(m),
           kindLabel: "Node",
         },
         layout: computeChatLayout(
@@ -1063,7 +1064,7 @@ export function GeneratorSystem() {
           id: config.sun.id,
           name: config.sun.name,
           img: config.sun.img,
-          line: config.sun.line,
+          line: minimalNodeDescription(config.sun),
           kindLabel: "Node",
         },
         layout: computeChatLayout(
@@ -1927,7 +1928,7 @@ export function GeneratorSystem() {
         name: config.sun.name,
         img: config.sun.img,
         kindLabel: "Node",
-        line: config.sun.line,
+        line: minimalNodeDescription(config.sun),
         childrenLabel: "Child nodes",
         childrenCap: MAX_SYSTEM_PLANETS,
         children: config.planets.map((p) => ({
@@ -1946,7 +1947,7 @@ export function GeneratorSystem() {
         name: p.name,
         img: p.img,
         kindLabel: "Node",
-        line: p.line,
+        line: minimalNodeDescription(p),
         childrenLabel: "Child nodes",
         childrenCap: MAX_MOONS_PER_BODY,
         children: p.moons.map((m) => ({ id: m.id, name: m.name, img: m.img })),
@@ -1961,7 +1962,7 @@ export function GeneratorSystem() {
         name: m.name,
         img: m.img,
         kindLabel: "Node",
-        line: m.line,
+        line: minimalNodeDescription(m),
         childrenLabel: "Child nodes",
         childrenCap: MAX_MOONS_PER_BODY,
         children: m.moons.map((c) => ({ id: c.id, name: c.name, img: c.img })),
