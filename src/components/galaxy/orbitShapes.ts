@@ -143,3 +143,31 @@ export function makeOrbitShape(
   }
   return { kind, d: `${d} Z`, pointAt, maxR };
 }
+
+/**
+ * Minimalist Mode orbit: a smooth eccentric ellipse with the nucleus near
+ * one end. Every orbit in a system shares one orientation and is a scaled
+ * copy about the nucleus (a homothety), so the rings nest like the orbit
+ * studies — crescents of white space that narrow on one side and open on
+ * the other — and can never cross.
+ */
+export function makeNestedOrbit(r: number, rot: number, bulge = 0): OrbitShape {
+  const A = r * 1.12;
+  const B = r * 0.78;
+  const shift = A * 0.34; // center sits away from the nucleus along the major axis
+  const cosR = Math.cos(rot);
+  const sinR = Math.sin(rot);
+  const pointAt = (a: number) => {
+    const k = 1 + bulge * Math.sin(2 * a + 0.9);
+    const ex = (shift + A * Math.cos(a)) * k;
+    const ey = B * Math.sin(a) * k;
+    return { x: ex * cosR - ey * sinR, y: ex * sinR + ey * cosR };
+  };
+  const N = 160;
+  let d = "";
+  for (let i = 0; i <= N; i++) {
+    const pt = pointAt((i / N) * TAU);
+    d += `${i === 0 ? "M" : "L"}${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
+  }
+  return { kind: "tilt", d: `${d} Z`, pointAt, maxR: (shift + A) * (1 + bulge) };
+}
