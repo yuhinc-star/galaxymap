@@ -2758,5 +2758,6 @@ export function GeneratorSystem() {
       )}
       </div>
     </div>
+    </MinimalContext.Provider>
   );
 }
