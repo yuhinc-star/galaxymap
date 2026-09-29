@@ -2718,17 +2718,17 @@ export function GeneratorSystem() {
                 aria-label="Open notes"
                 title="Open notes"
                 onClick={() => openChat()}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-mini-line bg-mini-paper text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95"
               >
-                <MessagesSquare className="h-5 w-5" />
+                <MessagesSquare className="h-4 w-4" strokeWidth={1.5} />
               </button>
               <Link
                 to="/"
                 aria-label="Back to the original view"
                 title="Back to the original view"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-mini-line bg-mini-paper text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95"
               >
-                <Home className="h-5 w-5" />
+                <Home className="h-4 w-4" strokeWidth={1.5} />
               </Link>
             </div>
 
@@ -2742,10 +2742,10 @@ export function GeneratorSystem() {
                 type="button"
                 onClick={regenerate}
                 disabled={warping}
-                className="group flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2.5 font-display text-sm font-semibold text-card-foreground shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-60"
+                className="group flex items-center justify-center gap-2 rounded-full border border-mini-line bg-mini-paper px-4 py-2 font-display text-xs font-normal tracking-[0.08em] text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95 disabled:opacity-60"
               >
                 <Dices
-                  className={`h-4 w-4 ${
+                  className={`h-3.5 w-3.5 ${
                     diceRolling
                       ? "animate-dice-roll"
                       : "group-hover:animate-[dice-wiggle_0.5s_ease-in-out]"
@@ -2757,13 +2757,13 @@ export function GeneratorSystem() {
                 <button
                   type="button"
                   onClick={showDeepDemo}
-                  className="flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-4 py-2.5 font-display text-sm font-semibold text-card-foreground shadow-lg transition-all hover:scale-105 active:scale-95"
+                  className="flex items-center justify-center gap-2 rounded-full border border-mini-line bg-mini-paper px-4 py-2 font-display text-xs font-normal tracking-[0.08em] text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95"
                 >
-                  <Sparkle className="h-4 w-4 text-star" />
+                  <Sparkle className="h-3.5 w-3.5 text-mini-blue" strokeWidth={1.5} />
                   Deep system
                 </button>
               )}
-              <p className="pointer-events-none text-center font-display text-xs text-star/70">
+              <p className="pointer-events-none text-center font-display text-[11px] tracking-[0.08em] text-mini-ink/50">
                 seed #{seed}
               </p>
             </div>
@@ -2839,9 +2839,9 @@ export function GeneratorSystem() {
                   onClick={() =>
                     zoomOutTarget && handleZoomOut(zoomOutTarget.id)
                   }
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-mini-line bg-mini-paper text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95 disabled:opacity-30"
                 >
-                  <Minus className="h-5 w-5" />
+                  <Minus className="h-4 w-4" strokeWidth={1.5} />
                 </button>
               ) : null}
               {chatActive ? (
@@ -2851,9 +2851,9 @@ export function GeneratorSystem() {
                   title="Reverse last step"
                   disabled={!undoState}
                   onClick={restoreUndo}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-mini-line bg-mini-paper text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95 disabled:opacity-30"
                 >
-                  <Undo className="h-5 w-5" />
+                  <Undo className="h-4 w-4" strokeWidth={1.5} />
                 </button>
               ) : (
                 <>
@@ -2863,9 +2863,9 @@ export function GeneratorSystem() {
                     onClick={() => {
                       nudgeCameraZoom(1.28);
                     }}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-mini-line bg-mini-paper text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95"
                   >
-                    <Plus className="h-5 w-5" />
+                    <Plus className="h-4 w-4" strokeWidth={1.5} />
                   </button>
                   <button
                     type="button"
@@ -2873,9 +2873,9 @@ export function GeneratorSystem() {
                     onClick={() => {
                       nudgeCameraZoom(1 / 1.28);
                     }}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-mini-line bg-mini-paper text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95"
                   >
-                    <Minus className="h-5 w-5" />
+                    <Minus className="h-4 w-4" strokeWidth={1.5} />
                   </button>
                   <button
                     type="button"
@@ -2884,9 +2884,9 @@ export function GeneratorSystem() {
                       chatUserZoom();
                       resetTransform();
                     }}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-mini-line bg-mini-paper text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95"
                   >
-                    <RotateCcw className="h-5 w-5" />
+                    <RotateCcw className="h-4 w-4" strokeWidth={1.5} />
                   </button>
                   <button
                     type="button"
@@ -2894,9 +2894,9 @@ export function GeneratorSystem() {
                     title="Reverse last step"
                     disabled={!undoState}
                     onClick={restoreUndo}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-mini-line bg-mini-paper text-mini-ink transition-colors hover:border-mini-ink/60 active:scale-95 disabled:opacity-30"
                   >
-                    <Undo className="h-5 w-5" />
+                    <Undo className="h-4 w-4" strokeWidth={1.5} />
                   </button>
                 </>
               )}
