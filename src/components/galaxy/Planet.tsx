@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 /** Minimalist Mode: bodies render as stateful ink dots; the chosen one is blue. */
 export const MinimalContext = createContext(false);
