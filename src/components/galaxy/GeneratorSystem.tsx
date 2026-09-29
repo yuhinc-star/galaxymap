@@ -183,6 +183,8 @@ export function GeneratorSystem() {
   const [bgIndex, setBgIndex] = useState(0);
   /** The generator is permanently presented as an ink-on-paper orbit study. */
   const minimal = true;
+  const minimalRef = useRef(minimal);
+  minimalRef.current = minimal;
   /** Runtime-grown system: once the user adds bodies by double-clicking,
       this replaces the seeded config (regenerating resets it). */
   const [extras, setExtras] = useState<SystemConfig | null>(null);
