@@ -944,6 +944,7 @@ export function GeneratorSystem() {
    * changing zoom or focus never snaps an orbit.
    */
   const bodyRateRef = useRef(new Map<string, number>());
+  const liveRateRef = useRef(new Map<string, number>());
   const bodyPhaseRef = useRef(new Map<string, number>());
   const livePhase = (id: string) => bodyPhaseRef.current.get(id) ?? 0;
   if (minimal) {
@@ -970,7 +971,7 @@ export function GeneratorSystem() {
   // Orbit math: bodies advance along their own wobbly closed curves.
   const planetPos = new Map<string, { x: number; y: number }>();
   for (const p of config.planets) {
-    const q = (minimal ? nestedOrbits.get(p.id) ?? p.orbit : p.orbit).pointAt(p.startAngle + (t * TAU) / p.period);
+    const q = (minimal ? nestedOrbits.get(p.id) ?? p.orbit : p.orbit).pointAt(p.startAngle + (livePhase(p.id) * TAU) / p.period);
     planetPos.set(p.id, { x: CENTER + q.x, y: CENTER + q.y });
   }
   const drifterPos = new Map<string, { x: number; y: number }>();
@@ -1010,7 +1011,7 @@ export function GeneratorSystem() {
     py: number,
   ): { x: number; y: number } | null => {
     for (const m of moons) {
-      const a = m.startAngle + (t * TAU) / m.period;
+      const a = m.startAngle + (livePhase(m.id) * TAU) / m.period;
       const r = chatPoseMoon(m, px, py, a);
       if (m.id === id) return { x: r.x, y: r.y };
       const sub = moonWorldPos(m.moons, id, r.x, r.y);
@@ -1369,7 +1370,7 @@ export function GeneratorSystem() {
       if (!inFan && !wasSubject && !wasRiding) continue;
       const q = planetPos.get(p.id);
       if (!q) continue;
-      const a = p.startAngle + (t * TAU) / p.period;
+      const a = p.startAngle + (livePhase(p.id) * TAU) / p.period;
       let r: { x: number; y: number; size: number };
       if (inFan && p.id === fanSubj.layout.parentId) {
         r = chatAdjustSubject(p.id, q.x, q.y, p.size);
@@ -2404,7 +2405,7 @@ export function GeneratorSystem() {
     depth = 0,
   ): ReactNode =>
     moons.map((m) => {
-      const a = m.startAngle + (t * TAU) / m.period;
+      const a = m.startAngle + (livePhase(m.id) * TAU) / m.period;
       // The moon's rendered pose (frame-guarded, agrees with the moon
       // bodies) so nested rings center on where it actually is — and
       // the ring breathes toward its fan-arc radius while the moon
@@ -2475,7 +2476,7 @@ export function GeneratorSystem() {
     parentId = "",
   ): ReactNode =>
     moons.map((m) => {
-      const a = m.startAngle + (t * TAU) / m.period;
+      const a = m.startAngle + (livePhase(m.id) * TAU) / m.period;
       const r = chatPoseMoon(m, px, py, a, parentId);
       const chatSized = Math.abs(r.size - m.size) > 0.5;
       const vis = visibilityFor(m.id, r.size);
