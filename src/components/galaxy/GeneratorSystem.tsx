@@ -444,6 +444,7 @@ export function GeneratorSystem() {
     let raf = 0;
     let lastNow = performance.now();
     let elapsed = 0;
+    let rate = 1;
     // Phones get a 30fps clock — the ultra-slow orbits look identical and
     // the main thread does half the React work.
     const mobile = window.matchMedia("(max-width: 639px)").matches;
