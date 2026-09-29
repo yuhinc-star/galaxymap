@@ -32,7 +32,7 @@ function Generator() {
       <GeneratorSystem />
       <Link
         to="/minimalist"
-        className="fixed bottom-3 left-1/2 z-[60] -translate-x-1/2 rounded-full border-2 border-white/70 bg-space-deep/80 px-4 py-1.5 font-display text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-space-deep"
+        className="fixed top-[13px] left-[228px] z-[60] rounded-full border-2 border-white/70 bg-space-deep/80 px-4 py-1.5 font-display text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-space-deep"
       >
         Minimalist mode
       </Link>
