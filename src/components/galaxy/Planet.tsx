@@ -245,11 +245,14 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
     or — for the chosen body — a large blue dot inside a thin blue ring. */
 function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true, chosen }: Pick<PlanetProps, "def" | "x" | "y" | "active" | "departing" | "newborn" | "onTap" | "highlighted" | "cameraScale" | "visualOpacity" | "visualScale" | "labelOpacity" | "interactive" | "chosen">) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
-  const counter = Math.max(1, cameraScale);
-  const dot = chosen ? Math.max(18, def.size * 0.3) : Math.max(8, def.size * 0.13);
+  // Dots are sized in screen pixels so every zoom depth reads like the
+  // orbit studies: small ink beads, one confident blue focus.
+  const sc = Math.max(1e-4, cameraScale);
+  const screen = Math.min(15, Math.max(6, def.size * 0.12 * sc));
+  const dot = (chosen ? 24 : screen) / sc;
   const hollow = !chosen && hashId(def.id) % 3 === 0;
-  const hit = Math.max(dot * 2.4, 30);
-  const stroke = Math.max(1, dot * 0.16);
+  const hit = Math.max(dot * 2.4, 30 / sc);
+  const stroke = 1.6 / sc;
   return (
     <div
       className={`absolute semantic-body ${departing || !interactive ? "pointer-events-none" : ""}`}
@@ -287,7 +290,7 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
           {chosen ? (
             <>
               <circle r={dot / 2} className="fill-mini-blue" style={{ transition: "r 0.5s" }} />
-              <circle r={dot / 2 + dot * 0.32} fill="none" className="stroke-mini-blue" strokeWidth={Math.max(1.2, dot * 0.07)} />
+              <circle r={dot / 2 + 6 / sc} fill="none" className="stroke-mini-blue" strokeWidth={1.8 / sc} />
             </>
           ) : (
             <circle
@@ -297,16 +300,16 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
             />
           )}
           {(highlighted || active) && (
-            <circle r={hit / 2 - 1} fill="none" className="stroke-mini-line" strokeWidth={Math.max(1, dot * 0.06)} strokeDasharray={`${dot * 0.25} ${dot * 0.25}`} />
+            <circle r={hit / 2 - 1} fill="none" className="stroke-mini-line" strokeWidth={1.2 / sc} strokeDasharray={`${3 / sc} ${3 / sc}`} />
           )}
         </svg>
       </button>
       <span
         className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 whitespace-nowrap font-sans font-medium uppercase tracking-[0.18em] text-mini-line"
         style={{
-          fontSize: Math.max(11, Math.min(def.size * 0.09, 26)) / counter,
-          marginTop: 2 / counter,
-          maxWidth: 320 / counter,
+          fontSize: (chosen ? 13 : 11) / sc,
+          marginTop: 3 / sc,
+          maxWidth: 260 / sc,
           overflow: "hidden",
           textOverflow: "ellipsis",
           opacity: departing ? 0 : labelOpacity,
