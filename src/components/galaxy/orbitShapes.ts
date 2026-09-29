@@ -145,29 +145,58 @@ export function makeOrbitShape(
 }
 
 /**
- * Minimalist Mode orbit: a smooth eccentric ellipse with the nucleus near
- * one end. Every orbit in a system shares one orientation and is a scaled
- * copy about the nucleus (a homothety), so the rings nest like the orbit
- * studies — crescents of white space that narrow on one side and open on
- * the other — and can never cross.
+ * Minimalist Mode ("orbit study") geometry.
+ *
+ * The references are drawn around an off-center nucleus: the enclosing
+ * boundary is a soft egg with the nucleus near its narrow end (a focal
+ * ellipse plus one gentle harmonic). Inner orbits are *interpolated*
+ * between a small ring hugging the nucleus and that boundary, so near the
+ * nucleus the gaps stay tight (thin crescents) while on the far side they
+ * open generously. Every curve is star-shaped about the nucleus and the
+ * interpolation is monotone, so rings nest and never cross.
  */
-export function makeNestedOrbit(r: number, rot: number, bulge = 0): OrbitShape {
-  const A = r * 1.12;
-  const B = r * 0.78;
-  const shift = A * 0.34; // center sits away from the nucleus along the major axis
-  const cosR = Math.cos(rot);
-  const sinR = Math.sin(rot);
-  const pointAt = (a: number) => {
-    const k = 1 + bulge * Math.sin(2 * a + 0.9);
-    const ex = (shift + A * Math.cos(a)) * k;
-    const ey = B * Math.sin(a) * k;
-    return { x: ex * cosR - ey * sinR, y: ex * sinR + ey * cosR };
+export interface StudyShape {
+  /** Radius about the nucleus at polar angle a, for unit size. */
+  unit: (a: number) => number;
+}
+
+export function makeStudyShape(seed: number, ecc = 0.55): StudyShape {
+  const rand = mulberry32(seed ^ 0x51ed);
+  const phi = (-35 + (rand() - 0.5) * 70) * (Math.PI / 180); // nucleus leans upper-right
+  const h = 0.035 + rand() * 0.03;
+  const hp = rand() * TAU;
+  const norm = 1 - ecc * ecc;
+  return {
+    unit: (a) => (norm / (1 + ecc * Math.cos(a - phi))) * (1 + h * Math.cos(2 * a + hp)),
   };
-  const N = 160;
+}
+
+function pathFrom(fn: (a: number) => number, N = 180) {
   let d = "";
   for (let i = 0; i <= N; i++) {
-    const pt = pointAt((i / N) * TAU);
-    d += `${i === 0 ? "M" : "L"}${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
+    const a = (i / N) * TAU;
+    const r = fn(a);
+    d += `${i === 0 ? "M" : "L"}${(r * Math.cos(a)).toFixed(1)} ${(r * Math.sin(a)).toFixed(1)}`;
   }
-  return { kind: "tilt", d: `${d} Z`, pointAt, maxR: (shift + A) * (1 + bulge) };
+  return `${d} Z`;
+}
+
+/** Orbit at fraction f (0 = hugging the nucleus, 1 = the boundary). */
+export function makeStudyOrbit(shape: StudyShape, R: number, innerR: number, f: number): OrbitShape {
+  // The innermost ring is the same egg, smaller — the nucleus sits near its narrow end too.
+  const rad = (a: number) => ((1 - f) * innerR + f * R) * shape.unit(a) + (1 - f) * f * innerR * 0.6;
+  return {
+    kind: "tilt",
+    d: pathFrom(rad),
+    pointAt: (a) => {
+      const r = rad(a);
+      return { x: r * Math.cos(a), y: r * Math.sin(a) };
+    },
+    maxR: R * 1.9,
+  };
+}
+
+/** Plain scaled copy of the shape (boundaries and moon rings). */
+export function studyPath(shape: StudyShape, R: number) {
+  return pathFrom((a) => R * shape.unit(a));
 }
