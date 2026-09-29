@@ -32,7 +32,7 @@ export function ZoomOutPill({ target, onZoomOut }: ZoomOutPillProps) {
       onClick={() => onZoomOut(target.id)}
       aria-label={`Zoom out to ${target.name}`}
       title={`Zoom out to ${target.name}`}
-      className="animate-pop-in flex items-center gap-2.5 rounded-full border border-white/20 bg-space-deep/90 py-1.5 pl-2 pr-4 shadow-xl backdrop-blur-sm transition-transform hover:scale-105 active:scale-95"
+      className="minimal-panel animate-pop-in flex items-center gap-2.5 border bg-space-deep/90 py-1.5 pl-2 pr-4 backdrop-blur-sm transition-opacity hover:opacity-70 active:opacity-50"
     >
       <span className="relative flex h-9 w-9 shrink-0 items-center justify-center">
         {target.img ? (

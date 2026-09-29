@@ -19,3 +19,4 @@
 - A wheel/pinch gesture owns the camera exclusively (260ms tail); the focused-body follow loop pauses during it and eases back to center at the user's new scale — two camera owners in the same frame caused amplified deep-zoom shake.
 - Sleep is per-body presentation state: bodies keep orbiting and chatting, while their artwork switches to a closed-eye edition with animated “zzz” marks.
 - Minimalist Mode owns its eccentric system-fit camera and reuses study-orbit geometry during chat morphs, preventing clipped overviews and split coordinate systems.
+- The generator is permanently minimalist: Sora, paper/ink/cobalt, open canvas, neutral focus/notes language, and no visible storybook or rocket metaphors.

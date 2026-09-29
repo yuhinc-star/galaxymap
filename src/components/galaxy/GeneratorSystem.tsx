@@ -20,7 +20,6 @@ import {
   Home,
   MessagesSquare,
   Minus,
-  Palette,
   Plus,
   RotateCcw,
   Sparkle,
@@ -181,8 +180,8 @@ export function GeneratorSystem() {
       elsewhere never hijacks the ongoing conversation. */
   const [chatTalkId, setChatTalkId] = useState<string | null>(null);
   const [bgIndex, setBgIndex] = useState(0);
-  /** Minimalist Mode: ink-on-paper orbit study; the rocket becomes the blue dot. */
-  const [minimal, setMinimal] = useState(false);
+  /** The generator is permanently presented as an ink-on-paper orbit study. */
+  const minimal = true;
   /** Runtime-grown system: once the user adds bodies by double-clicking,
       this replaces the seeded config (regenerating resets it). */
   const [extras, setExtras] = useState<SystemConfig | null>(null);
@@ -2260,7 +2259,7 @@ export function GeneratorSystem() {
 
   return (
     <MinimalContext.Provider value={minimal}>
-    <div className={`fixed inset-0 overflow-hidden ${minimal ? "bg-mini-paper" : "bg-space"}`}>
+    <div className="minimal-ui fixed inset-0 overflow-hidden bg-mini-paper">
       <div className="flex h-full w-full">
       {/* Sky strip: the whole galaxy squeezes here when chat opens */}
       <div
@@ -2547,21 +2546,10 @@ export function GeneratorSystem() {
             </TransformComponent>
 
             <header className="pointer-events-none fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2">
-              <Sparkle className={`h-5 w-5 ${minimal ? "text-mini-blue" : "text-star"}`} aria-hidden />
-              <span className={`font-display text-base font-semibold tracking-wide sm:text-xl ${minimal ? "text-mini-ink" : "text-star"}`}>
-                {minimal ? "Orbit Study" : "Galaxy Generator"}
+              <span className="h-2.5 w-2.5 rounded-full bg-mini-blue" aria-hidden />
+              <span className="font-display text-base font-semibold text-mini-ink sm:text-xl">
+                Orbit Study
               </span>
-              <button
-                type="button"
-                onClick={toggleMinimalMode}
-                aria-pressed={minimal}
-                title={minimal ? "Back to the storybook galaxy" : "Minimalist Mode: ink orbits, the chosen star is the blue dot"}
-                className={`pointer-events-auto ml-2 rounded-full border-2 px-3 py-1 font-display text-xs font-semibold transition-colors sm:text-sm ${
-                  minimal ? "border-mini-ink bg-mini-paper text-mini-ink hover:bg-mini-ink hover:text-mini-paper" : "border-star/70 bg-space/70 text-star hover:bg-star hover:text-space"
-                }`}
-              >
-                {minimal ? "Storybook" : "Minimalist"}
-              </button>
             </header>
 
             <Navigator
@@ -2622,7 +2610,8 @@ export function GeneratorSystem() {
               <button
                 type="button"
                 aria-label="Chat with this world"
-                title="Chat mode — the rocket introduces its host"
+                aria-label="Open notes"
+                title="Open notes"
                 onClick={() => openChat()}
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
               >
@@ -2728,16 +2717,6 @@ export function GeneratorSystem() {
                   : "flex right-[max(1rem,env(safe-area-inset-right))]"
               }`}
             >
-              <button
-                type="button"
-                aria-label={`Change background (now: ${BACKGROUNDS[bgIndex]!.name})`}
-                title={`Sky: ${BACKGROUNDS[bgIndex]!.name}`}
-                onClick={cycleBg}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/90 text-card-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
-              >
-                <Palette className="h-5 w-5" />
-              </button>
-
               {chatActive ? (
                 <button
                   type="button"
