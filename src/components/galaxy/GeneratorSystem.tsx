@@ -470,7 +470,18 @@ export function GeneratorSystem() {
       lastNow = now;
       // Ease the clock rate towards the zoom-relative target so changing zoom
       // or focus never snaps the phase of an orbit.
-      rate += (desiredMotionRateRef.current - rate) * Math.min(1, dt / 420);
+      let want = desiredMotionRateRef.current;
+      // Closed loop: the camera itself must never travel faster than the
+      // target apparent speed. When a deep node is pinned, its ancestors'
+      // orbits are magnified by the scale and would sling the view around.
+      if (minimalRef.current) {
+        const v = camSpeedRef.current;
+        if (v > 1) {
+          const correction = Math.max(0.2, Math.min(3, MOTION_TARGET_PX_PER_SEC / v));
+          want = Math.max(0.0005, Math.min(want, rate * correction));
+        }
+      }
+      rate += (want - rate) * Math.min(1, dt / 420);
       if (!freezeDeepMotionRef.current) elapsed += dt * rate;
       if (!mobile || now - lastSet >= 33) {
         lastSet = now;
