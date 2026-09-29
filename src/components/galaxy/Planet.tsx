@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 /** Minimalist Mode: bodies render as stateful ink dots; the chosen one is blue. */
 export const MinimalContext = createContext(false);
@@ -240,6 +240,14 @@ export function Planet({ def, x, y, active, bouncing = false, newborn = false, d
     current destination remains the large blue dot inside a thin blue ring. */
 function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted, cameraScale = 1, visualOpacity = 1, visualScale = 1, labelOpacity = 1, interactive = true, chosen }: Pick<PlanetProps, "def" | "x" | "y" | "active" | "departing" | "newborn" | "onTap" | "highlighted" | "cameraScale" | "visualOpacity" | "visualScale" | "labelOpacity" | "interactive" | "chosen">) {
   const downAt = useRef<{ x: number; y: number; t: number } | null>(null);
+  // Only animate a release on nodes that were actually chosen before.
+  const wasChosen = useRef(!!chosen);
+  const [released, setReleased] = useState(false);
+  useEffect(() => {
+    if (wasChosen.current && !chosen) setReleased(true);
+    if (chosen) setReleased(false);
+    wasChosen.current = !!chosen;
+  }, [chosen]);
   // Dots are sized in screen pixels so every zoom depth reads like the
   // orbit studies: small ink beads, one confident blue focus.
   const sc = Math.max(1e-4, cameraScale);
@@ -282,35 +290,30 @@ function MinimalDot({ def, x, y, active, departing, newborn, onTap, highlighted,
           style={{ animation: departing ? "body-goodbye 0.68s ease-in 1 both" : newborn ? "planet-birth 0.9s cubic-bezier(0.34,1.56,0.64,1) 1" : undefined }}
           aria-hidden
         >
-          {chosen ? (
-            <>
-              <circle r={dot / 2} className="fill-mini-blue" style={{ transition: "r 0.55s ease, fill 0.55s ease" }} />
-              <circle r={dot / 2 + 5 / sc} fill="none" className="stroke-mini-blue" strokeWidth={1.5 / sc} style={{ transition: "r 0.55s ease, opacity 0.55s ease" }} />
-            </>
-          ) : (
+          {/* One persistent bead: becoming chosen grows and tints it in place
+              with a springy bubble, instead of swapping elements instantly. */}
+          <g key={chosen ? "chosen" : "plain"} className={chosen ? "minimal-choose-pop" : released ? "minimal-release-pop" : undefined}>
             <circle
               r={dot / 2}
-              className={def.asleep ? "fill-mini-ink" : "fill-mini-paper stroke-mini-ink"}
-              strokeWidth={def.asleep ? 0 : stroke}
+              className={chosen ? "fill-mini-blue stroke-mini-blue" : def.asleep ? "fill-mini-ink stroke-mini-ink" : "fill-mini-paper stroke-mini-ink"}
+              strokeWidth={chosen || def.asleep ? 0 : stroke}
+              style={{ transition: "r 0.6s cubic-bezier(0.34,1.56,0.64,1), fill 0.45s ease, stroke 0.45s ease" }}
             />
-          )}
+          </g>
+          <circle
+            r={(chosen ? dot / 2 + 5 / sc : dot / 2)}
+            fill="none"
+            className="stroke-mini-blue"
+            strokeWidth={1.5 / sc}
+            style={{ opacity: chosen ? 1 : 0, transition: "r 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.08s, opacity 0.4s ease" }}
+          />
           {(highlighted || active) && (
             <circle r={hit / 2 - 1} fill="none" className="stroke-mini-line" strokeWidth={1.2 / sc} strokeDasharray={`${3 / sc} ${3 / sc}`} />
           )}
-          {active && (
-            <g className="minimal-refocus-pulse">
-              <circle
-                r={dot / 2 + 4 / sc}
-                fill="none"
-                className="minimal-refocus-ring stroke-mini-blue"
-                strokeWidth={1.8 / sc}
-              />
-              <circle
-                r={dot / 2 + 4 / sc}
-                fill="none"
-                className="minimal-refocus-ring minimal-refocus-ring-delay stroke-mini-blue"
-                strokeWidth={1.2 / sc}
-              />
+          {chosen && (
+            <g key="choose-ripple">
+              <circle r={dot / 2 + 4 / sc} fill="none" className="minimal-refocus-ring stroke-mini-blue" strokeWidth={1.8 / sc} />
+              <circle r={dot / 2 + 4 / sc} fill="none" className="minimal-refocus-ring minimal-refocus-ring-delay stroke-mini-blue" strokeWidth={1.2 / sc} />
             </g>
           )}
         </svg>
