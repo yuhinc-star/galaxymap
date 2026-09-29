@@ -11,6 +11,6 @@ export function minimalNodeDescription(body: MinimalBodyCopy, kindLabel?: string
       ? "PRIMARY"
       : generation
         ? `G${generation}`
-        : kindLabel?.toUpperCase() ?? "NODE";
+        : "NODE";
   return `${role} / ${body.asleep ? "SLEEPING" : "AWAKE"}`;
 }

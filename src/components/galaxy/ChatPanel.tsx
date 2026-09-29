@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Moon, Send, Sun, X } from "lucide-react";
+import { Circle, Send, X } from "lucide-react";
 import { minimalNodeDescription } from "./minimalCopy";
 
 export interface ChatSubjectInfo {
@@ -21,14 +21,14 @@ interface ChatMessage {
  * line; after that the conversation drifts through these quips.
  */
 const QUIPS = [
-  "The visible contour records this body's current orbital relationship.",
+  "The visible contour records this node's current relationship.",
   "The adjacent nodes belong to the same five-generation observation window.",
   "Scale changes presentation only; the underlying system remains intact.",
   "White indicates awake. Black indicates sleeping. Cobalt indicates focus.",
 ];
 
 const SUGGESTIONS = [
-  "Describe this body",
+  "Describe this node",
   "Describe its orbit",
   "Show its lineage",
 ];
@@ -112,7 +112,7 @@ export function ChatPanel({ subject, onClose, waiting = false, onToggleSleep }: 
             onClick={onToggleSleep}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-orbit-label/30 text-orbit-label transition-transform hover:scale-105 active:scale-95"
           >
-            {subject.asleep ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            <Circle className={`h-5 w-5 ${subject.asleep ? "fill-current" : ""}`} />
           </button>
         )}
         <button

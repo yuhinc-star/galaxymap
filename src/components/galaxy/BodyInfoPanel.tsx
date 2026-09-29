@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, LocateFixed, Moon, Pencil, Plus, Sun, Trash2, X } from "lucide-react";
+import { Check, Circle, LocateFixed, Pencil, Plus, Trash2, X } from "lucide-react";
 import { MAX_BODY_NAME } from "./systemGenerator";
 import { sleepingSpriteFor } from "./sleepSprites";
 
@@ -202,7 +202,7 @@ export function BodyInfoPanel({
             onClick={onToggleSleep}
             className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-dashed border-orbit-label/60 bg-space/45 px-4 py-2 font-hand text-2xl font-bold uppercase leading-none tracking-wider text-orbit-label transition-transform hover:scale-[1.03] active:scale-95"
           >
-            {info.asleep ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            <Circle className={`h-5 w-5 ${info.asleep ? "fill-current" : ""}`} />
             {info.asleep ? `Wake ${info.name}` : `Let ${info.name} sleep`}
           </button>
         )}
@@ -241,7 +241,7 @@ export function BodyInfoPanel({
             </ul>
           ) : (
             <p className="mt-1 font-hand text-lg font-bold uppercase tracking-wider text-white/40">
-              Nothing orbiting yet
+               No child nodes
             </p>
           )}
         </section>
@@ -267,7 +267,7 @@ export function BodyInfoPanel({
         {/* The single primary action: grow this family */}
         <section className="rounded-2xl border-2 border-dashed border-star/60 bg-star/10 px-3 py-2.5">
           <h3 className="font-hand text-lg font-bold uppercase tracking-[0.18em] text-star">
-             Add orbiting body
+             Add node
           </h3>
           {info.add.canAdd ? (
             <button
@@ -292,7 +292,7 @@ export function BodyInfoPanel({
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/20 px-3 py-1.5 font-hand text-xl font-bold uppercase tracking-wider text-white/50 transition-colors hover:border-red-300/60 hover:bg-red-400/10 hover:text-red-200 active:scale-95"
           >
             <Trash2 className="h-4 w-4" />
-             Remove body
+             Remove node
           </button>
         )}
       </div>

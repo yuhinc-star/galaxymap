@@ -4,20 +4,20 @@ import { GeneratorSystem } from "@/components/galaxy/GeneratorSystem";
 export const Route = createFileRoute("/generator")({
   head: () => ({
     meta: [
-      { title: "Orbit Study — Generative Celestial Systems" },
+      { title: "Orbit Study — Generative Node Systems" },
       {
         name: "description",
         content:
-          "Explore generative celestial systems through nested orbital contours, recursive families, and an interactive minimalist canvas.",
+          "Explore generative node systems through nested contours, recursive structures, and an interactive minimalist canvas.",
       },
       {
         property: "og:title",
-        content: "Orbit Study — Generative Celestial Systems",
+        content: "Orbit Study — Generative Node Systems",
       },
       {
         property: "og:description",
         content:
-          "Explore generative celestial systems through nested orbital contours, recursive families, and an interactive minimalist canvas.",
+          "Explore generative node systems through nested contours, recursive structures, and an interactive minimalist canvas.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
