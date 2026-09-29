@@ -4,7 +4,7 @@ interface MinimalBodyCopy {
 }
 
 /** Compact observational copy for the orbit study. No character voice. */
-export function minimalNodeDescription(body: MinimalBodyCopy, kindLabel?: string) {
+export function minimalNodeDescription(body: MinimalBodyCopy) {
   const generation = body.id.match(/^deep-moon-(\d+)/)?.[1];
   const role =
     body.id === "sun"

@@ -77,7 +77,7 @@ export function ChatPanel({ subject, onClose, waiting = false, onToggleSleep }: 
     if (!text || typing || waiting) return;
     const replyCount = messages.filter((m) => m.from === "body").length;
     const reply = replyCount === 0
-      ? minimalNodeDescription(subject, subject.kindLabel)
+      ? minimalNodeDescription(subject)
       : QUIPS[(replyCount - 1 + subject.id.length) % QUIPS.length]!;
     setMessages((m) => [...m, { from: "me", text }]);
     setDraft("");

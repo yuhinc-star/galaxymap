@@ -15,6 +15,10 @@ import {
 
 const TAU = Math.PI * 2;
 
+/** Minimalist generator vocabulary: celestial nouns are presented as nodes. */
+const nodeName = (name: string) =>
+  name.replace(/\b(?:sun|star|planet|moon|world|orb)\b/gi, "Node");
+
 export interface GeneratedMoon extends BodyDef {
   orbitR: number;
   period: number;
@@ -174,7 +178,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
   const sunSprite = pick(SUN_SPRITES);
   const sun: BodyDef = {
     id: "sun",
-    name: rand() < 0.4 ? makeLongName() : sunSprite.name,
+    name: nodeName(rand() < 0.4 ? makeLongName() : sunSprite.name),
     img: sunSprite.img,
     size: 700 + rand() * 90,
     line: pick(SUN_LINES),
@@ -213,7 +217,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
       const mOrbitR = size * 0.72 + 50 + m * 62;
       moons.push({
         id: `moon-${i}-${m}`,
-        name: ms.name,
+        name: nodeName(ms.name),
         img: ms.img,
         size: 44 + rand() * 26,
         orbitR: mOrbitR,
@@ -229,7 +233,7 @@ export function generateSystem(seed: number, planetCount: number): SystemConfig 
 
     return {
       id: `planet-${i}-${sprite.id}`,
-      name: planetName(),
+      name: nodeName(planetName()),
       img: sprite.img,
       size,
       orbit,
@@ -505,7 +509,7 @@ export function addPlanetToSystem(
   );
   const planet: GeneratedPlanet = {
     id: `planet-new-${Date.now().toString(36)}-${sprite.id}`,
-    name: runtimePlanetName(used),
+      name: nodeName(runtimePlanetName(used)),
     img: sprite.img,
     size,
     orbit,
@@ -555,7 +559,7 @@ export function addMoonToSystem(
       : parentSize * 0.85 + 34 + siblingCount * 40;
     return {
       id: `moon-new-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`,
-      name: uniqueRuntimeName(sprite.name, used),
+      name: nodeName(uniqueRuntimeName(sprite.name, used)),
       img: sprite.img,
       size,
       orbitR,
