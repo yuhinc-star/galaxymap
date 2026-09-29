@@ -725,11 +725,78 @@ export function GeneratorSystem() {
     return makeStudyShape(hash, eccentricity);
   };
 
-  /** Moon offset from its parent follows that moon's own stable contour. */
+  /**
+   * Minimalist proportion system (presentation-only, recursive):
+   * - Every family owns a "reach" B: the radius of its ink boundary.
+   * - Sibling rings are scaled copies of the parent's contour, so they are
+   *   perfectly nested and never cross.
+   * - Rings sit on an even ladder between an inner margin (breathing room
+   *   around the parent bead) and an outer margin (space before the boundary).
+   * - A child's own family reach is derived from the narrowest free gap
+   *   around its ring, so miniatures always fit between neighbouring rings
+   *   and shrink by a consistent ratio every generation.
+   */
+  const minimalLayout = useMemo(() => {
+    const ring = new Map<string, number>();
+    const reach = new Map<string, number>();
+    const shapeOf = new Map<string, StudyShape>();
+    const INNER = 0.36;
+    const OUTER = 0.8;
+    const FILL = 0.44; // share of the free gap a miniature may occupy
+    const minUnit = (e: number) => (1 - e) * 0.95;
+    const maxUnit = (e: number) => (1 + e) * 1.05;
+    const eccOf = (id: string) => {
+      let hash = seed ^ 0x7f4a7c15;
+      for (let i = 0; i < id.length; i++) hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
+      const v = Math.abs(hash) % 5;
+      return v === 0 ? 0.5 : v === 1 ? 0.42 : v === 2 ? 0.34 : v === 3 ? 0.28 : 0.22;
+    };
+    const layFamily = (parentId: string, B: number, kids: GeneratedMoon[]) => {
+      reach.set(parentId, B);
+      if (kids.length === 0) return;
+      const shape = moonStudyShape(parentId);
+      const eP = eccOf(parentId);
+      const sorted = [...kids].sort((a, b) => a.orbitR - b.orbitR);
+      const k = sorted.length;
+      const fs = sorted.map((_, i) => (k === 1 ? (INNER + OUTER) / 2 : INNER + ((OUTER - INNER) * i) / (k - 1)));
+      sorted.forEach((c, i) => {
+        const f = fs[i];
+        const inner = i === 0 ? f : f - fs[i - 1];
+        const outer = i === k - 1 ? 1 - f : fs[i + 1] - f;
+        const gap = Math.min(inner, outer) * B * minUnit(eP);
+        ring.set(c.id, f * B);
+        shapeOf.set(c.id, shape);
+        layFamily(c.id, (gap * FILL) / maxUnit(eccOf(c.id)), c.moons);
+      });
+    };
+    const ps = [...config.planets].sort((a, b) => a.orbit.maxR - b.orbit.maxR);
+    const R = nestedOrbits.radius;
+    const innerR = Math.max(config.sun.size * 0.95, R * 0.15);
+    const n = ps.length;
+    const base = ps.map((_, i) => {
+      const u = (i + 0.75) / (n + 0.35);
+      const f = 0.06 + 0.9 * Math.pow(u, 0.82);
+      return (1 - f) * innerR + f * R;
+    });
+    ps.forEach((p, i) => {
+      const inner = i === 0 ? base[0] * 0.6 : base[i] - base[i - 1];
+      const outer = i === n - 1 ? R - base[i] : base[i + 1] - base[i];
+      const gap = Math.min(inner, outer) * minUnit(0.42);
+      layFamily(p.id, (gap * FILL) / maxUnit(eccOf(p.id)), p.moons);
+    });
+    return { ring, reach, shapeOf };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config, seed, nestedOrbits]);
+
+  /** Moon offset from its parent follows the parent's nested contour. */
   const moonOff = (m: GeneratedMoon, a: number) => {
-    const r = minimal ? m.orbitR * moonStudyShape(m.id).unit(a) * 1.12 : m.orbitR;
+    const shape = minimalLayout.shapeOf.get(m.id);
+    const r = minimal && shape ? (minimalLayout.ring.get(m.id) ?? m.orbitR) * shape.unit(a) : m.orbitR;
     return { x: r * Math.cos(a), y: r * Math.sin(a) };
   };
+  const minimalRingPath = (m: GeneratedMoon) =>
+    studyPath(minimalLayout.shapeOf.get(m.id) ?? moonStudyShape(m.id), minimalLayout.ring.get(m.id) ?? m.orbitR);
+  const minimalBoundaryPath = (id: string) => studyPath(moonStudyShape(id), minimalLayout.reach.get(id) ?? 0);
 
   // Orbit math: bodies advance along their own wobbly closed curves.
   const planetPos = new Map<string, { x: number; y: number }>();
