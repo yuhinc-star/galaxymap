@@ -767,10 +767,14 @@ export function GeneratorSystem() {
         const f = fs[i]!;
         const inner = i === 0 ? f : f - fs[i - 1]!;
         const outer = i === k - 1 ? 1 - f : fs[i + 1]! - f;
-        void inner; void outer; void eP;
+        // The miniature must sit inside the free band around its ring (never
+        // crossing a sibling ring or the parent boundary), with a floor so
+        // deep lineages keep a steady ~0.3 generational ratio.
+        const gap = Math.min(inner, outer) * B * minUnit(eP);
+        const fit = (gap * FILL) / maxUnit(eccOf(c.id));
         ring.set(c.id, f * B);
         shapeOf.set(c.id, shape);
-        layFamily(c.id, naturalReach(c), c.moons);
+        layFamily(c.id, Math.min(naturalReach(c), Math.max(fit, B * 0.3)), c.moons);
       });
     };
     const ps = [...config.planets].sort((a, b) => a.orbit.maxR - b.orbit.maxR);
