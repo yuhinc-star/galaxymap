@@ -625,21 +625,37 @@ export function GeneratorSystem() {
 
   /** Toolbar zoom uses the same camera writer as focus tracking. The library's
       convenience zoom methods were immediately overwritten by the follow loop. */
-  const nudgeCameraZoom = (factor: number) => {
+  const nudgeCameraZoom = (factor: number, anchor?: { x: number; y: number }) => {
     const st = stateRef.current;
     if (!st) return;
-    const nextScale = Math.max(0.002, Math.min(96, st.scale * factor));
+    const nextScale = Math.max(0.002, Math.min(minimal ? 2000 : 96, st.scale * factor));
     const focused = followRef.current;
     const point = focused ? bodyPos(focused.id) : null;
-    const worldX = point?.x ?? (window.innerWidth / 2 - st.positionX) / st.scale;
-    const worldY = point?.y ?? (window.innerHeight / 2 - st.positionY) / st.scale;
+    // Focused: keep the node centered. Free: keep the point under the cursor.
+    const sx = point ? window.innerWidth / 2 : anchor?.x ?? window.innerWidth / 2;
+    const sy = point ? window.innerHeight / 2 : anchor?.y ?? window.innerHeight / 2;
+    const worldX = point?.x ?? (sx - st.positionX) / st.scale;
+    const worldY = point?.y ?? (sy - st.positionY) / st.scale;
     if (focused) focused.scale = nextScale;
-    writeCamera(
-      window.innerWidth / 2 - worldX * nextScale,
-      window.innerHeight / 2 - worldY * nextScale,
-      nextScale,
-    );
+    writeCamera(sx - worldX * nextScale, sy - worldY * nextScale, nextScale);
   };
+  const nudgeRef = useRef(nudgeCameraZoom);
+  nudgeRef.current = nudgeCameraZoom;
+  // The zoom library's wheel step is additive, so at deep scales a wheel
+  // tick barely moved. Minimalist wheel zoom is multiplicative per tick.
+  useEffect(() => {
+    if (!minimal) return;
+    const onWheel = (e: WheelEvent) => {
+      const t = e.target as Element | null;
+      if (!t?.closest?.(".react-transform-wrapper")) return;
+      e.preventDefault();
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const factor = Math.exp(-Math.max(-240, Math.min(240, dy)) * 0.0022);
+      nudgeRef.current(factor, { x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    return () => window.removeEventListener("wheel", onWheel, { capture: true });
+  }, [minimal]);
 
 
   /** Open chat mode: the rocket decides who we chat with. A zoomed body
@@ -1494,7 +1510,7 @@ export function GeneratorSystem() {
     // bodies naturally need less magnification; tiny descendants get more.
     const desiredBodyPx = Math.min(isMobileView ? 138 : 178, viewport * 0.23);
     const bodyFit = desiredBodyPx / size;
-    const s = Math.min(Math.max(minimal ? familyFit : Math.min(familyFit, bodyFit), minimal ? 0.002 : 0.16), 96);
+    const s = Math.min(Math.max(minimal ? familyFit : Math.min(familyFit, bodyFit), minimal ? 0.002 : 0.16), minimal ? 2000 : 96);
     const st = stateRef.current;
     followRef.current = {
       id,
@@ -2389,14 +2405,14 @@ export function GeneratorSystem() {
         key={`${seed}-${planetCount}`}
         initialScale={0.36}
         minScale={chatOpen && fanSubj ? Math.min(fanSubj.layout.camera.scale, 0.002) : 0.002}
-        maxScale={96}
+        maxScale={minimal ? 2000 : 96}
         centerOnInit
         limitToBounds={false}
         doubleClick={{ disabled: true }}
         // `smooth` mode multiplies this by the wheel delta. Keeping the old
         // 0.15 here made a single trackpad flick jump dozens of zoom levels,
         // where the moving deep-family camera looked like a continuous shake.
-        wheel={{ step: 0.0015 }}
+        wheel={{ step: 0.0015, disabled: minimal }}
         panning={{ velocityDisabled: true, disabled: dragActive || chatActive }}
         // Release focus only once the press really moves: a plain tap or
         // double-click on a star must not unfocus it (that hid deep stars
