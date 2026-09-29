@@ -269,10 +269,24 @@ export function GeneratorSystem() {
     ) {
       return;
     }
+    // Track how fast the camera itself is travelling (px/s, smoothed). Pinning
+    // a deep node magnifies every ancestor's orbit, so this is the only honest
+    // measure of how violent the view feels.
+    if (prev) {
+      const now = performance.now();
+      const dt = Math.max(8, now - (camWriteAtRef.current || now));
+      camWriteAtRef.current = now;
+      const v = (Math.hypot(x - prev.x, y - prev.y) / dt) * 1000;
+      camSpeedRef.current = camSpeedRef.current * 0.82 + v * 0.18;
+    } else {
+      camWriteAtRef.current = performance.now();
+    }
     camWriteRef.current = { x, y, s };
     const controller = cameraRef.current?.instance;
     if (controller) controller.setState(s, x, y);
   };
+  const camSpeedRef = useRef(0);
+  const camWriteAtRef = useRef(0);
 
   /** Latest camera state, so a glide eases from exactly where the camera
       is now — even mid-flight from a previous pick. */
